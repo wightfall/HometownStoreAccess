@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Engine-independent logic (localization, navigation model, text cleanup, grid and
+       path math, input mapping). Has no Unity dependency so it can be unit tested. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>HometownStoreAccess.Core</AssemblyName>
+    <RootNamespace>HometownStoreAccess.Core</RootNamespace>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="HometownStoreAccess.Tests" />
+  </ItemGroup>
+</Project>

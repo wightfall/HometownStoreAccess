@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Installer logic without UI, so it can be unit tested: Steam library discovery and
+       installing / updating / removing BepInEx and the mod from a release zip. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>HometownStoreAccess.Installer.Core</AssemblyName>
+    <RootNamespace>HometownStoreAccess.Installer</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="HometownStoreAccess.Tests" />
+  </ItemGroup>
+</Project>

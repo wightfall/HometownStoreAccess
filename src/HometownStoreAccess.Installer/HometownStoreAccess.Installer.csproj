@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Windows installer for the mod. .NET Framework 4.7.2 ships with Windows 10 and 11, so it needs
+       no runtime download. The release zip is embedded so the installer works offline, and the shared
+       sources (translations, install logic) are compiled in, so HometownStoreAccessInstaller.exe is a
+       single file that runs on its own. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>HometownStoreAccessInstaller</AssemblyName>
+    <RootNamespace>HometownStoreAccess.Installer</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\HometownStoreAccess.Core\**\*.cs" Exclude="..\HometownStoreAccess.Core\obj\**;..\HometownStoreAccess.Core\bin\**" LinkBase="Shared\Core" />
+    <Compile Include="..\HometownStoreAccess.Installer.Core\**\*.cs" Exclude="..\HometownStoreAccess.Installer.Core\obj\**;..\HometownStoreAccess.Installer.Core\bin\**" LinkBase="Shared\InstallerCore" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(ReleaseZip)' != '' And Exists('$(ReleaseZip)')">
+    <EmbeddedResource Include="$(ReleaseZip)" LogicalName="release.zip" />
+  </ItemGroup>
+</Project>

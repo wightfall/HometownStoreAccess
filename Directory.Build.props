@@ -1,0 +1,19 @@
+<Project>
+  <PropertyGroup>
+    <!-- Path to the Hometown Store installation. Override with the HOMETOWN_STORE_DIR
+         environment variable or /p:GameDir=... when building on another machine. -->
+    <GameDir Condition="'$(GameDir)' == '' And '$(HOMETOWN_STORE_DIR)' != ''">$(HOMETOWN_STORE_DIR)</GameDir>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\HometownStore</GameDir>
+    <GameManaged>$(GameDir)\HometownStore_Data\Managed</GameManaged>
+    <BepInExCore>$(GameDir)\BepInEx\core</BepInExCore>
+
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <Deterministic>true</Deterministic>
+    <Version>1.0.0</Version>
+    <Authors>wightfall</Authors>
+    <Product>Hometown Store Access</Product>
+    <Copyright>Copyright (c) 2026 wightfall</Copyright>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>

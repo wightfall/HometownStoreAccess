@@ -1,0 +1,12 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+TestResults/
+artifacts/
+dist/
+*.log
+# Never commit game files or decompiled game code.
+decomp/
+Managed/
