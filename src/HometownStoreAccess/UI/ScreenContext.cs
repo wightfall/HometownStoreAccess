@@ -55,6 +55,12 @@ namespace HometownStoreAccess.UI
         /// <summary>Return to the first item each time the context is entered instead of the last focus.</summary>
         public virtual bool ResetFocusOnEnter => false;
 
+        /// <summary>
+        /// Where focus goes when the focused item disappears (a sub-list opened or closed), when that item
+        /// is in the new list; null keeps the default (the same position).
+        /// </summary>
+        public virtual string PreferredFocusKey() => null;
+
         /// <summary>Help lines specific to this screen, appended to the general help.</summary>
         public virtual IEnumerable<string> HelpLines() { yield break; }
 

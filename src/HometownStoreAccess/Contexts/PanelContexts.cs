@@ -65,13 +65,20 @@ namespace HometownStoreAccess.Contexts
         }
 
         public override string ReadAll() => Intro();
+
+        public override IEnumerable<string> HelpLines()
+        {
+            yield return Loc.Get("help_summary");
+        }
     }
 
     /// <summary>Customer groups: popularity, budget, trust level, wanted items, favourite.</summary>
     internal sealed class CustomerPanelContext : ScreenContext
     {
         public override string Id => "customers";
-        public override int Priority => 50;
+        // Above the map (60): these open from the map's buttons too.
+        public override int Priority => 61;
+        public override bool ResetFocusOnEnter => true;
 
         private static CustomerPanel Panel => UIPanelManager.Instance != null ? UIPanelManager.Instance.customerPanel : null;
 
@@ -120,13 +127,20 @@ namespace HometownStoreAccess.Contexts
                 Loc.Get("budget_range", prof.currentBudgetMinMax.x, prof.currentBudgetMinMax.y), trust, storeReq,
                 needs.Length > 0 ? Loc.Get("customer_needs", needs) : null);
         }
+
+        public override IEnumerable<string> HelpLines()
+        {
+            yield return Loc.Get("help_customers");
+        }
     }
 
     /// <summary>Event journal: current or finished events with their tasks.</summary>
     internal sealed class JournalContext : ScreenContext
     {
         public override string Id => "journal";
-        public override int Priority => 49;
+        // Above the map (60): these open from the map's buttons too.
+        public override int Priority => 62;
+        public override bool ResetFocusOnEnter => true;
 
         private static EventJournalPanel Panel => UIPanelManager.Instance != null ? UIPanelManager.Instance.GetEventJournalPanel() : null;
 
@@ -161,10 +175,46 @@ namespace HometownStoreAccess.Contexts
                 UiScan.AddText(items, p.ongoingEventJournal.GetComponent<TMP_Text>());
             }
             string actions = Loc.Get("group_actions");
-            UiScan.AddControl(items, p.eventInprogressButton, actions);
-            UiScan.AddControl(items, p.eventDoneButton, actions);
+            // The game's captions for these are Thai in every language. Only one shows at a time.
+            if (p.eventInprogressButton != null && p.eventInprogressButton.gameObject.activeInHierarchy)
+            {
+                items.Add(new ActionItem(() => Loc.Get("label_show_view", Loc.Get("journal_in_progress")), () => SwitchView(), "view") { Group = actions });
+            }
+            else if (p.eventDoneButton != null && p.eventDoneButton.gameObject.activeInHierarchy)
+            {
+                items.Add(new ActionItem(() => Loc.Get("label_show_view", Loc.Get("journal_done")), () => SwitchView(), "view") { Group = actions });
+            }
             Transform close = p.transform.Find("Close");
             if (close != null) UiScan.AddControl(items, close.GetComponent<Button>(), actions, () => Loc.Get("label_close"));
+        }
+
+        /// <summary>Ctrl+Up / Ctrl+Down: the journal's two views (events in progress, finished events).</summary>
+        public override bool HandleInput()
+        {
+            if (!Input.ModInput.Ctrl || !(Input.ModInput.Down(KeyCode.UpArrow) || Input.ModInput.Down(KeyCode.DownArrow))) return false;
+            return SwitchView();
+        }
+
+        /// <summary>Shows the other view, then reads its name and first event.</summary>
+        private bool SwitchView()
+        {
+            EventJournalPanel p = Panel;
+            if (p == null) return false;
+            Button b = p.eventInprogressButton != null && p.eventInprogressButton.gameObject.activeInHierarchy ? p.eventInprogressButton : p.eventDoneButton;
+            if (b == null || !b.gameObject.activeInHierarchy) return false;
+            UiUtil.Click(b.gameObject);
+            Audio.AudioCues.Play(Audio.Cue.Wrap);
+            ContextManager cm = AccessibilityRoot.Instance.Contexts;
+            cm.Refresh(false);
+            cm.MoveToSilently(0);
+            SpeechService.Say(Title(), true);
+            cm.AnnounceFocus(includeGroup: true, interrupt: false);
+            return true;
+        }
+
+        public override IEnumerable<string> HelpLines()
+        {
+            yield return Loc.Get("help_journal");
         }
     }
 
@@ -172,7 +222,9 @@ namespace HometownStoreAccess.Contexts
     internal sealed class CharacterCollectionContext : ScreenContext
     {
         public override string Id => "characters";
-        public override int Priority => 48;
+        // Above the map (60): these open from the map's buttons too.
+        public override int Priority => 67;
+        public override bool ResetFocusOnEnter => true;
 
         private static CharacterCollectionPanel Panel => UIPanelManager.Instance != null ? UIPanelManager.Instance.GetCharacterCollectionPanel() : null;
 
@@ -198,13 +250,20 @@ namespace HometownStoreAccess.Contexts
             Transform close = p.transform.Find("Close");
             if (close != null) UiScan.AddControl(items, close.GetComponent<Button>(), string.Empty, () => Loc.Get("label_close"));
         }
+
+        public override IEnumerable<string> HelpLines()
+        {
+            yield return Loc.Get("help_characters");
+        }
     }
 
     /// <summary>The storage summary pop-up (all items in storage and on shelves).</summary>
     internal sealed class StorageSummaryContext : ScreenContext
     {
         public override string Id => "storage_summary";
-        public override int Priority => 47;
+        // Above the map (60): these open from the map's buttons too.
+        public override int Priority => 66;
+        public override bool ResetFocusOnEnter => true;
 
         private static StorageSummaryPanel Panel
         {
@@ -221,6 +280,38 @@ namespace HometownStoreAccess.Contexts
         public override bool IsActive() => Panel != null;
         public override string Title() => Loc.Get("ctx_storage_summary");
 
+        private readonly CategoryFilter _filter = new CategoryFilter(
+            o => o == CategoryCycle.All ? Loc.Get("cat_all_items") : TradeContext.CategoryLabel(o),
+            i => i.Key != null && i.Key.StartsWith("stock:"));
+
+        public override bool HandleInput()
+        {
+            // The game does not close this list on Escape (it opens the pause menu instead).
+            if (UnityEngine.Input.GetKeyDown(KeyCode.Escape) && CloseOpen()) return true;
+            return _filter.HandleKeys();
+        }
+
+        /// <summary>Closes the open stock list; false when none is open.</summary>
+        public static bool CloseOpen()
+        {
+            StorageSummaryPanel p = Panel;
+            if (p == null) return false;
+            p.Close();
+            InputGuard.HoldUntilReleased(KeyCode.Escape);
+            return true;
+        }
+
+        /// <summary>A closed screen starts again with every category; a popup on top keeps the choice.</summary>
+        public override void OnExit()
+        {
+            if (!IsActive()) _filter.Cycle.Reset();
+        }
+
+        public override IEnumerable<string> HelpLines()
+        {
+            yield return Loc.Get("help_storage_summary");
+        }
+
         public override void Build(List<NavItem> items)
         {
             StorageSummaryPanel p = Panel;
@@ -230,8 +321,11 @@ namespace HometownStoreAccess.Contexts
             Dictionary<Item, int> shelves = rm.AllResourceOnSelf();
             var all = storage.Keys.Union(shelves.Keys).Where(i => i != null).OrderBy(GameText.Name).ToList();
             if (all.Count == 0) items.Add(new TextItem(Loc.Get("nothing_in_stock"), "none"));
+            _filter.Prepare(all.Select(i => i.itemCategory.ToString()));
+            if (_filter.Active) items.Add(_filter.Item(string.Empty));
             foreach (Item it in all)
             {
+                if (!_filter.Matches(it.itemCategory.ToString())) continue;
                 Item item = it;
                 storage.TryGetValue(item, out int s);
                 shelves.TryGetValue(item, out int sh);
@@ -282,6 +376,11 @@ namespace HometownStoreAccess.Contexts
             UiScan.AddControl(items, p.selectSkinButton, actions, () => Loc.Get("label_confirm_skin"));
             UiScan.AddControl(items, p.closeButton, actions, () => Loc.Get("label_close"));
         }
+
+        public override IEnumerable<string> HelpLines()
+        {
+            yield return Loc.Get("help_cashier_skin");
+        }
     }
 
     /// <summary>Vehicle shop: current and next vehicle, upgrade price.</summary>
@@ -314,6 +413,11 @@ namespace HometownStoreAccess.Contexts
             items.Add(new TextItem(() => GameText.Money(ResourceManager.Instance.cash), "cash"));
             Transform close = p.transform.Find("Close Button");
             if (close != null) UiScan.AddControl(items, close.GetComponent<Button>(), string.Empty, () => Loc.Get("label_close"));
+        }
+
+        public override IEnumerable<string> HelpLines()
+        {
+            yield return Loc.Get("help_vehicle");
         }
     }
 
@@ -445,5 +549,9 @@ namespace HometownStoreAccess.Contexts
             if (close != null) UiScan.AddControl(items, close.GetComponent<Button>(), string.Empty, () => Loc.Get("label_close"));
         }
 
+        public override IEnumerable<string> HelpLines()
+        {
+            yield return Loc.Get("help_lottery");
+        }
     }
 }

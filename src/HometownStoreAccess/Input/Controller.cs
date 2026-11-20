@@ -55,6 +55,20 @@ namespace HometownStoreAccess.Input
 
         private const uint ErrorSuccess = 0;
         private const short LeftStickDeadZone = 7849;
+        private const short RightStickDeadZone = 8689;
+
+        // Test mode: a simulated pad state fed through the same mapping and dispatch as a real controller.
+        private static PadState _simulated;
+        private static int _simulatedFrames;
+        private static bool _simulatedRelease;
+
+        /// <summary>Holds <paramref name="state"/> for <paramref name="frames"/> frames, then releases everything.</summary>
+        public static void Simulate(PadState state, int frames)
+        {
+            _simulated = state;
+            _simulatedFrames = Math.Max(1, frames);
+            _simulatedRelease = false;
+        }
 
         private static readonly ControllerMapping Mapping = new ControllerMapping();
         private static bool _useLegacyDll;
@@ -68,7 +82,23 @@ namespace HometownStoreAccess.Input
 
         public static void Update()
         {
-            if (_disabled || Plugin.Settings == null || !Plugin.Settings.ControllerEnabled.Value) return;
+            if (Plugin.Settings == null || !Plugin.Settings.ControllerEnabled.Value) return;
+            if (_simulatedFrames > 0 || _simulatedRelease)
+            {
+                PadState sim = _simulatedFrames > 0 ? _simulated : default(PadState);
+                if (_simulatedFrames > 0)
+                {
+                    _simulatedFrames--;
+                    _simulatedRelease = _simulatedFrames == 0;
+                }
+                else
+                {
+                    _simulatedRelease = false;
+                }
+                foreach (PadAction a in Mapping.Update(sim, Time.unscaledTime)) Dispatch(a);
+                return;
+            }
+            if (_disabled) return;
             try
             {
                 if (_padIndex < 0)
@@ -107,6 +137,7 @@ namespace HometownStoreAccess.Input
                     RightTrigger = s.Gamepad.bRightTrigger,
                 };
                 ControllerMapping.NormalizeStick(s.Gamepad.sThumbLX, s.Gamepad.sThumbLY, LeftStickDeadZone, out state.LeftX, out state.LeftY);
+                ControllerMapping.NormalizeStick(s.Gamepad.sThumbRX, s.Gamepad.sThumbRY, RightStickDeadZone, out state.RightX, out state.RightY);
                 List<PadAction> actions = Mapping.Update(state, Time.unscaledTime);
                 foreach (PadAction a in actions) Dispatch(a);
             }
@@ -151,6 +182,13 @@ namespace HometownStoreAccess.Input
                 case PadAction.Status: ModInput.Inject(KeyCode.T, ctrl: true); break;
                 case PadAction.Customers: ModInput.Inject(KeyCode.K, ctrl: true); break;
                 case PadAction.TogglePause: ModInput.Inject(KeyCode.P, ctrl: true); break;
+                case PadAction.CategoryPrevious: ModInput.Inject(KeyCode.UpArrow, ctrl: true); break;
+                case PadAction.CategoryNext: ModInput.Inject(KeyCode.DownArrow, ctrl: true); break;
+                case PadAction.HistoryOlder: ModInput.Inject(KeyCode.Comma); break;
+                case PadAction.HistoryNewer: ModInput.Inject(KeyCode.Period); break;
+                case PadAction.KeyList: ModInput.Inject(KeyCode.F1, shift: true); break;
+                case PadAction.ModSettings: ModInput.Inject(KeyCode.F5); break;
+                case PadAction.RecallStory: ModInput.Inject(KeyCode.Backslash); break;
                 case PadAction.Back: GameActions.Back(); break;
                 case PadAction.Pause:
                     if (Contexts.Overlay.IsOpen) Contexts.Overlay.Close();

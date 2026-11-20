@@ -58,8 +58,8 @@ namespace HometownStoreAccess.Contexts
             return n;
         }
 
-        /// <summary>One list entry per stack in an inventory.</summary>
-        public static void AddStacks(List<NavItem> items, Inventory inv, Inventory target, string group, string targetName, string keyPrefix)
+        /// <summary>One list entry per stack in an inventory (only the stacks <paramref name="include"/> accepts).</summary>
+        public static void AddStacks(List<NavItem> items, Inventory inv, Inventory target, string group, string targetName, string keyPrefix, System.Func<Item, bool> include = null)
         {
             if (inv == null) return;
             if (inv.ItemList.Count == 0)
@@ -68,9 +68,12 @@ namespace HometownStoreAccess.Contexts
                 return;
             }
             var seen = new Dictionary<Item, int>();
+            int shown = 0;
             foreach (ItemSlotData s in inv.ItemList.ToList())
             {
                 ItemSlotData slot = s;
+                if (slot.ID == null || (include != null && !include(slot.ID))) continue;
+                shown++;
                 seen.TryGetValue(slot.ID, out int k);
                 seen[slot.ID] = k + 1;
                 var item = new ActionItem(() => GameText.Stack(slot), () => Move(slot, inv, target, targetName, Amount.Stack), keyPrefix + ":" + slot.ID.name + ":" + k)
@@ -82,6 +85,16 @@ namespace HometownStoreAccess.Contexts
                 };
                 if (target != null && !target.IsItemsStoreAble(slot.ID)) item.ValueFunc = () => Loc.Get("transfer_cannot_go", targetName);
                 items.Add(item);
+            }
+            if (shown == 0) items.Add(new TextItem(Loc.Get("category_empty"), keyPrefix + ":none") { Group = group });
+        }
+
+        public static IEnumerable<string> Categories(Inventory inv)
+        {
+            if (inv == null) yield break;
+            foreach (ItemSlotData s in inv.ItemList)
+            {
+                if (s.ID != null) yield return s.ID.itemCategory.ToString();
             }
         }
     }
@@ -115,19 +128,40 @@ namespace HometownStoreAccess.Contexts
 
         public override string Title() => NameOf(Target);
 
+        private readonly CategoryFilter _filter = new CategoryFilter(
+            o => o == CategoryCycle.All ? Loc.Get("cat_all_items") : TradeContext.CategoryLabel(o),
+            i => i.Key != null && (i.Key.StartsWith("t:") || i.Key.StartsWith("s:") || i.Key.StartsWith("hold:"))
+                && !i.Key.EndsWith(":none") && !i.Key.EndsWith(":empty"));
+
+        public override bool HandleInput() => _filter.HandleKeys();
+
+        /// <summary>A closed screen starts again with every category; a popup on top keeps the choice.</summary>
+        public override void OnExit()
+        {
+            if (!IsActive()) _filter.Cycle.Reset();
+        }
+
         public override void Build(List<NavItem> items)
         {
             ShelfPanel t = Target;
             ShelfPanel s = Source;
             if (t == null) return;
+            bool withSource = s != null && s.gameObject.activeInHierarchy;
+            var categories = new List<string>(Transfer.Categories(t._refInventory));
+            if (withSource) categories.AddRange(Transfer.Categories(s._refInventory));
+            if (t._refShelfObject != null) categories.AddRange(t._refShelfObject.ShelfID.storeAbleItems.Where(i => i != null).Select(i => i.itemCategory.ToString()));
+            _filter.Prepare(categories);
+            if (_filter.Active) items.Add(_filter.Item(string.Empty));
+            System.Func<Item, bool> include = i => _filter.Matches(i.itemCategory.ToString());
+
             string tName = NameOf(t);
             string sName = s != null ? NameOf(s) : string.Empty;
             string tGroup = TextCleaner.Join(", ", tName, GameText.Slots(t._refInventory));
-            Transfer.AddStacks(items, t._refInventory, t._refInventoryToTransfer, tGroup, sName, "t");
-            if (s != null && s.gameObject.activeInHierarchy)
+            Transfer.AddStacks(items, t._refInventory, t._refInventoryToTransfer, tGroup, sName, "t", include);
+            if (withSource)
             {
                 string sGroup = TextCleaner.Join(", ", sName, GameText.Slots(s._refInventory));
-                Transfer.AddStacks(items, s._refInventory, s._refInventoryToTransfer, sGroup, tName, "s");
+                Transfer.AddStacks(items, s._refInventory, s._refInventoryToTransfer, sGroup, tName, "s", include);
                 string actions = Loc.Get("group_actions");
                 UiScan.AddControl(items, s.giveAllButton, actions, () => Loc.Get("label_give_all", sName, tName));
                 UiScan.AddControl(items, s.takeAllButton, actions, () => Loc.Get("label_take_all", tName, sName));
@@ -138,6 +172,7 @@ namespace HometownStoreAccess.Contexts
                 string canHold = Loc.Get("group_can_hold");
                 foreach (Item it in t._refShelfObject.ShelfID.storeAbleItems)
                 {
+                    if (it == null || !include(it)) continue;
                     Item captured = it;
                     items.Add(new TextItem(() => TextCleaner.Join(", ", GameText.Name(captured), Loc.Get("in_storage_count", Transfer.CountOf(ResourceManager.Instance.storage, captured))), "hold:" + it.name, () => GameText.ItemDetails(captured)) { Group = canHold });
                 }
@@ -242,6 +277,15 @@ namespace HometownStoreAccess.Contexts
                 UiScan.AddControl(items, storage.takeAllButton, actions, () => Loc.Get("label_take_all", machine, storageName));
             }
             UiScan.AddControl(items, p.closeButton, Loc.Get("group_actions"), () => Loc.Get("label_close"));
+        }
+
+        /// <summary>When the recipe list opens, start on the recipe the machine uses now.</summary>
+        public override string PreferredFocusKey()
+        {
+            ManufacturePanel p = Panel;
+            if (p == null || p._refManufactureObject == null || p.allCraftRecipePanel == null || !p.allCraftRecipePanel.activeInHierarchy) return null;
+            CraftingRecipe current = p._refManufactureObject.currentRecipe;
+            return "recipe:" + (current != null ? current.name : "none");
         }
 
         public override IEnumerable<string> HelpLines()

@@ -45,6 +45,11 @@ namespace HometownStoreAccess.Input
                 return true;
             }
             if (HistoryKeys()) return true;
+            if (ModInput.Down(KeyCode.Backslash))
+            {
+                RecallStory(root, ModInput.Shift);
+                return true;
+            }
 
             bool letters = LetterCommandsAllowed(root);
             if (letters && ModInput.Down(KeyCode.R) && !ModInput.Alt)
@@ -92,6 +97,32 @@ namespace HometownStoreAccess.Input
                 return true;
             }
             return false;
+        }
+
+        /// <summary>
+        /// Backslash: the latest conversation line or tutorial message again (on a tutorial page, the page).
+        /// Shift+Backslash: the whole latest conversation from its first line.
+        /// </summary>
+        private static void RecallStory(AccessibilityRoot root, bool whole)
+        {
+            StoryRecall recall = SpeechService.Recall;
+            ScreenContext c = root.Contexts.Current;
+            if (!whole && c != null && c.Id == "tutorial_pages")
+            {
+                ReadScreen(root);
+                return;
+            }
+            string text;
+            if (whole)
+            {
+                var lines = new System.Collections.Generic.List<string>(recall.Conversation);
+                text = lines.Count == 0 ? null : TextCleaner.Join(". ", lines.ToArray());
+            }
+            else
+            {
+                text = recall.Last;
+            }
+            SpeechService.SpeakReview(string.IsNullOrEmpty(text) ? Loc.Get("recall_nothing") : text);
         }
 
         public static string CategoryName(MsgCategory c) => Loc.Get("hist_" + c.ToString().ToLowerInvariant());

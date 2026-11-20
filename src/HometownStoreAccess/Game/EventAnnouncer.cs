@@ -116,7 +116,12 @@ namespace HometownStoreAccess.Game
                 if (key != _lastGuideKey)
                 {
                     _lastGuideKey = key;
-                    if (key != null) SpeechService.Say(Loc.Get("tutorial_hint", Loc.Get(key)), false, MsgCategory.Tutorial);
+                    if (key != null)
+                    {
+                        string hint = Loc.Get("tutorial_hint", Loc.Get(key));
+                        SpeechService.Recall.AddTutorial(hint);
+                        SpeechService.Say(hint, false, MsgCategory.Tutorial);
+                    }
                 }
             }
 
@@ -128,7 +133,12 @@ namespace HometownStoreAccess.Game
                 if (text != (before ?? string.Empty))
                 {
                     TutorialNotes[note] = text;
-                    if (text.Length > 0) SpeechService.Say(Loc.Get("tutorial_note", text), false, MsgCategory.Tutorial);
+                    if (text.Length > 0)
+                    {
+                        string spoken = Loc.Get("tutorial_note", text);
+                        SpeechService.Recall.AddTutorial(spoken);
+                        SpeechService.Say(spoken, false, MsgCategory.Tutorial);
+                    }
                 }
             }
         }

@@ -239,6 +239,9 @@ namespace HometownStoreAccess.Contexts
         private bool _floorMode;
         private GameplayMode _lastMode = GameplayMode.Default;
         private bool _hadTemp;
+        private readonly CategoryFilter _filter = new CategoryFilter(
+            o => o == Core.CategoryCycle.All ? Loc.Get("cat_all_blueprints") : TradeContext.CategoryLabel(o),
+            i => i.Key != null && i.Key.StartsWith("bp:"));
 
         public override string Id => "build";
         public override int Priority => 40;
@@ -253,6 +256,11 @@ namespace HometownStoreAccess.Contexts
             if (gc == null) return false;
             BuildingPanel p = Panel;
             return gc.CurrentGameplayMode != GameplayMode.Default || (p != null && p.gameObject.activeInHierarchy);
+        }
+
+        public override void OnExit()
+        {
+            if (!IsActive()) _filter.Cycle.Reset();
         }
 
         public override void OnEnter()
@@ -316,10 +324,13 @@ namespace HometownStoreAccess.Contexts
         {
             BuildingSystem bs = BuildingSystem.Instance;
             string bp = Loc.Get("group_blueprints");
-            foreach (BuildingBlueprint blueprint in bs.currentBlueprint.ToList())
+            List<BuildingBlueprint> blueprints = bs.currentBlueprint.Where(x => x != null && x.Id != null).ToList();
+            _filter.Prepare(blueprints.Select(x => KindOf(x.Id)));
+            if (_filter.Active) items.Add(_filter.Item(bp));
+            foreach (BuildingBlueprint blueprint in blueprints)
             {
                 Building b = blueprint.Id;
-                if (b == null) continue;
+                if (!_filter.Matches(KindOf(b))) continue;
                 items.Add(new ActionItem(() => Loc.Get("blueprint_entry", GameText.Name(b), BlueprintAmount(b)), () =>
                 {
                     if (GameActions.StartPlacing(b)) _floorMode = true;
@@ -335,12 +346,18 @@ namespace HometownStoreAccess.Contexts
             string tools = Loc.Get("group_build_tools");
             UiScan.AddControl(items, p._moveButton, tools, () => Loc.Get("label_move_mode"));
             UiScan.AddControl(items, p._PickupButton, tools, () => Loc.Get("label_pickup_mode"));
-            UiScan.AddControl(items, p.shelfTag, tools);
-            UiScan.AddControl(items, p.storageTag, tools);
-            UiScan.AddControl(items, p.manufacturerTag, tools);
-            UiScan.AddControl(items, p.decorateTag, tools);
             Transform close = p.transform.Find("Close Panel");
             if (close != null) UiScan.AddControl(items, close.GetComponent<Button>(), tools);
+        }
+
+        /// <summary>What a building is, like the game's own build tags (its buildingCategory is the goods it holds).</summary>
+        private static string KindOf(Building b)
+        {
+            if (b is Manufacture) return "Manufacture";
+            if (b is Storage) return "Storage";
+            if (b is Cashier) return "Cashier";
+            if (b is Shelf) return "Shelf";
+            return "Decorate";
         }
 
         private static int BlueprintAmount(Building b)
@@ -368,6 +385,7 @@ namespace HometownStoreAccess.Contexts
         public override bool HandleInput()
         {
             bool placing = Placement.Active;
+            if (!placing && !_floorMode && _filter.HandleKeys()) return true;
             if (!placing && ModInput.Down(KeyCode.Tab))
             {
                 _floorMode = !_floorMode;

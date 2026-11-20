@@ -64,6 +64,37 @@ namespace HometownStoreAccess.Core
             return sb.ToString();
         }
 
+        /// <summary>A new file with every entry and setting of <paramref name="under"/>, then those of <paramref name="over"/> on top.</summary>
+        public static LangFile Merge(LangFile under, LangFile over)
+        {
+            var f = new LangFile();
+            foreach (LangFile src in new[] { under, over })
+            {
+                if (src == null) continue;
+                foreach (var kv in src.Entries) f.Entries[kv.Key] = kv.Value;
+                foreach (var kv in src.Settings)
+                {
+                    if (!string.IsNullOrEmpty(kv.Value)) f.Settings[kv.Key] = kv.Value;
+                }
+                f.Errors.AddRange(src.Errors);
+            }
+            return f;
+        }
+
+        /// <summary>
+        /// The language a game text file is for: one of the mod's built-in languages when the code is that
+        /// language or a regional form of it ("zh-HK" is "zh"), otherwise the code itself in lower case.
+        /// </summary>
+        public static string GameTextLanguage(string code)
+        {
+            string c = (code ?? string.Empty).Trim().ToLowerInvariant().Replace('_', '-');
+            foreach (string lang in Loc.SupportedLanguages)
+            {
+                if (c == lang || c.StartsWith(lang + "-", StringComparison.Ordinal)) return lang;
+            }
+            return c;
+        }
+
         public static LangFile Load(string path)
         {
             try

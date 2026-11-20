@@ -37,7 +37,7 @@ namespace HometownStoreAccess.Core
             s = s.Replace("​", string.Empty).Replace("‌", string.Empty).Replace("‍", string.Empty).Replace("﻿", string.Empty);
             s = s.Replace(' ', ' ');
             s = WhitespaceRegex.Replace(s, " ").Trim();
-            return s;
+            return FixedText.Translate(s);
         }
 
         /// <summary>True when the cleaned text carries no speakable information.</summary>

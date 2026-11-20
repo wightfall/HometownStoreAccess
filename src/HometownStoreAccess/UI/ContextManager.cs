@@ -57,6 +57,8 @@ namespace HometownStoreAccess.UI
                 Rebuild(false);
             }
             try { Current.Tick(); } catch (Exception e) { Log.Error("Context " + Current.Id + " tick failed: " + e); }
+            // The game closes sub-lists itself when Escape is released: say where the focus went.
+            if (UnityEngine.Input.GetKeyUp(KeyCode.Escape)) _announceFocusAfterRebuild = true;
 
             if (TextEntry.Active) return;
             bool enter = ModInput.Down(KeyCode.Return) || ModInput.Down(KeyCode.KeypadEnter);
@@ -147,7 +149,15 @@ namespace HometownStoreAccess.UI
         {
             _nextRebuild = Time.unscaledTime + RebuildInterval;
             BuildItems();
+            string before = _cursor.FocusedKey;
             bool changed = _cursor.Reset(_keys, preferFirst);
+            if (changed && before != null && !_keys.Contains(before))
+            {
+                string preferred = null;
+                try { preferred = Current.PreferredFocusKey(); } catch (Exception e) { Log.Debug("PreferredFocusKey " + Current.Id + " threw " + e.Message); }
+                int at = preferred != null ? _keys.IndexOf(preferred) : -1;
+                if (at >= 0) _cursor.MoveTo(at, _keys);
+            }
             // Keep list focus on the text field being typed in (the game may activate one itself).
             TMPro.TMP_InputField editing = TextEntry.Field;
             if (editing != null)

@@ -149,11 +149,14 @@ namespace HometownStoreAccess.Game
         /// <summary>Same as the Escape key in the game: closes the topmost panel or opens the pause menu.</summary>
         public static void Back()
         {
+            // A closed sub-list leaves the same screen: announce the new focus once the list is rebuilt.
+            AccessibilityRoot.Instance?.Contexts?.AnnounceFocusIfChanged();
             if (Contexts.Overlay.IsOpen)
             {
                 Contexts.Overlay.Close();
                 return;
             }
+            if (Contexts.StorageSummaryContext.CloseOpen()) return;
             UIPanelManager ui = UIPanelManager.Instance;
             if (ui == null)
             {

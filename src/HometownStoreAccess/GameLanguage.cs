@@ -38,6 +38,28 @@ namespace HometownStoreAccess
 
         public static string Folder => Path.Combine(Plugin.PluginDirectory, "lang");
 
+        /// <summary>Game text translations shipped with the mod (the player's own files in lang go on top).</summary>
+        public static string BuiltInFolder => Path.Combine(Plugin.PluginDirectory, "translations");
+
+        private static readonly Dictionary<string, LangFile> BuiltIn = new Dictionary<string, LangFile>(StringComparer.OrdinalIgnoreCase);
+        private static bool _builtInLoaded;
+
+        private static void LoadBuiltIn()
+        {
+            _builtInLoaded = true;
+            BuiltIn.Clear();
+            if (!Directory.Exists(BuiltInFolder)) return;
+            foreach (string file in Directory.GetFiles(BuiltInFolder, "*.game.txt"))
+            {
+                string name = Path.GetFileName(file);
+                string code = LangFile.GameTextLanguage(name.Substring(0, name.Length - ".game.txt".Length));
+                LangFile f = LangFile.Load(file);
+                foreach (string err in f.Errors) Log.Warn("translations/" + name + ": " + err);
+                BuiltIn[code] = BuiltIn.TryGetValue(code, out LangFile earlier) ? LangFile.Merge(earlier, f) : f;
+                Log.Info("Loaded built-in game translation " + name + " (" + f.Entries.Count + " entries)");
+            }
+        }
+
         public static string DisplayName(string code)
         {
             switch ((code ?? string.Empty).ToLowerInvariant())
@@ -74,7 +96,13 @@ namespace HometownStoreAccess
             try
             {
                 Directory.CreateDirectory(Folder);
-                if (ScanForChanges()) Reload();
+                bool changed = ScanForChanges();
+                if (!_builtInLoaded)
+                {
+                    LoadBuiltIn();
+                    changed = true;
+                }
+                if (changed) Reload();
                 if (!_templatesWritten && LocalizationReady()) WriteTemplates();
                 if (_gameTextDirty && LocalizationReady()) ApplyGameText();
             }
@@ -121,6 +149,7 @@ namespace HometownStoreAccess
         {
             Loc.ClearExternal();
             GameFiles.Clear();
+            foreach (var kv in BuiltIn) GameFiles[kv.Key] = kv.Value;
             foreach (string file in Stamps.Keys)
             {
                 string name = Path.GetFileName(file);
@@ -134,8 +163,9 @@ namespace HometownStoreAccess
                 }
                 else if (name.EndsWith(".game.txt", StringComparison.OrdinalIgnoreCase))
                 {
-                    string code = name.Substring(0, name.Length - ".game.txt".Length).ToLowerInvariant();
-                    GameFiles[code] = f;
+                    string code = LangFile.GameTextLanguage(name.Substring(0, name.Length - ".game.txt".Length));
+                    // The player's file goes on top of the built-in translation of the same language.
+                    GameFiles[code] = GameFiles.TryGetValue(code, out LangFile under) ? LangFile.Merge(under, f) : f;
                     Log.Info("Loaded game translation " + name + " (" + f.Entries.Count + " entries, base " + f.BaseLocale + ")");
                 }
             }
@@ -175,6 +205,29 @@ namespace HometownStoreAccess
                 }
             }
             if (entries.Count > 0) WriteIfChanged(Path.Combine(Folder, "template.game.txt"), LangFile.BuildTemplate(TemplateHeader("game"), entries));
+        }
+
+        /// <summary>The game's own non-empty entries in the given locale, for every English key (for diagnostics).</summary>
+        public static List<KeyValuePair<string, string>> ExistingGameEntries(string localeCode)
+        {
+            var result = new List<KeyValuePair<string, string>>();
+            Locale en = LocalizationSettings.AvailableLocales.Locales.FirstOrDefault(l => l.Identifier.Code.StartsWith("en"));
+            Locale target = LocalizationSettings.AvailableLocales.Locales.FirstOrDefault(l => l.Identifier.Code.StartsWith(localeCode, StringComparison.OrdinalIgnoreCase));
+            if (en == null || target == null) return result;
+            foreach (LocalizationTable t in Enum.GetValues(typeof(LocalizationTable)))
+            {
+                string tableName = t.GetTableName();
+                StringTable enTable = LocalizationSettings.StringDatabase.GetTable(tableName, en);
+                StringTable table = LocalizationSettings.StringDatabase.GetTable(tableName, target);
+                if (enTable == null || table == null) continue;
+                foreach (StringTableEntry e in enTable.Values.OrderBy(v => v.Key, StringComparer.Ordinal))
+                {
+                    if (e == null || string.IsNullOrEmpty(e.Key)) continue;
+                    StringTableEntry other = table.GetEntry(e.Key);
+                    if (other != null && !string.IsNullOrWhiteSpace(other.Value)) result.Add(new KeyValuePair<string, string>(tableName + "/" + e.Key, other.Value));
+                }
+            }
+            return result;
         }
 
         /// <summary>Game text entries that exist in English but are empty or absent in the given locale (for diagnostics).</summary>
