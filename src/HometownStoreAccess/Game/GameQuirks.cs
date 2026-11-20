@@ -4,9 +4,18 @@ namespace HometownStoreAccess.Game
     internal static class GameQuirks
     {
         private static bool _cheatChecked;
+        private static bool? _uiHidden;
 
         public static void Update()
         {
+            // F3 hides the game's whole on-screen interface (for screenshots); menus look empty then.
+            bool hidden = HideUI.IsHidden;
+            if (_uiHidden.HasValue && hidden != _uiHidden.Value)
+            {
+                Speech.SpeechService.Say(Core.Loc.Get(hidden ? "quirk_ui_hidden" : "quirk_ui_shown"), true);
+            }
+            _uiHidden = hidden;
+
             GameControl gc = GameControl.Instance;
             if (gc == null) return;
             // F1 is the mod's help key. The game turns on hidden developer cheats (F2 money, F4 every

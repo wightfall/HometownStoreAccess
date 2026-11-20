@@ -30,15 +30,18 @@ namespace HometownStoreAccess.Tests
         }
 
         [Fact]
-        public void TutorialMessagesAreTheLatestButNotPartOfTheConversation()
+        public void HistoryClearForgetsEverything()
         {
-            var r = new StoryRecall();
-            r.AddLine("A: one");
-            r.AddTutorial("Tutorial: press B to build");
-            Assert.Equal("Tutorial: press B to build", r.Last);
-            Assert.Equal(new[] { "A: one" }, r.Conversation);
-            r.AddTutorial("");
-            Assert.Equal("Tutorial: press B to build", r.Last);
+            var log = new MessageLog();
+            log.Add("Villager came in", MsgCategory.Customers);
+            log.Add("Sold candy", MsgCategory.Sales);
+            log.CycleCategory(1);
+            log.Clear();
+            Assert.Equal(MsgCategory.All, log.Current);
+            foreach (MsgCategory c in MessageLog.Categories) Assert.Equal(0, log.Count(c));
+            Assert.Null(log.Jump(toLast: true));
+            log.Add("New day", MsgCategory.Events);
+            Assert.Equal("New day", log.Jump(toLast: true));
         }
 
         [Fact]
@@ -67,6 +70,7 @@ namespace HometownStoreAccess.Tests
                 Assert.Equal(Loc.Get("fixed_game_version", "0.7.11A"), FixedText.Translate("Hometown Store Version: 0.7.11A"));
                 Assert.Equal(Loc.Get("fixed_version", "0.7.11A"), FixedText.Translate("Version: 0.7.11A"));
                 Assert.Equal(Loc.Get("money_baht", 50), FixedText.Translate("50 baht"));
+                Assert.Equal("อัพเกรด: " + Loc.Get("money_baht", 500), FixedText.Translate("อัพเกรด: 500 baht"));
                 Assert.NotEqual("LOAD GAME", FixedText.Translate("LOAD GAME"));
             }
             finally

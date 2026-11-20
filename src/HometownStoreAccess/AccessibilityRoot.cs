@@ -25,7 +25,33 @@ namespace HometownStoreAccess
         private float _sceneConfiguredAt;
 
         public string SceneName => _sceneName;
+
+        /// <summary>When the current scene finished loading (unscaled time).</summary>
+        public float SceneLoadedAt { get; private set; } = -100f;
         public bool InGame => _sceneName == SceneSetup.GameScene;
+
+        /// <summary>
+        /// Playing the game: in the game scene, not in the pause menu or the save screen, and none of
+        /// the mod's own screens (key list, settings) open. Only then are messages kept in the history,
+        /// and only then do the history keys work.
+        /// </summary>
+        public bool GameplayActive
+        {
+            get
+            {
+                if (!InGame || Overlay.IsOpen) return false;
+                try
+                {
+                    GlobeOption o = GlobeOption.Instance;
+                    if (o != null && o.optionPanel != null && o.GetOptionPanelActiveSelf()) return false;
+                }
+                catch
+                {
+                }
+                string id = Contexts.Current != null ? Contexts.Current.Id : null;
+                return id != "options" && id != "save_slots";
+            }
+        }
 
         private void Awake()
         {
@@ -33,6 +59,7 @@ namespace HometownStoreAccess
             SceneManager.sceneLoaded += OnSceneLoaded;
             AudioCues.Initialize(gameObject);
             DebugCommands.StateProvider = () => Contexts.DebugState();
+            SpeechService.HistoryEnabled = () => GameplayActive;
             Loc.SetLanguage(Plugin.Settings.ModLanguage.Value == "Auto" ? "en" : Plugin.Settings.ModLanguage.Value);
         }
 
@@ -48,6 +75,7 @@ namespace HometownStoreAccess
             // The very first scene is not always reported as Single; only ignore true additive loads.
             if (mode == LoadSceneMode.Additive && _sceneName.Length > 0) return;
             _sceneName = scene.name;
+            SceneLoadedAt = Time.unscaledTime;
             SceneCache.Clear();
             Contexts.Clear();
             EventAnnouncer.Reset();
@@ -55,6 +83,12 @@ namespace HometownStoreAccess
             FloorContext.ToolbarOpen = false;
             _sceneConfiguredAt = -1f;
             if (scene.name == SceneSetup.GameScene) SpeechService.Say(Loc.Get("loading_game"), true);
+            else
+            {
+                // Back in the menus: the game session's messages and conversation are over.
+                SpeechService.History.Clear();
+                SpeechService.Recall.Clear();
+            }
         }
 
         private void Update()

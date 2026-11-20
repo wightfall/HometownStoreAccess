@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
@@ -39,6 +40,15 @@ namespace HometownStoreAccess.Core
             ["SFX"] = "fixed_sound_volume",
             ["Save"] = "fixed_save",
             ["Return To Menu"] = "fixed_return_to_menu",
+            ["Selling is disabled during the tutorial."] = "fixed_no_selling_tutorial",
+            ["Enter text..."] = "fixed_save_name",
+            // Credits headings (the names stay as written).
+            ["Credit"] = "label_credits",
+            ["Developed by"] = "fixed_developed_by",
+            ["Core Team"] = "fixed_core_team",
+            ["Collaborators"] = "fixed_collaborators",
+            ["Testers"] = "fixed_testers",
+            ["Speical Thanks"] = "fixed_special_thanks",
             ["Portrait Collection"] = "fixed_portraits",
             ["Character Collection"] = "fixed_characters",
             ["Give All"] = "fixed_give_all",
@@ -90,6 +100,9 @@ namespace HometownStoreAccess.Core
             public string Key;
         }
 
+        private static readonly Regex Baht = new Regex(@"^(-?\d+) baht$", RegexOptions.IgnoreCase);
+        private static readonly Regex InnerBaht = new Regex(@"(?<![\w.])(-?\d+) baht\b", RegexOptions.IgnoreCase);
+
         private static readonly Pattern[] Patterns =
         {
             new Pattern { Regex = new Regex(@"^(-?\d+) baht$", RegexOptions.IgnoreCase), Key = "money_baht" },
@@ -116,6 +129,11 @@ namespace HometownStoreAccess.Core
         {
             if (string.IsNullOrEmpty(text)) return text;
             if (Exact.TryGetValue(text, out string key)) return Loc.Get(key);
+            // Amounts the game writes in English inside other text ("Upgrade: 500 baht").
+            if (text.IndexOf(" baht", StringComparison.OrdinalIgnoreCase) > 0 && !Baht.IsMatch(text))
+            {
+                text = InnerBaht.Replace(text, m => Loc.Get("money_baht", int.Parse(m.Groups[1].Value)));
+            }
             char first = text[0];
             // Cheap filter: every pattern starts with a digit, '-' or one of these letters.
             if (!(char.IsDigit(first) || first == '-' || first == 'L' || first == 'D' || first == 'S' || first == 'H' || first == 'V')) return text;

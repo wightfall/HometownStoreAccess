@@ -41,6 +41,17 @@ namespace HometownStoreAccess.Core
 
         public MsgCategory Current { get; private set; } = MsgCategory.All;
 
+        /// <summary>Forgets every message (a game session ended).</summary>
+        public void Clear()
+        {
+            foreach (MsgCategory c in Categories)
+            {
+                _buffers[c].Clear();
+                _positions[c] = -1;
+            }
+            Current = MsgCategory.All;
+        }
+
         public int Count(MsgCategory c) => _buffers[c].Count;
 
         /// <summary>Records a message in "All" and, if different, in its own category. Reading positions follow the newest.</summary>

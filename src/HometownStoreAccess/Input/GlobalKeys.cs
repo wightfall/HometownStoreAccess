@@ -44,10 +44,12 @@ namespace HometownStoreAccess.Input
                 else Overlay.Show(Overlay.Kind.Settings, root.Contexts.Current, root.InGame);
                 return true;
             }
-            if (HistoryKeys()) return true;
-            if (ModInput.Down(KeyCode.Backslash))
+            // The message history belongs to the game: its keys do nothing in the menus.
+            if (root.GameplayActive && HistoryKeys()) return true;
+            // Backslash: only inside a conversation.
+            if (ModInput.Down(KeyCode.Backslash) && root.Contexts.Current != null && root.Contexts.Current.Id == "dialog")
             {
-                RecallStory(root, ModInput.Shift);
+                RecallStory(ModInput.Shift);
                 return true;
             }
 
@@ -100,18 +102,12 @@ namespace HometownStoreAccess.Input
         }
 
         /// <summary>
-        /// Backslash: the latest conversation line or tutorial message again (on a tutorial page, the page).
-        /// Shift+Backslash: the whole latest conversation from its first line.
+        /// In a conversation: Backslash says the current line again, Shift+Backslash everything said so
+        /// far from the first line.
         /// </summary>
-        private static void RecallStory(AccessibilityRoot root, bool whole)
+        private static void RecallStory(bool whole)
         {
             StoryRecall recall = SpeechService.Recall;
-            ScreenContext c = root.Contexts.Current;
-            if (!whole && c != null && c.Id == "tutorial_pages")
-            {
-                ReadScreen(root);
-                return;
-            }
             string text;
             if (whole)
             {

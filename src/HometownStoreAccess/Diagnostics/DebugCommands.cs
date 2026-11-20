@@ -310,7 +310,8 @@ namespace HometownStoreAccess.Diagnostics
                     // open lottery | open vehicle: panels that are only reachable later in the game
                     if (arg == "lottery") UIPanelManager.Instance.OpenLotterySlot();
                     else if (arg == "vehicle") UIPanelManager.Instance.OpenVehiclePanel();
-                    else Log.Warn("open: lottery or vehicle");
+                    else if (arg == "characters") UIPanelManager.Instance.ToggleCharacterCollectionPanel();
+                    else Log.Warn("open: lottery, vehicle or characters");
                     break;
                 case "table":
                 {

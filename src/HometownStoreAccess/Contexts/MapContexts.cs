@@ -219,6 +219,13 @@ namespace HometownStoreAccess.Contexts
                 SpeechService.Say(Loc.Get("map_traveling"), true);
                 return;
             }
+            bool place = (node is Content_SelectLocation loc && loc.LocationID != null) || (node is Content_SelectSign sign && sign.TargetMap != null);
+            if (!place)
+            {
+                // Your own shop is only a marker on the map: the game does nothing when it is chosen.
+                SpeechService.Say(Loc.Get("map_your_shop_hint"), true);
+                return;
+            }
             UiUtil.Click(node.gameObject);
         }
 

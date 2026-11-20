@@ -18,9 +18,11 @@ namespace HometownStoreAccess.Contexts
         private readonly Func<string> _title;
         private readonly bool _includeTexts;
         private readonly Func<GameObject, bool> _skip;
+        private readonly string _helpKey;
 
-        public PanelContext(string id, int priority, Func<GameObject> root, Func<string> title, bool includeTexts = false, Func<GameObject, bool> skip = null)
+        public PanelContext(string id, int priority, Func<GameObject> root, Func<string> title, bool includeTexts = false, Func<GameObject, bool> skip = null, string helpKey = "help_panel")
         {
+            _helpKey = helpKey;
             _id = id;
             _priority = priority;
             _root = root;
@@ -48,9 +50,52 @@ namespace HometownStoreAccess.Contexts
 
         public override string ReadAll() => UiUtil.JoinTexts(SafeRoot(), false, ". ");
 
+        private string _spokenText;
+        private string _pendingText;
+        private float _pendingSince;
+        private float _nextCheck;
+
+        public override void OnEnter()
+        {
+            _spokenText = _includeTexts ? ReadAll() : null;
+            _pendingText = null;
+        }
+
+        /// <summary>
+        /// Text that appears while the panel is open (a letter being opened, the next tutorial page) is
+        /// read once it has stopped changing, so a typing animation is not read half-finished.
+        /// </summary>
+        public override void Tick()
+        {
+            if (!_includeTexts || Time.unscaledTime < _nextCheck) return;
+            _nextCheck = Time.unscaledTime + 0.2f;
+            string now = ReadAll();
+            if (now == _spokenText)
+            {
+                _pendingText = null;
+                return;
+            }
+            if (now != _pendingText)
+            {
+                _pendingText = now;
+                _pendingSince = Time.unscaledTime;
+                return;
+            }
+            if (Time.unscaledTime - _pendingSince < 0.5f) return;
+            string before = _spokenText ?? string.Empty;
+            _spokenText = now;
+            _pendingText = null;
+            if (string.IsNullOrEmpty(now)) return;
+            // Only the new part when the earlier text is still there.
+            string added = before.Length > 0 && now.StartsWith(before, StringComparison.Ordinal) ? now.Substring(before.Length).TrimStart('.', ' ') : now;
+            if (added.Length == 0) return;
+            AccessibilityRoot.Instance.Contexts.Refresh(false);
+            Speech.SpeechService.Say(added, false);
+        }
+
         public override IEnumerable<string> HelpLines()
         {
-            yield return Loc.Get("help_panel");
+            yield return Loc.Get(_helpKey);
         }
 
         private GameObject SafeRoot()

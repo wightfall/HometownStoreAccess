@@ -311,6 +311,11 @@ namespace HometownStoreAccess.Contexts
                 }
             }
             bool temp = Placement.Active;
+            if (_hadTemp && !temp)
+            {
+                // Escape (the game's own key) cancelled placing or moving: nothing changed.
+                if (Time.unscaledTime - Placement.PlacedAt > 0.5f) SpeechService.Say(Loc.Get("place_cancelled"), true);
+            }
             if (_hadTemp && !temp && mode == GameplayMode.BuildMode)
             {
                 // The ghost was placed or cancelled: go back to the blueprint list.
