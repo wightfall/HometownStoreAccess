@@ -3,8 +3,8 @@ using System.Collections.Generic;
 namespace HometownStoreAccess.Core
 {
     /// <summary>
-    /// Remembers the latest conversation (all its lines) and the latest tutorial message, so they can
-    /// be heard again with one key from any screen instead of searching the message history.
+    /// Remembers the lines of the latest conversation, so that inside the conversation the current
+    /// line (Backslash) or everything said so far (Shift+Backslash) can be heard again.
     /// </summary>
     public sealed class StoryRecall
     {
@@ -17,7 +17,7 @@ namespace HometownStoreAccess.Core
             _limit = limit;
         }
 
-        /// <summary>The newest conversation line or tutorial message.</summary>
+        /// <summary>The newest conversation line.</summary>
         public string Last { get; private set; }
 
         /// <summary>The lines of the current (or last) conversation, oldest first.</summary>
@@ -41,11 +41,6 @@ namespace HometownStoreAccess.Core
                 if (_conversation.Count > _limit) _conversation.RemoveAt(0);
             }
             Last = line;
-        }
-
-        public void AddTutorial(string text)
-        {
-            if (!string.IsNullOrEmpty(text)) Last = text;
         }
 
         public void Clear()

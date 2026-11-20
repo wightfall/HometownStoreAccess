@@ -13,6 +13,9 @@ namespace HometownStoreAccess.Game
     /// </summary>
     internal static class Placement
     {
+        /// <summary>When the mod last placed a building (unscaled time), to tell a placement from a cancel.</summary>
+        public static float PlacedAt = -100f;
+
         private static Vector3 _lastMouse;
 
         /// <summary>True when the keyboard, not the mouse, positions the ghost building.</summary>
@@ -131,6 +134,7 @@ namespace HometownStoreAccess.Game
             BuildingSystem.Instance.Refresh();
             AudioCues.Play(Cue.PlaceOk, FloorNav.Pan(FloorCursor.Row, FloorCursor.X));
             SpeechService.Say(Loc.Get("placed", name), true);
+            PlacedAt = Time.unscaledTime;
             return true;
         }
     }

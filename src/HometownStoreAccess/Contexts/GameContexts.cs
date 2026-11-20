@@ -27,7 +27,7 @@ namespace HometownStoreAccess.Contexts
             m.Register(new DialogLogContext());
             m.Register(new DialogContext());
             m.Register(new PanelContext("thanks", 78, () => SceneCache.Find("Thank For Demo"), () => Loc.Get("ctx_thanks"), includeTexts: true));
-            m.Register(new PanelContext("letter", 77, LetterRoot, () => Loc.Get("ctx_letter"), includeTexts: true, skip: SkipHiddenGroup));
+            m.Register(new PanelContext("letter", 77, LetterRoot, () => Loc.Get("ctx_letter"), includeTexts: true, skip: SkipHiddenGroup, helpKey: "help_letter"));
             m.Register(new PanelContext("tutorial_pages", 76, () => SceneCache.Find("Tutorial Temp"), () => Loc.Get("ctx_tutorial_pages"), includeTexts: true));
             m.Register(new SummaryContext());
             m.Register(new TradeContext());

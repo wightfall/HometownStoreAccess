@@ -181,7 +181,7 @@ namespace HometownStoreAccess.Speech
             if (string.IsNullOrEmpty(text)) return;
             Buffer.Add(text, interrupt);
             string clean = TextCleaner.Clean(text);
-            if (clean.Length > 0 && clean != _lastLogged)
+            if (clean.Length > 0 && clean != _lastLogged && (HistoryEnabled == null || HistoryEnabled()))
             {
                 _lastLogged = clean;
                 History.Add(clean, category);
@@ -191,7 +191,10 @@ namespace HometownStoreAccess.Speech
         /// <summary>Categorised history of everything spoken (reviewed with , . [ ]).</summary>
         public static readonly MessageLog History = new MessageLog();
 
-        /// <summary>The latest conversation and tutorial message, for Backslash and Shift+Backslash.</summary>
+        /// <summary>Whether spoken messages are kept in the history now: only while playing.</summary>
+        public static Func<bool> HistoryEnabled;
+
+        /// <summary>The latest conversation, for Backslash and Shift+Backslash inside it.</summary>
         public static readonly StoryRecall Recall = new StoryRecall();
         private static string _lastLogged;
 

@@ -56,7 +56,17 @@ namespace HometownStoreAccess.Contexts
             _pendingAdvance = false;
             _lastResponseCount = 0;
             _announcedLine = null;
-            SpeechService.Recall.StartConversation();
+            if (!_resumeConversation) SpeechService.Recall.StartConversation();
+            _resumeConversation = false;
+        }
+
+        /// <summary>Left for the game's Log view or a popup while the conversation is still open.</summary>
+        private bool _resumeConversation;
+
+        public override void OnExit()
+        {
+            DialogPanel p = Panel;
+            _resumeConversation = p != null && p.gameObject.activeInHierarchy;
         }
 
         public override string Title() => null;
@@ -191,12 +201,12 @@ namespace HometownStoreAccess.Contexts
 
         public override bool HandleInput()
         {
-            if ((ModInput.Down(KeyCode.Return) || ModInput.Down(KeyCode.KeypadEnter)) && ResponseCount(Panel) == 0)
-            {
-                Advance();
-                return true;
-            }
-            return false;
+            if (!(ModInput.Down(KeyCode.Return) || ModInput.Down(KeyCode.KeypadEnter)) || ResponseCount(Panel) != 0) return false;
+            // Enter on the Log or Skip button presses that button; anywhere else it moves the conversation on.
+            NavItem f = AccessibilityRoot.Instance.Contexts.Focused;
+            if (f != null && f.Group == Loc.Get("group_dialog_tools") && f.Key != "line") return false;
+            Advance();
+            return true;
         }
 
         public override string ReadAll() => CurrentLineText();

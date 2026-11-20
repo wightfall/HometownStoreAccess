@@ -116,12 +116,7 @@ namespace HometownStoreAccess.Game
                 if (key != _lastGuideKey)
                 {
                     _lastGuideKey = key;
-                    if (key != null)
-                    {
-                        string hint = Loc.Get("tutorial_hint", Loc.Get(key));
-                        SpeechService.Recall.AddTutorial(hint);
-                        SpeechService.Say(hint, false, MsgCategory.Tutorial);
-                    }
+                    if (key != null) SpeechService.Say(Loc.Get("tutorial_hint", Loc.Get(key)), false, MsgCategory.Tutorial);
                 }
             }
 
@@ -133,12 +128,7 @@ namespace HometownStoreAccess.Game
                 if (text != (before ?? string.Empty))
                 {
                     TutorialNotes[note] = text;
-                    if (text.Length > 0)
-                    {
-                        string spoken = Loc.Get("tutorial_note", text);
-                        SpeechService.Recall.AddTutorial(spoken);
-                        SpeechService.Say(spoken, false, MsgCategory.Tutorial);
-                    }
+                    if (text.Length > 0) SpeechService.Say(Loc.Get("tutorial_note", text), false, MsgCategory.Tutorial);
                 }
             }
         }
@@ -307,6 +297,10 @@ namespace HometownStoreAccess.Game
         private static void Postfix(int amount)
         {
             if (!Plugin.Settings.AnnounceCashChanges.Value || amount == 0) return;
+            // The game gives its starting money as the scene loads, before a save sets the real amount.
+            AccessibilityRoot root = AccessibilityRoot.Instance;
+            // (It does so before Unity reports the scene as loaded, while the mod still thinks it is in the menu.)
+            if (root != null && (!root.InGame || Time.unscaledTime - root.SceneLoadedAt < 2f)) return;
             SpeechService.Say(Loc.Get(amount > 0 ? "cash_plus" : "cash_minus", Mathf.Abs(amount), ResourceManager.Instance.cash), false, MsgCategory.Sales);
         }
     }

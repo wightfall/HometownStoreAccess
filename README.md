@@ -81,8 +81,10 @@ for help."
   you can listen to each sound cue. Page Up and Page Down jump between sections.
 - **F5** opens the mod settings.
 
-The game's own tutorial runs on the first day. The mod adds a key hint to each tutorial step. Press
-**J** (Ctrl+J in lists) to hear the current goal again.
+A new game starts with a letter: first choose whether you want the tutorial, then press Enter on
+**Open letter**, read it with the arrow keys, and press Enter on the letter to go on. The game's own
+tutorial runs on the first day. The mod adds a key hint to each tutorial step. Press **J** (Ctrl+J
+in lists) to hear the current goal again.
 
 ## Keys
 
@@ -119,8 +121,9 @@ to repeat. On the shop floor and in walk mode, letters work without Ctrl.
 | Shift+Comma, Shift+Period | First, last message |
 | Left bracket, Right bracket | Previous, next category |
 | Shift+Left bracket, Shift+Right bracket | First, last category |
-| Backslash | Hear the latest conversation line or tutorial message again, from any screen |
-| Shift+Backslash | Hear the whole latest conversation from its first line |
+
+These keys work while you play. The main menu, the pause menu, the save screen and the mod's own
+screens (key list, settings) are not recorded, and there the keys do nothing.
 
 ### In the game
 
@@ -183,9 +186,15 @@ appear in the output. Move them to storage with Enter.
 ### Dialog
 
 Lines are read automatically. Enter continues. Choose a reply with Up and Down, then press Enter;
-each reply also says what it leads to when the game shows that. Ctrl+R repeats the line.
-Backslash repeats the latest line from any screen, also after the conversation has closed, and
-Shift+Backslash reads the whole conversation from its first line.
+each reply also says what it leads to when the game shows that. The Speed up and Dialog log
+buttons are at the end of the list (Enter presses them; Escape closes the log).
+
+| Key | Action |
+| --- | --- |
+| Backslash | The current line again |
+| Shift+Backslash | The whole conversation so far, from its first line |
+
+These two keys work only during a conversation. On a controller, hold the left trigger for the line.
 
 ### Town map (evening)
 
@@ -203,7 +212,8 @@ End of the day finishes the evening. The map's own buttons (customers, event jou
 all stock, settings) are in the map section at the end of the list.
 
 If you closed a shop with Escape, choose the place you are at again: its button says **Go in
-again** and opens the shop without using a travel point.
+again** and opens the shop without using a travel point. Your own shop is only a marker on the map;
+you go back to it with End of the day.
 
 ### Shops on the map
 
@@ -234,7 +244,7 @@ Xbox-compatible (XInput) controllers work directly. Other controllers work throu
 | LB, RB | Previous, next section |
 | Start | Pause menu; hold for the mod settings (F5) |
 | Back | Help for this screen (F1); hold for the key list (Shift+F1) |
-| Left trigger | Repeat; hold to hear the latest conversation line (Backslash) |
+| Left trigger | Repeat; in a conversation, hold to hear the line again (Backslash) |
 | Right trigger | Status (day and time) |
 | Left stick click | Customers |
 | Right stick click | Pause or resume |
@@ -277,8 +287,9 @@ current category and say "name, n of m". Ctrl+Up and Ctrl+Down change the catego
 Everything the mod says is kept, and also sorted into categories: **all messages, customers,
 sales, dialog, events, shop, tutorial and notices**. Comma and Period step through the current
 category and Shift jumps to the first or last message. The bracket keys change the category.
-Backslash is a shortcut for the most common case: it repeats the latest conversation line or
-tutorial message, and Shift+Backslash reads the whole latest conversation.
+Only messages from playing are kept: the menus, the pause menu, the save screen and the mod's own
+screens are left out, and the history starts again when you go back to the main menu. During a
+conversation, Backslash and Shift+Backslash repeat its lines directly (see [Dialog](#dialog)).
 
 ## Sound cues
 
@@ -358,6 +369,10 @@ For any other language, you can translate both the mod and the game text with pl
   section of the settings file to keep them.
 - **Escape in a text box:** Escape in a text box (shop search, save names) only stops editing;
   press it again to close the screen.
+- **Everything went quiet or empty:** F3 is the game's own key for hiding its on-screen interface
+  (for screenshots). The mod says when it is hidden; press F3 again to show it.
+- **Saves:** saving from the pause menu (Save, then New save or an existing save) says "Saved as"
+  with the name. Shift+Enter renames a save and Delete removes it, in the save and load lists.
 
 ## Building from source
 
