@@ -43,6 +43,12 @@ namespace HometownStoreAccess.UI
                 if (_field != null && focused == null)
                 {
                     _finishedAt = UnityEngine.Time.unscaledTime;
+                    // Escape ended editing: the game closes the whole screen when Escape is released
+                    // (shop, map...), so keep that key from the game until it is let go.
+                    if (UnityEngine.Input.GetKey(UnityEngine.KeyCode.Escape) || UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.Escape))
+                    {
+                        Contexts.InputGuard.HoldUntilReleased(UnityEngine.KeyCode.Escape);
+                    }
                     string done = TextCleaner.Clean(_field.text);
                     SpeechService.Say(Loc.Get("edit_done", done.Length == 0 ? Loc.Get("state_empty") : done));
                 }

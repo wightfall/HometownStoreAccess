@@ -48,6 +48,11 @@ namespace HometownStoreAccess.Contexts
 
         public override string ReadAll() => UiUtil.JoinTexts(SafeRoot(), false, ". ");
 
+        public override IEnumerable<string> HelpLines()
+        {
+            yield return Loc.Get("help_panel");
+        }
+
         private GameObject SafeRoot()
         {
             try { return _root(); } catch { return null; }
@@ -119,6 +124,11 @@ namespace HometownStoreAccess.Contexts
         }
 
         public override string ReadAll() => MessageText();
+
+        public override IEnumerable<string> HelpLines()
+        {
+            yield return Loc.Get("help_popup");
+        }
 
         private string MessageText()
         {

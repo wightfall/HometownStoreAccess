@@ -163,7 +163,22 @@ namespace HometownStoreAccess.Contexts
                         items.Add(new TextItem(() => Loc.Get("goods_line", GameText.Name(set.shelf), set.amount, Mathf.CeilToInt(set.pricePerUnit)), "goodb:" + set.shelf.name) { Group = info });
                     }
                 }
-                UiScan.AddControl(items, p.travelToLocationButton, info);
+                LocationTradeManager ltm = LocationTradeManager.Instance;
+                if (prof != null && ltm != null && ltm.CurrentAtLocationProfile == prof && p.travelToLocationButton != null)
+                {
+                    // Already here (the shop was closed with Escape): the game's Travel button does nothing
+                    // when the player does not move, so open the place again directly (it costs no travel point).
+                    LocationProfile here = prof;
+                    items.Add(new ActionItem(() => Loc.Get("map_go_in_again"), () => ltm.ReadLocationProfile(here.locationTradeID), "travel_here")
+                    {
+                        Group = info,
+                        TargetObject = p.travelToLocationButton.gameObject,
+                    });
+                }
+                else
+                {
+                    UiScan.AddControl(items, p.travelToLocationButton, info);
+                }
             }
 
             string map = Loc.Get("group_map");
@@ -174,6 +189,8 @@ namespace HometownStoreAccess.Contexts
             if (close != null) UiScan.AddControl(items, close.GetComponent<Button>(), map, () => Loc.Get("label_close_map"));
             Transform hud = p.transform.Find("MainButton (1)");
             if (hud != null) UiScan.Add(items, hud.gameObject, map);
+            Transform stock = p.transform.Find("StorageSummary/StorageButton");
+            if (stock != null && stock.gameObject.activeInHierarchy) UiScan.AddControl(items, stock.GetComponent<Button>(), map, () => Loc.Get("label_storage_summary"));
         }
 
         private static LocationProfile InfoProfile(SelectLocationPanel p)
@@ -368,159 +385,8 @@ namespace HometownStoreAccess.Contexts
 
         public override IEnumerable<string> HelpLines()
         {
-            yield return Loc.Get("help_map");
+            yield return Loc.Get(_walkMode ? "help_walk" : "help_map");
         }
     }
 
-    /// <summary>
-    /// Buying goods or shelves at a location. Left/Right change the quantity in the basket (Shift: 10),
-    /// Enter adds one, I gives details; the basket, total and checkout follow.
-    /// </summary>
-    internal sealed class TradeContext : ScreenContext
-    {
-        public override string Id => "trade";
-        public override int Priority => 65;
-
-        private static TradePanel Panel => UIPanelManager.Instance != null ? UIPanelManager.Instance.tradePanel : null;
-
-        public override bool IsActive() => Panel != null && Panel.gameObject.activeInHierarchy;
-
-        public override string Title()
-        {
-            TradePanel p = Panel;
-            return TextCleaner.Join(", ", UiUtil.Text(p.locationNameText), Loc.Get("trade_cash", UiUtil.Text(p.currentCashText)));
-        }
-
-        public override void Build(List<NavItem> items)
-        {
-            TradePanel p = Panel;
-            if (p == null || p.locationProfile == null) return;
-            string tabs = Loc.Get("group_trade_tabs");
-            AddTabs(items, p.typeButtons, tabs);
-            AddTabs(items, p.filterButtons, Loc.Get("group_trade_filters"));
-            UiScan.AddControl(items, p.searchInputField, Loc.Get("group_trade_filters"), () => Loc.Get("label_search"));
-
-            string goods = Loc.Get("group_goods");
-            int count = 0;
-            foreach (Transform t in p.sellParent)
-            {
-                var set = t.GetComponent<ContentSellingSet>();
-                if (set == null || !t.gameObject.activeInHierarchy) continue;
-                Item item = set.contentItem != null && set.contentItem.gameObject.activeSelf ? set.contentItem._item : null;
-                Building shelf = item == null && set.contentBuilding != null ? set.contentBuilding._building : null;
-                if (item == null && shelf == null) continue;
-                count++;
-                items.Add(GoodsItem(p, item, shelf, goods));
-            }
-            if (count == 0) items.Add(new TextItem(Loc.Get("trade_nothing"), "nogoods") { Group = goods });
-
-            string basket = Loc.Get("group_basket");
-            foreach (var kv in p.basketItem.ToList()) items.Add(new TextItem(Loc.Get("item_stack", GameText.Name(kv.Key), kv.Value), "bi:" + kv.Key.name) { Group = basket });
-            foreach (var kv in p.basketShelf.ToList()) items.Add(new TextItem(Loc.Get("item_stack", GameText.Name(kv.Key), kv.Value), "bs:" + kv.Key.name) { Group = basket });
-            items.Add(new TextItem(() => Loc.Get("trade_totals", UiUtil.Text(p.summaryPriceText), UiUtil.Text(p.balanceSumText)), "totals") { Group = basket });
-            UiScan.AddControl(items, p.checkOutButton, basket, () => Loc.Get("label_checkout"));
-            Transform close = p.transform.Find("Close Button");
-            if (close != null) UiScan.AddControl(items, close.GetComponent<Button>(), basket, () => Loc.Get("label_close"));
-        }
-
-        private static void AddTabs(List<NavItem> items, List<TabButtonPrefab> tabs, string group)
-        {
-            if (tabs == null) return;
-            foreach (TabButtonPrefab tab in tabs)
-            {
-                if (tab == null || !tab.gameObject.activeInHierarchy) continue;
-                TabButtonPrefab t = tab;
-                items.Add(new ButtonItem(t.button, () => CategoryLabel(TabText(t)), "tab:" + group + ":" + TabText(t))
-                {
-                    Group = group,
-                    ValueFunc = () => t.isSelected ? Loc.Get("state_selected") : null,
-                });
-            }
-        }
-
-        /// <summary>Filter tabs show their name only on hover; fall back to that text.</summary>
-        private static string TabText(TabButtonPrefab t)
-        {
-            string s = UiUtil.Text(t.text);
-            return s.Length > 0 ? s : UiUtil.Text(t.shelfNameText);
-        }
-
-        /// <summary>The game labels filters with raw category names ("FoodAndSnack"); translate them.</summary>
-        private static string CategoryLabel(string raw)
-        {
-            string key = "cat_" + raw;
-            string tr = Loc.Get(key);
-            return tr == key ? TextCleaner.HumanizeName(raw) : tr;
-        }
-
-        private static NavItem GoodsItem(TradePanel p, Item item, Building shelf, string group)
-        {
-            string name = item != null ? GameText.Name(item) : GameText.Name(shelf);
-            string key = item != null ? "gi:" + item.name : "gs:" + shelf.name;
-            return new ActionItem(() => name, () => Change(p, item, shelf, 1), key)
-            {
-                Group = group,
-                ValueFunc = () => GoodsValue(p, item, shelf),
-                DetailFunc = () => GoodsDetail(p, item, shelf),
-                OnActivateAlt = () => Change(p, item, shelf, 10),
-                OnAdjust = (dir, large) =>
-                {
-                    Change(p, item, shelf, dir * (large ? 10 : 1));
-                    return true;
-                },
-            };
-        }
-
-        private static (int stock, float price, int inBasket) Data(TradePanel p, Item item, Building shelf)
-        {
-            if (item != null)
-            {
-                TradeItemSet s = p.locationProfile.currentItemList.FirstOrDefault(x => x.item == item);
-                p.basketItem.TryGetValue(item, out int n);
-                return (s != null ? s.amount : 0, s != null ? s.pricePerUnit : 0f, n);
-            }
-            TradeShelfSet ss = p.locationProfile.currentShelfList.FirstOrDefault(x => x.shelf == shelf);
-            p.basketShelf.TryGetValue(shelf, out int m);
-            return (ss != null ? ss.amount : 0, ss != null ? ss.pricePerUnit : 0f, m);
-        }
-
-        private static string GoodsValue(TradePanel p, Item item, Building shelf)
-        {
-            var (stock, price, inBasket) = Data(p, item, shelf);
-            return Loc.Get("goods_value", Mathf.CeilToInt(price), inBasket, stock);
-        }
-
-        private static string GoodsDetail(TradePanel p, Item item, Building shelf)
-        {
-            var (stock, price, _) = Data(p, item, shelf);
-            if (item != null)
-            {
-                int profit = Mathf.RoundToInt(item.marketValue - price);
-                return TextCleaner.Join(". ", GameText.ItemDetails(item), Loc.Get("goods_profit", Mathf.RoundToInt(item.marketValue), profit), Loc.Get("hint_trade"));
-            }
-            return TextCleaner.Join(". ", GameText.Name(shelf), GameText.Description(shelf), shelf is Shelf sh ? Loc.Get("can_hold", string.Join(", ", sh.storeAbleItems.Select(GameText.Name).ToArray())) : null, Loc.Get("hint_trade"));
-        }
-
-        private static void Change(TradePanel p, Item item, Building shelf, int delta)
-        {
-            var before = Data(p, item, shelf);
-            if (delta < 0) delta = -Mathf.Min(-delta, before.inBasket);
-            if (delta == 0)
-            {
-                AudioCues.Play(Cue.Edge);
-                SpeechService.Say(GoodsValue(p, item, shelf), true);
-                return;
-            }
-            if (item != null) p.ModifyBasketItemQuantity(item, delta);
-            else p.ModifyBasketShelfQuantity(shelf, delta);
-            var after = Data(p, item, shelf);
-            if (after.inBasket == before.inBasket) AudioCues.Play(Cue.Edge);
-            SpeechService.Say(TextCleaner.Join(", ", Loc.Get("in_basket", after.inBasket, after.stock), Loc.Get("trade_totals", UiUtil.Text(p.summaryPriceText), UiUtil.Text(p.balanceSumText))), true);
-        }
-
-        public override IEnumerable<string> HelpLines()
-        {
-            yield return Loc.Get("help_trade");
-        }
-    }
 }

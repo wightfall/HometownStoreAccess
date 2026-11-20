@@ -1,0 +1,5 @@
+# Game text translation shipped with Hometown Store Access.
+# Entries the game already translates are not listed; the game's own text is used for those.
+# To improve a line, put it in lang/th.game.txt: your file goes on top of this one.
+
+Dialog_Response_Name/Response_Event_Sell_TaoYeabLok_0_R2 = เซลส์แมนเต่าเหยียบโลก

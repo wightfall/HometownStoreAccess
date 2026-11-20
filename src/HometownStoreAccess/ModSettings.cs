@@ -32,6 +32,7 @@ namespace HometownStoreAccess
 
         public readonly ConfigEntry<bool> DebugLogging;
         public readonly ConfigEntry<bool> TestHooks;
+        public readonly ConfigEntry<bool> AllowDevCheats;
 
         public ModSettings(ConfigFile config)
         {
@@ -68,6 +69,7 @@ namespace HometownStoreAccess
 
             DebugLogging = config.Bind("Debug", "Verbose", false, "Write detailed diagnostic messages to the log.");
             TestHooks = config.Bind("Debug", "TestHooks", false, "Developer only: read commands from BepInEx/hsa_cmd.txt (UI dumps, simulated keys).");
+            AllowDevCheats = config.Bind("Debug", "AllowDevCheats", false, "Keep the game's hidden developer cheats when they were switched on (pressing F1 three times quickly). Off: the mod switches them off at start, since F1 is its help key.");
         }
 
         public ConfigEntry<float> CueVolume(Audio.Cue cue) => _cueVolumes[cue];

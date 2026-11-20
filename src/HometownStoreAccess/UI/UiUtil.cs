@@ -47,7 +47,8 @@ namespace HometownStoreAccess.UI
         /// Collects the texts under <paramref name="root"/> in hierarchy order. Input field placeholders
         /// are skipped; input fields contribute their current text instead.
         /// </summary>
-        public static List<string> CollectTexts(GameObject root, bool includeInactive, int max = 50)
+        /// <param name="skipRoots">Parts of the screen to leave out (read some other way).</param>
+        public static List<string> CollectTexts(GameObject root, bool includeInactive, int max = 50, ICollection<Transform> skipRoots = null)
         {
             var result = new List<string>();
             if (root == null) return result;
@@ -56,13 +57,14 @@ namespace HometownStoreAccess.UI
             {
                 if (input.placeholder is TMP_Text ph) skip.Add(ph);
             }
-            Collect(root.transform, includeInactive, skip, result, max);
+            Collect(root.transform, includeInactive, skip, result, max, skipRoots);
             return result;
         }
 
-        private static void Collect(Transform t, bool includeInactive, HashSet<TMP_Text> skip, List<string> result, int max)
+        private static void Collect(Transform t, bool includeInactive, HashSet<TMP_Text> skip, List<string> result, int max, ICollection<Transform> skipRoots)
         {
             if (result.Count >= max) return;
+            if (skipRoots != null && skipRoots.Contains(t)) return;
             if (!includeInactive && !t.gameObject.activeInHierarchy) return;
             var cg = t.GetComponent<CanvasGroup>();
             if (!includeInactive && cg != null && cg.alpha <= 0.01f) return;
@@ -81,7 +83,7 @@ namespace HometownStoreAccess.UI
                     if (!TextCleaner.IsBlank(s)) result.Add(s);
                 }
             }
-            for (int i = 0; i < t.childCount; i++) Collect(t.GetChild(i), includeInactive, skip, result, max);
+            for (int i = 0; i < t.childCount; i++) Collect(t.GetChild(i), includeInactive, skip, result, max, skipRoots);
         }
 
         public static string JoinTexts(GameObject root, bool includeInactive, string separator = ", ", int max = 50)

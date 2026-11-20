@@ -16,7 +16,15 @@ namespace HometownStoreAccess.Game
         public static string Description(Customer c) => c == null ? string.Empty : Safe(() => c.detailsKey.GetDescription(c.name, LanguageControl.CurrentLanguage), string.Empty);
         public static string Name(LocationTrade l) => l == null ? "?" : Safe(() => l.detailsKey.GetName(l.name), l.name);
         public static string Description(LocationTrade l) => l == null ? string.Empty : Safe(() => l.detailsKey.GetDescription(l.name), string.Empty);
-        public static string Name(CraftingRecipe r) => r == null ? Loc.Get("recipe_none") : Safe(() => r.detailsKey.GetName(r.name, LanguageControl.CurrentLanguage), r.name);
+        public static string Name(CraftingRecipe r)
+        {
+            if (r == null) return Loc.Get("recipe_none");
+            string n = Safe(() => r.detailsKey.GetName(r.name, LanguageControl.CurrentLanguage), null);
+            if (!string.IsNullOrEmpty(n)) return n;
+            // The demo's recipes have no names of their own (the game shows none): name them after what they make.
+            string[] outputs = r.itemOutput.Where(s => s != null && s.ID != null).Select(s => Name(s.ID)).Distinct().ToArray();
+            return outputs.Length > 0 ? string.Join(", ", outputs) : TextCleaner.HumanizeName(r.name);
+        }
         public static string Name(Journal j) => j == null ? "?" : Safe(() => j.detailsKey.GetName(j.name, LanguageControl.CurrentLanguage), j.name);
         public static string VehicleName(Vehicle v) => Safe(() => LocalizationManager.GetString(LocalizationTable.Vehicle_Name, v.ToString()), v.ToString());
 

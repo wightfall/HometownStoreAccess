@@ -86,6 +86,7 @@ namespace HometownStoreAccess
                 if (es != null && es.sendNavigationEvents) es.sendNavigationEvents = false;
 
                 TextEntry.Update();
+                Game.GameQuirks.Update();
                 if (InGame) EventAnnouncer.Update();
                 if (!TextEntry.Active && GlobalKeys.Handle(this)) return;
                 Contexts.Update();

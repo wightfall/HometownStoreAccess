@@ -122,6 +122,11 @@ namespace HometownStoreAccess.Contexts
             }
             UiScan.AddText(items, p.versionText);
         }
+
+        public override IEnumerable<string> HelpLines()
+        {
+            yield return Loc.Get("help_options");
+        }
     }
 
     /// <summary>Save / load slot list, including the new-save name prompt.</summary>

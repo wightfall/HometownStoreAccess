@@ -190,6 +190,9 @@ namespace HometownStoreAccess.Speech
 
         /// <summary>Categorised history of everything spoken (reviewed with , . [ ]).</summary>
         public static readonly MessageLog History = new MessageLog();
+
+        /// <summary>The latest conversation and tutorial message, for Backslash and Shift+Backslash.</summary>
+        public static readonly StoryRecall Recall = new StoryRecall();
         private static string _lastLogged;
 
         /// <summary>Speaks immediately (bypassing the frame buffer). Use sparingly.</summary>

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using DG.Tweening;
 using HometownStoreAccess.Core;
+using HometownStoreAccess.Game;
 using HometownStoreAccess.Input;
 using HometownStoreAccess.Speech;
 using HometownStoreAccess.UI;
@@ -55,6 +56,7 @@ namespace HometownStoreAccess.Contexts
             _pendingAdvance = false;
             _lastResponseCount = 0;
             _announcedLine = null;
+            SpeechService.Recall.StartConversation();
         }
 
         public override string Title() => null;
@@ -66,6 +68,7 @@ namespace HometownStoreAccess.Contexts
             _lastDialog = p._shownDialog;
             _lastLine = p._shownLineIndex;
             _announcedLine = CurrentLineText();
+            SpeechService.Recall.AddLine(_announcedLine);
             return _announcedLine;
         }
 
@@ -87,6 +90,7 @@ namespace HometownStoreAccess.Contexts
                 _lastDialog = p._shownDialog;
                 _lastLine = p._shownLineIndex;
                 string line = p._shownDialog != null ? CurrentLineText() : null;
+                if (!string.IsNullOrEmpty(line)) SpeechService.Recall.AddLine(line);
                 if (!string.IsNullOrEmpty(line) && line != _announcedLine && Plugin.Settings.ReadDialogAutomatically.Value)
                 {
                     _announcedLine = line;
@@ -99,6 +103,10 @@ namespace HometownStoreAccess.Contexts
                 p.OnNextPressed();
             }
             int responses = ResponseCount(p);
+            // Reply buttons of the previous conversation can linger while a new one starts: replies
+            // only count from the last line on.
+            // (While a new one is set up, no dialog is shown and the old buttons are not yet destroyed.)
+            if (p._shownDialog == null || p._shownLineIndex < p._shownDialog.dialogLines.Count - 1) responses = 0;
             if (responses != _lastResponseCount)
             {
                 _lastResponseCount = responses;
@@ -130,14 +138,17 @@ namespace HometownStoreAccess.Contexts
             foreach (Transform t in p.answerParent)
             {
                 var r = t.GetComponent<ContentRespond>();
-                if (r == null || !t.gameObject.activeInHierarchy) continue;
+                if (r == null || !t.gameObject.activeInHierarchy || p._shownDialog == null) continue;
                 any = true;
                 ContentRespond resp = r;
                 items.Add(new ButtonItem(resp.Button, () => UiUtil.Text(resp._title), "resp:" + resp.GetInstanceID())
                 {
                     Group = answers,
-                    ValueFunc = () => resp._currentResponse != null && resp._currentResponse.costMoney > 0 ? Loc.Get("response_cost", resp._currentResponse.costMoney) : null,
-                    DetailFunc = () => resp._currentResponse != null ? TextCleaner.Clean(resp._currentResponse.answerText.GetDescription(string.Empty, LanguageControl.CurrentLanguage)) : null,
+                    // The game shows the outcome of a reply ("Received 100 baht") on hover: say it with the reply.
+                    ValueFunc = () => TextCleaner.Join(", ",
+                        resp._currentResponse != null && resp._currentResponse.costMoney > 0 ? Loc.Get("response_cost", resp._currentResponse.costMoney) : null,
+                        ResponseOutcome(resp)),
+                    DetailFunc = () => ResponseOutcome(resp),
                 });
             }
             if (!any)
@@ -151,6 +162,15 @@ namespace HometownStoreAccess.Contexts
                 items.Add(new ButtonItem(p.skipPressedButton, () => Loc.Get("label_dialog_skip")) { Group = tools });
             }
             UiScan.AddControl(items, p.logButtonObject, tools, () => Loc.Get("label_dialog_log"));
+        }
+
+        /// <summary>The reply's description, unless it is empty, a placeholder or the reply text itself.</summary>
+        private static string ResponseOutcome(ContentRespond resp)
+        {
+            if (resp._currentResponse == null) return null;
+            string d = TextCleaner.Clean(resp._currentResponse.answerText.GetDescription(string.Empty, LanguageControl.CurrentLanguage));
+            if (string.IsNullOrEmpty(d) || d.Length < 2 || d == UiUtil.Text(resp._title)) return null;
+            return d;
         }
 
         private void Advance()
@@ -221,13 +241,21 @@ namespace HometownStoreAccess.Contexts
             // Start at the most recent line.
             AccessibilityRoot.Instance.Contexts.Refresh(false);
         }
+
+        public override IEnumerable<string> HelpLines()
+        {
+            yield return Loc.Get("help_dialog_log");
+        }
     }
 
     /// <summary>Reward popups (money, items, blueprints, new customers, new places, vehicles).</summary>
     internal sealed class CongratulationContext : ScreenContext
     {
-        private float _readAt;
         private CongratulationPanel _read;
+        private CongratulationPanel _pending;
+        private float _pendingSince;
+        private float _stableSince;
+        private string _lastContent;
 
         public override string Id => "congratulation";
         public override MsgCategory IntroCategory => MsgCategory.Events;
@@ -249,31 +277,69 @@ namespace HometownStoreAccess.Contexts
         public override void OnEnter()
         {
             _read = null;
-            _readAt = Time.unscaledTime + 0.15f;
+            _pending = null;
         }
 
         public override void Tick()
         {
             CongratulationPanel p = Panel;
-            if (p == null) return;
-            if (p != _read && Time.unscaledTime >= _readAt)
+            if (p == null || p == _read) return;
+            float now = Time.unscaledTime;
+            if (p != _pending)
             {
-                if (_read != null)
-                {
-                    // Next reward in the queue: wait a moment for its texts, then read.
-                    _read = p;
-                    _readAt = Time.unscaledTime + 0.15f;
-                    return;
-                }
-                _read = p;
-                SpeechService.Say(Content(p), false, MsgCategory.Events);
+                // A new reward (or the next one in the queue): give its texts a moment to appear.
+                _pending = p;
+                _pendingSince = now;
+                _lastContent = null;
+                return;
             }
+            if (now - _pendingSince < 0.15f) return;
+            string content = Content(p);
+            if (content != _lastContent)
+            {
+                _lastContent = content;
+                _stableSince = now;
+            }
+            // Counters (trust points) count up: read once the text settles, at the latest after 3 seconds.
+            if (now - _stableSince < 0.4f && now - _pendingSince < 3f) return;
+            _read = p;
+            SpeechService.Say(content, false, MsgCategory.Events);
         }
 
-        private static string Content(CongratulationPanel p)
+        internal static string Content(CongratulationPanel p)
         {
-            var texts = UiUtil.CollectTexts(p.gameObject, false, 30);
-            texts.RemoveAll(t => t == "999" || t == "x999");
+            var skip = new HashSet<Transform>();
+            var extra = new List<string>();
+            if (p.budgetTemplate != null && p.budgetTemplate.activeInHierarchy)
+            {
+                extra.Add(RewardText.Budget(p.hasMin, UiUtil.Text(p.budgetMinBase), UiUtil.Text(p.budgetMinFinal), p.hasMax, UiUtil.Text(p.budgetMaxBase), UiUtil.Text(p.budgetMaxFinal)));
+                if (p.budgetMin != null) skip.Add(p.budgetMin.transform);
+                if (p.budgetMax != null) skip.Add(p.budgetMax.transform);
+            }
+            if (p.itemNeedTemplate != null && p.itemNeedTemplate.gameObject.activeInHierarchy && p.listItemNeedPopup != null)
+            {
+                // New wishes are only pictures: name the items.
+                var names = new List<string>();
+                foreach (GameObject g in p.listItemNeedPopup)
+                {
+                    if (g == null) continue;
+                    skip.Add(g.transform);
+                    ContentItem c = g.GetComponent<ContentItem>();
+                    if (c != null && c._item != null) names.Add(GameText.Name(c._item));
+                }
+                if (names.Count > 0) extra.Add(string.Join(", ", names.ToArray()));
+            }
+            if (p.sliderTemplate != null && p.sliderTemplate.activeInHierarchy && p.profileToAnimate != null)
+            {
+                // Trust points count up for a second and a half: read the result straight away.
+                if (p.sliderValueText != null) skip.Add(p.sliderValueText.transform);
+                if (p.finalValueText != null) skip.Add(p.finalValueText.transform);
+                extra.Add("+" + p.expToAdd);
+                CustomerProfile now = CustomerManager.Instance != null ? CustomerManager.Instance.GetCustomerProfile(p.profileToAnimate.customerID) : null;
+                if (now != null) extra.Add(Loc.Get("reward_level", now.trustLevel));
+            }
+            List<string> texts = RewardText.Prepare(UiUtil.CollectTexts(p.gameObject, false, 40, skip));
+            texts.AddRange(extra);
             return TextCleaner.Join(". ", texts.ToArray());
         }
 
@@ -306,5 +372,10 @@ namespace HometownStoreAccess.Contexts
         }
 
         public override string ReadAll() => Panel != null ? Content(Panel) : null;
+
+        public override IEnumerable<string> HelpLines()
+        {
+            yield return Loc.Get("help_reward");
+        }
     }
 }

@@ -109,6 +109,11 @@ namespace HometownStoreAccess.Contexts
             }
             return false;
         }
+
+        public override IEnumerable<string> HelpLines()
+        {
+            yield return Loc.Get("help_key_list");
+        }
     }
 
     /// <summary>F5: every mod option, sound cue volumes, and reset to defaults.</summary>

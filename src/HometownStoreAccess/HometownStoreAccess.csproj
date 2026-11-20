@@ -51,8 +51,12 @@
     <PropertyGroup>
       <PluginDeployDir>$(GameDir)\BepInEx\plugins\HometownStoreAccess</PluginDeployDir>
     </PropertyGroup>
-    <MakeDir Directories="$(PluginDeployDir)" />
+    <ItemGroup>
+      <BuiltInTranslation Include="$(MSBuildThisFileDirectory)..\..\translations\*.game.txt" />
+    </ItemGroup>
+    <MakeDir Directories="$(PluginDeployDir);$(PluginDeployDir)\translations" />
     <Copy SourceFiles="$(TargetDir)HometownStoreAccess.dll;$(TargetDir)HometownStoreAccess.Core.dll;$(TargetDir)prism.dll" DestinationFolder="$(PluginDeployDir)" />
+    <Copy SourceFiles="@(BuiltInTranslation)" DestinationFolder="$(PluginDeployDir)\translations" />
     <Message Importance="high" Text="Deployed to $(PluginDeployDir)" />
   </Target>
 </Project>

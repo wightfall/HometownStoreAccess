@@ -18,6 +18,7 @@ other screen readers, and falls back to Windows speech (OneCore or SAPI) when no
 - [Install](#install)
 - [Getting started](#getting-started)
 - [Keys](#keys)
+- [Categories](#categories)
 - [Shop floor scanner](#shop-floor-scanner)
 - [Message history](#message-history)
 - [Sound cues](#sound-cues)
@@ -101,13 +102,14 @@ to repeat. On the shop floor and in walk mode, letters work without Ctrl.
 | Page Up, Page Down / Tab, Shift+Tab | Previous or next section |
 | Home, End | First or last item |
 | Letters | Jump to the next item starting with that letter |
+| Ctrl+Up, Ctrl+Down | Previous or next category, on screens with categories (see [Categories](#categories)) |
 | Ctrl+I | Details about the focused item (tooltip, prices, contents) |
 | Ctrl+R | Repeat the last message |
 | Ctrl+Shift+R | Read the whole screen |
 | F1 | Keys for this screen |
 | Shift+F1 | Key list and sound cue preview |
 | F5 | Mod settings |
-| Escape | Back, close, or open the pause menu, as in the game |
+| Escape | Back, close, or open the pause menu, as in the game. In a text box, Escape only stops editing. |
 
 ### Message history
 
@@ -117,6 +119,8 @@ to repeat. On the shop floor and in walk mode, letters work without Ctrl.
 | Shift+Comma, Shift+Period | First, last message |
 | Left bracket, Right bracket | Previous, next category |
 | Shift+Left bracket, Shift+Right bracket | First, last category |
+| Backslash | Hear the latest conversation line or tutorial message again, from any screen |
+| Shift+Backslash | Hear the whole latest conversation from its first line |
 
 ### In the game
 
@@ -152,6 +156,7 @@ Hold Ctrl while a list is open.
 | Key | Action |
 | --- | --- |
 | Up, Down | Choose a building from your blueprints |
+| Ctrl+Up, Ctrl+Down | Show one kind of building: shelves, storage, machines, cashiers, decorations |
 | Enter | Start placing it |
 | Shift+Enter | Sell one |
 | Left, Right (while placing) | Move it. You hear whether it fits and what blocks it. |
@@ -166,17 +171,21 @@ Hold Ctrl while a list is open.
 Each has two lists: the building's items and your storage (or the delivery truck). Tab jumps
 between them. Enter moves the whole stack to the other side, Shift+Enter moves half and Ctrl+Enter
 moves one. Ctrl+I describes an item: price, how it stacks, and which shelves it fits on. The
-actions section has the move-everything buttons and Close.
+actions section has the move-everything buttons and Close. When the goods belong to more than one
+category, Ctrl+Up and Ctrl+Down (or the Category item at the top) show one category at a time.
 
 ### Machines
 
-Choose a recipe, set the daily amount with Left and Right on Daily limit, and move ingredients from
-storage into the input. Finished goods appear in the output. Move them to storage with Enter.
+Choose a recipe (the list opens on the recipe the machine uses now), set the daily amount with
+Left and Right on Daily limit, and move ingredients from storage into the input. Finished goods
+appear in the output. Move them to storage with Enter.
 
 ### Dialog
 
-Lines are read automatically. Enter continues. Choose a reply with Up and Down, then press Enter.
-Ctrl+R repeats the line.
+Lines are read automatically. Enter continues. Choose a reply with Up and Down, then press Enter;
+each reply also says what it leads to when the game shows that. Ctrl+R repeats the line.
+Backslash repeats the latest line from any screen, also after the conversation has closed, and
+Shift+Backslash reads the whole conversation from its first line.
 
 ### Town map (evening)
 
@@ -190,18 +199,24 @@ Ctrl+R repeats the line.
 | I (walk mode) | Where you are and the nearest place |
 | W (walk mode) | Leave walk mode |
 
-End of the day finishes the evening.
+End of the day finishes the evening. The map's own buttons (customers, event journal, daily summary,
+all stock, settings) are in the map section at the end of the list.
+
+If you closed a shop with Escape, choose the place you are at again: its button says **Go in
+again** and opens the shop without using a travel point.
 
 ### Shops on the map
 
-The screen has four sections, and Page Up and Page Down move between them:
+The screen has these sections, and Page Up and Page Down move between them:
 
-- **Types**: goods, or buildings (shelves and furniture). Enter switches between them.
-- **Filters**: narrow the list by kind of goods, or type into the search box.
-- **Goods**: everything this place sells, with stock and price. Right adds one to the basket, Left
-  removes one, and holding Shift changes ten at a time. Ctrl+I describes an item and the profit
-  you make on it.
-- **Basket**: what you are buying, the total and what money is left, then Check out and Close.
+- **Filters**: the Category item and the search box. Ctrl+Up and Ctrl+Down (or Left and Right on
+  Category) step through: all products, all goods, each kind of goods, all buildings, and each kind
+  of building. The game's own tabs follow, so a sighted helper sees the same list.
+- **Goods** and **Buildings**: everything this place sells, with price and stock ("sold out" when
+  none is left). Right adds one to the basket, Left removes one, and holding Shift changes ten at
+  a time. Ctrl+I describes an item and the profit you make on it.
+- **Basket**: what you are buying (change amounts here too), the total and what money is left,
+  then Check out and Close.
 
 The goods arrive in your delivery truck the next morning.
 
@@ -217,12 +232,30 @@ Xbox-compatible (XInput) controllers work directly. Other controllers work throu
 | Y | Details |
 | B | Back |
 | LB, RB | Previous, next section |
-| Start | Pause menu |
-| Back | Help for this screen (F1) |
-| Left trigger | Repeat |
+| Start | Pause menu; hold for the mod settings (F5) |
+| Back | Help for this screen (F1); hold for the key list (Shift+F1) |
+| Left trigger | Repeat; hold to hear the latest conversation line (Backslash) |
 | Right trigger | Status (day and time) |
 | Left stick click | Customers |
 | Right stick click | Pause or resume |
+| Right stick up, down | Previous, next category (Ctrl+Up, Ctrl+Down) |
+| Right stick left, right | Older, newer message (Comma, Period) |
+
+## Categories
+
+Screens with many kinds of things have categories. Ctrl+Up and Ctrl+Down change the category from
+anywhere on the screen, and a **Category** item at the top of the list does the same with Left and
+Right. The first choice always shows everything. After a change you hear the category and how many
+entries it has, and the focus moves to the first one.
+
+- **Shops on the map**: all products, goods, each kind of goods, buildings, each kind of building
+- **Build mode**: shelves, storage, machines, cashiers, decorations
+- **All stock** (G, or the toolbar and map button): each kind of goods
+- **Shelves, storage and the delivery truck**: each kind of goods
+- **Event journal**: events in progress and finished events
+
+A screen opens again with everything shown. On the shop floor, Ctrl+Up and Ctrl+Down change the
+scanner category instead.
 
 ## Shop floor scanner
 
@@ -244,6 +277,8 @@ current category and say "name, n of m". Ctrl+Up and Ctrl+Down change the catego
 Everything the mod says is kept, and also sorted into categories: **all messages, customers,
 sales, dialog, events, shop, tutorial and notices**. Comma and Period step through the current
 category and Shift jumps to the first or last message. The bracket keys change the category.
+Backslash is a shortcut for the most common case: it repeats the latest conversation line or
+tutorial message, and Shift+Backslash reads the whole latest conversation.
 
 ## Sound cues
 
@@ -293,6 +328,12 @@ makes all the game's languages available: English, Thai, Japanese, Indonesian an
 Chinese. Choose them in the game language setting (F5, or the Options screen). The mod's own messages
 are translated into the same five languages.
 
+The game's Japanese, Indonesian and Chinese text is mostly untranslated in the demo. The mod ships
+complete translations of the game text for these languages (story, items, places, customers and
+menus), in `BepInEx\plugins\HometownStoreAccess\translations`. Text the game still lacks falls back
+to English instead of showing an error. Some captions the game leaves in English in every language
+("Next Day", "Quit To OS", the reward screen and others) are spoken in your language too.
+
 For any other language, you can translate both the mod and the game text with plain text files in
 `BepInEx\plugins\HometownStoreAccess\lang`. Changes load while you play, without restarting. See
 [docs/TRANSLATING.md](docs/TRANSLATING.md).
@@ -311,6 +352,12 @@ For any other language, you can translate both the mod and the game text with pl
   wrong.
 - **The game opens with the wrong language:** set the game language in F5. Any
   `<code>.game.txt` file in the lang folder adds that language.
+- **Developer cheats:** the game turns on hidden developer cheats when F1 is pressed three times
+  within a second. Since F1 is the mod's help key, the mod stops those presses from counting and
+  switches the cheats off when the game starts. Set `AllowDevCheats = true` in the `[Debug]`
+  section of the settings file to keep them.
+- **Escape in a text box:** Escape in a text box (shop search, save names) only stops editing;
+  press it again to close the screen.
 
 ## Building from source
 

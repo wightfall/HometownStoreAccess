@@ -22,6 +22,16 @@ namespace HometownStoreAccess.UI
             ["ShowSkin/ConfirmButton"] = "label_confirm_skin",
             ["Main/Language"] = "label_language",
             ["OptionBG/Language"] = "label_language",
+            // The game leaves these button texts in English in every language.
+            ["ConfirmPanel/Confirm"] = "label_confirm",
+            ["ConfirmPanel/Cancel"] = "label_cancel",
+            ["InputName Panel/ConfirmButton"] = "label_confirm",
+            ["InputName Panel/Cancel Button"] = "label_cancel",
+            ["NotiflyPanel/ConfirmButton"] = "label_ok",
+            // Toolbar buttons whose captions are hidden (not refreshed on a language change) or hard-coded.
+            ["Main_Interface/SkipDayButton"] = "label_skip_day",
+            ["StorageSummary/StorageButton"] = "label_storage_summary",
+            ["MainButton/BuildButton"] = "label_build_mode",
         };
 
         private static readonly Dictionary<string, string> ByName = new Dictionary<string, string>
@@ -51,6 +61,8 @@ namespace HometownStoreAccess.UI
             ["PlusButton"] = "label_plus1",
             ["Plus10Button"] = "label_plus10",
             ["Letter"] = "label_open_letter",
+            ["Option"] = "label_options",
+            ["Credit"] = "label_credits",
         };
 
         /// <summary>Returns the localized override label, or null when the game's own text should be used.</summary>

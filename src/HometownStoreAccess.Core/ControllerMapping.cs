@@ -43,6 +43,13 @@ namespace HometownStoreAccess.Core
         Status,
         Customers,
         TogglePause,
+        CategoryPrevious,
+        CategoryNext,
+        HistoryOlder,
+        HistoryNewer,
+        KeyList,
+        ModSettings,
+        RecallStory,
     }
 
     /// <summary>Snapshot of a controller in logical form (after the stick dead zone).</summary>
@@ -50,19 +57,25 @@ namespace HometownStoreAccess.Core
     {
         public PadButtons Buttons;
         public float LeftX, LeftY;
+        public float RightX, RightY;
         public byte LeftTrigger, RightTrigger;
 
         public bool StickUp => LeftY > 0.55f;
         public bool StickDown => LeftY < -0.55f;
         public bool StickLeft => LeftX < -0.55f;
         public bool StickRight => LeftX > 0.55f;
+        public bool RightStickUp => RightY > 0.55f && Math.Abs(RightY) >= Math.Abs(RightX);
+        public bool RightStickDown => RightY < -0.55f && Math.Abs(RightY) >= Math.Abs(RightX);
+        public bool RightStickLeft => RightX < -0.55f && Math.Abs(RightX) > Math.Abs(RightY);
+        public bool RightStickRight => RightX > 0.55f && Math.Abs(RightX) > Math.Abs(RightY);
         public bool LeftTriggerDown => LeftTrigger > 128;
         public bool RightTriggerDown => RightTrigger > 128;
     }
 
     /// <summary>
-    /// Converts controller state changes into mod actions. Directional input auto-repeats while held;
-    /// all other buttons fire once per press.
+    /// Converts controller state changes into mod actions. Directional input (and the right stick's
+    /// message history) auto-repeats while held; the right stick's category steps and all buttons fire
+    /// once per press.
     /// </summary>
     public sealed class ControllerMapping
     {
@@ -70,7 +83,15 @@ namespace HometownStoreAccess.Core
         private readonly KeyRepeater _down = new KeyRepeater();
         private readonly KeyRepeater _left = new KeyRepeater();
         private readonly KeyRepeater _right = new KeyRepeater();
+        private readonly KeyRepeater _older = new KeyRepeater();
+        private readonly KeyRepeater _newer = new KeyRepeater();
         private PadState _previous;
+
+        /// <summary>Holding Back or Start this long (seconds) gives their second action.</summary>
+        public const double LongPress = 0.6;
+
+        private double _backDownAt = -1, _startDownAt = -1, _ltDownAt = -1;
+        private bool _backLongFired, _startLongFired, _ltLongFired;
 
         private static readonly (PadButtons button, PadAction action)[] Presses =
         {
@@ -78,8 +99,6 @@ namespace HometownStoreAccess.Core
             (PadButtons.X, PadAction.ActivateAlt),
             (PadButtons.Y, PadAction.Details),
             (PadButtons.B, PadAction.Back),
-            (PadButtons.Start, PadAction.Pause),
-            (PadButtons.Back, PadAction.Help),
             (PadButtons.RightShoulder, PadAction.NextSection),
             (PadButtons.LeftShoulder, PadAction.PreviousSection),
             (PadButtons.LeftThumb, PadAction.Customers),
@@ -104,10 +123,39 @@ namespace HometownStoreAccess.Core
                 bool wasDown = (_previous.Buttons & button) != 0;
                 if (isDown && !wasDown) actions.Add(action);
             }
-            if (state.LeftTriggerDown && !_previous.LeftTriggerDown) actions.Add(PadAction.Repeat);
+            // Back: tap for the keys of this screen, hold for the key list. Start: tap for the pause menu,
+            // hold for the mod settings. Taps fire on release, holds as soon as the time has passed.
+            TapOrHold((state.Buttons & PadButtons.Back) != 0, (_previous.Buttons & PadButtons.Back) != 0, now, ref _backDownAt, ref _backLongFired, PadAction.Help, PadAction.KeyList, actions);
+            TapOrHold((state.Buttons & PadButtons.Start) != 0, (_previous.Buttons & PadButtons.Start) != 0, now, ref _startDownAt, ref _startLongFired, PadAction.Pause, PadAction.ModSettings, actions);
+            // Left trigger: tap repeats the last message, hold repeats the latest conversation line.
+            TapOrHold(state.LeftTriggerDown, _previous.LeftTriggerDown, now, ref _ltDownAt, ref _ltLongFired, PadAction.Repeat, PadAction.RecallStory, actions);
             if (state.RightTriggerDown && !_previous.RightTriggerDown) actions.Add(PadAction.Status);
+            // Right stick: up and down step the category, left and right the message history.
+            if (state.RightStickUp && !_previous.RightStickUp) actions.Add(PadAction.CategoryPrevious);
+            if (state.RightStickDown && !_previous.RightStickDown) actions.Add(PadAction.CategoryNext);
+            if (_older.Update(state.RightStickLeft, now)) actions.Add(PadAction.HistoryOlder);
+            if (_newer.Update(state.RightStickRight, now)) actions.Add(PadAction.HistoryNewer);
             _previous = state;
             return actions;
+        }
+
+        private static void TapOrHold(bool isDown, bool wasDown, double now, ref double downAt, ref bool longFired, PadAction tap, PadAction hold, List<PadAction> actions)
+        {
+            if (isDown && !wasDown)
+            {
+                downAt = now;
+                longFired = false;
+            }
+            else if (isDown && !longFired && downAt >= 0 && now - downAt >= LongPress)
+            {
+                longFired = true;
+                actions.Add(hold);
+            }
+            else if (!isDown && wasDown)
+            {
+                if (!longFired) actions.Add(tap);
+                downAt = -1;
+            }
         }
 
         /// <summary>Applies a radial dead zone and normalises a raw thumbstick axis pair to -1..1.</summary>

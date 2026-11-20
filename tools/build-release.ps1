@@ -87,6 +87,8 @@ Copy-Item (Join-Path $root "README.md") (Join-Path $plugin "README.txt")
 Copy-Item (Join-Path $root "LICENSE") (Join-Path $plugin "LICENSE.txt")
 Copy-Item (Join-Path $root "THIRD-PARTY-NOTICES.md") (Join-Path $plugin "THIRD-PARTY-NOTICES.txt")
 Copy-Item (Join-Path $root "docs\TRANSLATING.md") (Join-Path $plugin "lang\README.txt")
+New-Item -ItemType Directory -Force (Join-Path $plugin "translations") | Out-Null
+Get-ChildItem (Join-Path $root "translations") -Filter "*.game.txt" | ForEach-Object { Copy-Item $_.FullName (Join-Path $plugin "translations") }
 Copy-Item (Join-Path $root "lib\prism\LICENSE-prism-MPL-2.0.txt") $licenses
 Copy-Item (Join-Path $root "lib\prism\third-party\nvdaController\lgpl-2.1.txt") (Join-Path $licenses "BepInEx-and-Doorstop-LGPL-2.1.txt")
 Copy-Item -Recurse (Join-Path $root "lib\prism\third-party") (Join-Path $licenses "prism-third-party")
