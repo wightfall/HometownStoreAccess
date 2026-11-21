@@ -126,6 +126,10 @@ game language, Options, Credits, Discord and the music switch. On Game language,
 switch the language at once and Enter goes on to the next one. Continue, New game and loading a save
 say "Loading" as soon as you press Enter.
 
+Two buttons act at once, without asking, and say so when you reach them: Exit closes the game, and
+New game starts a new one whose autosave, from its second day, replaces the game that Continue loads.
+To keep your current game, save it under its own name first (pause menu, Save).
+
 Options (the pause menu in the game) has the sections General (full screen, show info, game
 language), Sound (overall, music and effects volume), Game (save, back to the main menu, quit; only
 in the game) and About (the version).
@@ -149,7 +153,7 @@ Hold Ctrl while a list is open.
 | Key | Action |
 | --- | --- |
 | C | Money |
-| T | Day, phase and time, or travel points in the evening |
+| T | Day, phase and time (travel points in the evening), money and shop level |
 | P | Pause or resume while the shop is open |
 | 1, 2, 3 | Normal, double, fast game speed |
 | N | Next phase: open the shop, go to the map, or end the day |
@@ -225,6 +229,9 @@ These two keys work only during a conversation. On a controller, hold the left t
 | Enter (walk mode) | Visit the place you are standing on |
 | I (walk mode) | Where you are and the nearest place |
 | W (walk mode) | Leave walk mode |
+
+Each place also says when it has an event from the event journal or is new, and a road sign says
+when the area it leads to has such a place, like the game's markers on the map.
 
 End of the day finishes the evening. The map's own buttons (customers, event journal, daily summary,
 all stock, settings) are in the map section at the end of the list.
@@ -363,6 +370,11 @@ complete translations of the game text for these languages (story, items, places
 menus), in `BepInEx\plugins\HometownStoreAccess\translations`. Text the game still lacks falls back
 to English instead of showing an error. Some captions the game leaves in English in every language
 ("Next Day", "Quit To OS", the reward screen and others) are spoken in your language too.
+
+Language names are also said in English ("ไทย, Thai", "日本語, Japanese"), so you always hear which
+language you picked. With the mod language on Automatic, the mod speaks the game's language. If your
+voice cannot read Japanese or Chinese letters, set the mod language to your own in F5: the game can
+then show another language while the mod keeps speaking yours.
 
 For any other language, you can translate both the mod and the game text with plain text files in
 `BepInEx\plugins\HometownStoreAccess\lang`. Changes load while you play, without restarting. See

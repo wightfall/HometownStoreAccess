@@ -527,6 +527,8 @@ namespace HometownStoreAccess.Contexts
                 parts.Add(Loc.Get("travel_status", lt.currentTravelPoint, lt.maxTravelPoint, GameText.VehicleName(lt.currentVehicle)));
             }
             if (ResourceManager.Instance != null) parts.Add(GameText.Money(ResourceManager.Instance.cash));
+            // The game shows the shop's level only through its size; customers' trust needs it.
+            if (StoreManager.Instance != null) parts.Add(Loc.Get("status_shop_level", StoreManager.Instance.StoreLevel + 1));
             return TextCleaner.Join(", ", parts.ToArray());
         }
 
