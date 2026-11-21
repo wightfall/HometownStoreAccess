@@ -21,8 +21,13 @@ namespace HometownStoreAccess.UI
         private readonly List<string> _keys = new List<string>();
         private readonly NavCursor _cursor = new NavCursor();
         private readonly Dictionary<string, string> _rememberedFocus = new Dictionary<string, string>();
+        // Contexts whose screen closed (not just covered by another one) since they were left.
+        private readonly HashSet<string> _closedSinceLeft = new HashSet<string>();
         private float _nextRebuild;
         private bool _announceFocusAfterRebuild;
+        // When the announcement was asked for: a list that is empty for a moment (a screen changing)
+        // is given a second to fill before "nothing here" is said.
+        private float _announceAskedAt;
         private string _lastAnnouncedGroup;
         private float _enterGuardUntil;
 
@@ -60,6 +65,7 @@ namespace HometownStoreAccess.UI
             _keys.Clear();
             _cursor.Reset(_keys);
             _rememberedFocus.Clear();
+            _closedSinceLeft.Clear();
         }
 
         public void Update()
@@ -84,7 +90,7 @@ namespace HometownStoreAccess.UI
             try { Current.Tick(); } catch (Exception e) { Log.Error("Context " + Current.Id + " tick failed: " + e); }
             if (t2 != 0 && Current != null) Diagnostics.Perf.Stop("contexts.tick:" + Current.Id, t2);
             // The game closes sub-lists itself when Escape is released: say where the focus went.
-            if (UnityEngine.Input.GetKeyUp(KeyCode.Escape)) _announceFocusAfterRebuild = true;
+            if (UnityEngine.Input.GetKeyUp(KeyCode.Escape)) AskFocusAnnouncement();
 
             if (TextEntry.Active) return;
             bool enter = ModInput.Down(KeyCode.Return) || ModInput.Down(KeyCode.KeypadEnter);
@@ -98,12 +104,18 @@ namespace HometownStoreAccess.UI
         public void Refresh(bool announceFocus)
         {
             if (Current == null) return;
-            _announceFocusAfterRebuild |= announceFocus;
+            if (announceFocus) AskFocusAnnouncement();
             Rebuild(false);
         }
 
         /// <summary>Asks the next rebuild to re-announce focus when the focused item vanished (after an action).</summary>
-        public void AnnounceFocusIfChanged() => _announceFocusAfterRebuild = true;
+        public void AnnounceFocusIfChanged() => AskFocusAnnouncement();
+
+        private void AskFocusAnnouncement()
+        {
+            if (!_announceFocusAfterRebuild) _announceAskedAt = Time.unscaledTime;
+            _announceFocusAfterRebuild = true;
+        }
 
         public string DebugState()
         {
@@ -150,6 +162,10 @@ namespace HometownStoreAccess.UI
                 if (_cursor.FocusedKey != null) _rememberedFocus[Current.Id] = _cursor.FocusedKey;
                 if (Current.GuardsEnterOnExit) _enterGuardUntil = Time.unscaledTime + 0.4f;
                 SafeExit(Current);
+                bool stillOpen;
+                try { stillOpen = Current.IsActive(); } catch { stillOpen = false; }
+                if (!stillOpen) _closedSinceLeft.Add(Current.Id);
+                else _closedSinceLeft.Remove(Current.Id);
             }
             Current = next;
             _items.Clear();
@@ -162,7 +178,8 @@ namespace HometownStoreAccess.UI
 
             BuildItems();
             string remembered = null;
-            if (!Current.ResetFocusOnEnter) _rememberedFocus.TryGetValue(Current.Id, out remembered);
+            bool newVisit = _closedSinceLeft.Remove(Current.Id);
+            if (!Current.ResetFocusOnEnter && !(newVisit && Current.ResetFocusOnNewVisit)) _rememberedFocus.TryGetValue(Current.Id, out remembered);
             int index = remembered != null ? _keys.IndexOf(remembered) : -1;
             if (index < 0)
             {
@@ -211,7 +228,9 @@ namespace HometownStoreAccess.UI
                     }
                 }
             }
-            if (_announceFocusAfterRebuild)
+            // (An empty list right after an action is usually a screen being replaced: wait for it.)
+            bool filling = _items.Count == 0 && Time.unscaledTime - _announceAskedAt < 1f;
+            if (_announceFocusAfterRebuild && !filling)
             {
                 _announceFocusAfterRebuild = false;
                 if (changed && Current.UsesListNavigation) AnnounceFocus(includeGroup: true, interrupt: false);

@@ -355,6 +355,7 @@ namespace HometownStoreAccess.Contexts
     {
         public override string Id => "cashier_skin";
         public override int Priority => 53;
+        public override bool ResetFocusOnNewVisit => true;
 
         private static SelectCashierSkinPanel Panel => UIPanelManager.Instance != null ? UIPanelManager.Instance.selectCashierSkinPanel : null;
 
@@ -406,6 +407,7 @@ namespace HometownStoreAccess.Contexts
     {
         public override string Id => "vehicle";
         public override int Priority => 63;
+        public override bool ResetFocusOnNewVisit => true;
 
         private static VehiclePanel Panel => UIPanelManager.Instance != null ? UIPanelManager.Instance.vehiclePanel : null;
 
@@ -446,6 +448,7 @@ namespace HometownStoreAccess.Contexts
     {
         public override string Id => "lottery";
         public override int Priority => 64;
+        public override bool ResetFocusOnNewVisit => true;
 
         private static LotteryPanel Panel => UIPanelManager.Instance != null ? UIPanelManager.Instance.lotteryPanel : null;
 
