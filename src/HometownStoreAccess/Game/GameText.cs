@@ -31,12 +31,19 @@ namespace HometownStoreAccess.Game
         public static string Name(Journal j) => j == null ? "?" : Cached(j, 0, () => Safe(() => j.detailsKey.GetName(j.name, LanguageControl.CurrentLanguage), UntitledJournal(j)));
 
         /// <summary>
-        /// Some demo events have no name in any language (the game shows an empty title): name them after
-        /// the place they lead to instead of reading the internal asset name ("J_Event_Shaman_Request_Help").
+        /// Many demo events have no name in any language (the game shows an empty title). Instead of the
+        /// internal asset name ("J_Event_Shaman_Request_Help") they are named after what they ask for:
+        /// the place to go to, else the goods or buildings, else the shop level.
         /// </summary>
         public static string UntitledJournal(Journal j)
         {
-            if (j != null && j.haveLocationCondition && j.locationTradeThatTrigger != null) return Loc.Get("journal_untitled_at", Name(j.locationTradeThatTrigger));
+            if (j == null) return Loc.Get("journal_untitled");
+            if (j.haveLocationCondition && j.locationTradeThatTrigger != null) return Loc.Get("journal_untitled_at", Name(j.locationTradeThatTrigger));
+            var things = new List<string>();
+            if (j.haveItemCondition && j.itemShouldHave != null) things.AddRange(j.itemShouldHave.Where(x => x != null && x.ID != null).Select(x => Name(x.ID)));
+            if (j.haveBuildingCondition && j.buildingShouldHave != null) things.AddRange(j.buildingShouldHave.Where(x => x != null).Select(x => Name(x)));
+            if (things.Count > 0) return Loc.Get("journal_untitled_of", string.Join(", ", things.Distinct().ToArray()));
+            if (j.haveStoreLevelCondition) return Loc.Get("journal_untitled_level", j.storeLevel);
             return Loc.Get("journal_untitled");
         }
 

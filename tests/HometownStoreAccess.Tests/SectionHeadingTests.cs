@@ -55,7 +55,7 @@ namespace HometownStoreAccess.Tests
             // (Placeholders are checked against English for every key by the localization tests.)
             foreach (string lang in Loc.SupportedLanguages)
             {
-                foreach (string key in new[] { "role_heading", "heading_items", "journal_untitled", "journal_untitled_at", "map_nothing_here" })
+                foreach (string key in new[] { "role_heading", "heading_items", "journal_untitled", "journal_untitled_at", "journal_untitled_of", "journal_untitled_level" })
                 {
                     Assert.True(Loc.Has(lang, key), lang + " " + key);
                 }

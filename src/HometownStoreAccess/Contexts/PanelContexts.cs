@@ -167,7 +167,14 @@ namespace HometownStoreAccess.Contexts
                 var tasks = new List<string>();
                 foreach (Content_TaskJournal task in j.ChildContent.GetComponentsInChildren<Content_TaskJournal>(false))
                 {
-                    tasks.Add(UiUtil.Text(task.descriptionText));
+                    // The game strikes through the tasks that are already done (an event in progress can
+                    // have some done); in the finished events every task is done, so it is not repeated.
+                    TMP_Text line = task.descriptionText;
+                    string raw = line != null ? line.text : null;
+                    bool done = JournalTasks.IsDone(raw) || (line != null && (line.fontStyle & FontStyles.Strikethrough) != 0);
+                    string text = JournalTasks.Describe(raw, markDone: false);
+                    if (text.Length == 0) continue;
+                    tasks.Add(done && !p.checkDoneJournals ? Loc.Get("task_done", text) : text);
                 }
                 string group = title;
                 items.Add(new TextItem(() => Loc.Get("task_count", tasks.Count), "j" + i) { Group = group });
