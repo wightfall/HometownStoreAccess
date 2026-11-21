@@ -71,6 +71,19 @@ namespace HometownStoreAccess.Tests
             Assert.True(bad.Count == 0, "Unbalanced: " + string.Join(", ", bad.Take(10)));
         }
 
+        [Fact]
+        public void ThaiSpellingMistakesOfTheGameAreFixed()
+        {
+            LangFile f = LangFile.Load(Path.Combine(Folder(), "th.game.txt"));
+            Assert.Equal("ผงซักฟอก", f.Entries["Product_Name/Washing Powder"]);
+            Assert.Equal("ยายสมศรี", f.Entries["Dialog_Name/Event_Grandma_Reveal_Locations_15"]);
+            Assert.Contains("{v1}", f.Entries["ConfirmAndNotify/Warning: All items in Delivery Storage"]);
+            foreach (string typo in new[] { "ฝงซัก", "น้ัำ", "สิงค้า", "สมสรี" })
+            {
+                Assert.DoesNotContain(f.Entries.Values, v => v.Contains(typo));
+            }
+        }
+
         [Theory]
         [InlineData("ja")]
         [InlineData("id")]

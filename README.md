@@ -213,6 +213,15 @@ moves one. Ctrl+I describes an item: price, how it stacks, and which shelves it 
 actions section has the move-everything buttons and Close. When the goods belong to more than one
 category, Ctrl+Up and Ctrl+Down (or the Category item at the top) show one category at a time.
 
+Enter on a cashier opens its looks. The game shows them only as pictures, so the mod names them:
+plain ones in your language (Default, Cat, Frozen), the others by their own names.
+
+I on the shop floor, and Ctrl+I in build mode, describe a building like the game's tooltip: name,
+description, size, value, and what a shelf holds.
+
+The character collection says each character's number, so the ones not met yet ("Character 3: not
+met yet") can be told apart.
+
 ### Machines
 
 Choose a recipe (the list opens on the recipe the machine uses now), set the daily amount with
@@ -400,7 +409,9 @@ The game's Japanese, Indonesian and Chinese text is mostly untranslated in the d
 complete translations of the game text for these languages (story, items, places, customers and
 menus), in `BepInEx\plugins\HometownStoreAccess\translations`. Text the game still lacks falls back
 to English instead of showing an error. Some captions the game leaves in English in every language
-("Next Day", "Quit To OS", the reward screen and others) are spoken in your language too.
+("Next Day", "Quit To OS", the reward screen and others) are spoken in your language too. A few
+spelling mistakes in the game's Thai text that make a voice misread them are corrected (for example
+the detergent, "ผงซักฟอก"); the game shows the corrected text too.
 
 Language names are also said in English ("ไทย, Thai", "日本語, Japanese"), so you always hear which
 language you picked. With the mod language on Automatic, the mod speaks the game's language. If your

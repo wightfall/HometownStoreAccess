@@ -172,7 +172,9 @@ namespace HometownStoreAccess.Contexts
                         else Speech.SpeechService.Say(Loc.Get("state_current"), true);
                     }, "speed:" + speed.name)
                     {
-                        ValueFunc = () => speed.IsInteractable() ? null : Loc.Get("state_current"),
+                        // From the real game speed: once the shop has closed the game runs at normal speed
+                        // but leaves the old speed button marked.
+                        ValueFunc = () => StatusText.IsCurrentSpeed(speed, ui.phaseMaininterface) ? Loc.Get("state_current") : null,
                         TargetObject = speed.gameObject,
                     });
                 }
@@ -373,7 +375,7 @@ namespace HometownStoreAccess.Contexts
 
         private static string BlueprintDetails(Building b)
         {
-            var parts = new List<string> { GameText.Name(b), GameText.Description(b), Loc.Get("building_size", b.sizeX) };
+            var parts = new List<string> { GameText.Name(b), GameText.Description(b), Loc.Get("building_size", b.sizeX), Loc.Get("building_value", Mathf.RoundToInt(b.marketValue)) };
             parts.Add(StoreFloor.RequiredKind(b) == CellKind.BackRoom ? Loc.Get("needs_back_room") : Loc.Get("needs_shop_floor"));
             if (b is Shelf shelf)
             {
@@ -530,6 +532,19 @@ namespace HometownStoreAccess.Contexts
             // The game shows the shop's level only through its size; customers' trust needs it.
             if (StoreManager.Instance != null) parts.Add(Loc.Get("status_shop_level", StoreManager.Instance.StoreLevel + 1));
             return TextCleaner.Join(", ", parts.ToArray());
+        }
+
+        /// <summary>True when this speed button is the speed the game runs at now.</summary>
+        public static bool IsCurrentSpeed(Button b, PhaseMaininterface hud)
+        {
+            TimeControl tc = TimeControl.Instance;
+            if (b == null || hud == null || tc == null) return false;
+            float s = Time.timeScale;
+            if (b == hud.pauseButton) return s == 0f;
+            if (b == hud.x1Button) return Mathf.Approximately(s, tc.X1TimeScale);
+            if (b == hud.x2Button) return Mathf.Approximately(s, tc.X2TimeScale);
+            if (b == hud.x3Button) return Mathf.Approximately(s, tc.X3TimeScale);
+            return false;
         }
 
         public static string SpeedText()

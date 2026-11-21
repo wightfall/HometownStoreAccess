@@ -24,6 +24,8 @@ namespace HometownStoreAccess.Contexts
         private bool _wasMoving;
         private string _lastInfoKey;
         private Content_Map _lastMap;
+        // The place whose details were opened last (its list key).
+        private string _detailsNode;
 
         public override string Id => "map";
         public override int Priority => 60;
@@ -42,6 +44,7 @@ namespace HometownStoreAccess.Contexts
             _wasMoving = false;
             _lastInfoKey = Panel?.previousShowTarget;
             _lastMap = CurrentMap;
+            _detailsNode = null;
         }
 
         public override string Title()
@@ -99,11 +102,15 @@ namespace HometownStoreAccess.Contexts
         }
 
         /// <summary>
-        /// When the focused item goes away (the place's details close as you arrive somewhere that opens
-        /// no screen), the focus goes to the place you are at, not to the next item in the list (which
-        /// could be End of the day).
+        /// When the focused item goes away because a place's details closed (Escape, or arriving somewhere
+        /// that opens no screen), the focus goes back to that place, not to the next item in the list
+        /// (which could be End of the day). Otherwise to the place you are at.
         /// </summary>
-        public override string PreferredFocusKey() => HereKey();
+        public override string PreferredFocusKey()
+        {
+            if (_detailsNode != null && Nodes().Any(n => NodeKey(n) == _detailsNode)) return _detailsNode;
+            return HereKey();
+        }
 
         /// <summary>Coming back to the map (a shop closed): start on the place you are at.</summary>
         public override int InitialFocus(IReadOnlyList<NavItem> items)
@@ -316,6 +323,7 @@ namespace HometownStoreAccess.Contexts
                 SpeechService.Say(Loc.Get("map_your_shop_hint"), true);
                 return;
             }
+            _detailsNode = NodeKey(node);
             UiUtil.Click(node.gameObject);
         }
 
@@ -329,6 +337,7 @@ namespace HometownStoreAccess.Contexts
             if (map != _lastMap)
             {
                 _lastMap = map;
+                _detailsNode = null;
                 _lastIndex = b._currentIndex;
                 _wasMoving = b._isMoving;
                 AudioCues.Play(Cue.Arrive);

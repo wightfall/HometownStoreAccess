@@ -126,7 +126,8 @@ namespace HometownStoreAccess.Game
         public static string BuildingDetails(BuildingObject b)
         {
             if (b == null) return string.Empty;
-            var parts = new List<string> { Name(b.ID), Description(b.ID), Loc.Get("building_size", b.ID.sizeX) };
+            // As the game's building tooltip: name, description, size, value, then what this one holds.
+            var parts = new List<string> { Name(b.ID), Description(b.ID), Loc.Get("building_size", b.ID.sizeX), Loc.Get("building_value", Mathf.RoundToInt(b.ID.marketValue)) };
             if (b.ID.upkeepCost > 0) parts.Add(Loc.Get("building_upkeep", b.ID.upkeepCost));
             switch (b)
             {
