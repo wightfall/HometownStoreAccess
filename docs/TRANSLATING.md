@@ -12,7 +12,7 @@ All translation files live in the mod's `lang` folder:
 The mod writes two templates there the first time the game runs, and updates them when a new
 version adds text:
 
-- `template.mod.txt` has every message of the mod (about 580).
+- `template.mod.txt` has every message of the mod (about 600).
 - `template.game.txt` has every text of the game (about 3200), such as menus, items, characters
   and dialog.
 

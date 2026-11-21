@@ -37,7 +37,7 @@ namespace HometownStoreAccess.Contexts
             {
                 GameProgressionControl gp = GameProgressionControl.Instance;
                 if (gp != null && gp.dialogPanel != null) return gp.dialogPanel;
-                return Object.FindObjectOfType<DialogPanel>();
+                return SceneCache.Get<DialogPanel>();
             }
         }
 
@@ -223,7 +223,16 @@ namespace HometownStoreAccess.Contexts
         public override string Id => "dialog_log";
         public override int Priority => 82;
 
-        private static DialogueLogManager LogManager => Object.FindObjectOfType<DialogueLogManager>();
+        /// <summary>The log belongs to the dialog panel (no scene search every frame).</summary>
+        private static DialogueLogManager LogManager
+        {
+            get
+            {
+                GameProgressionControl gp = GameProgressionControl.Instance;
+                DialogueLogManager l = gp != null && gp.dialogPanel != null ? gp.dialogPanel.GetComponent<DialogueLogManager>() : null;
+                return l != null ? l : SceneCache.Get<DialogueLogManager>();
+            }
+        }
 
         public override bool IsActive()
         {
@@ -246,11 +255,17 @@ namespace HometownStoreAccess.Contexts
             if (close != null) UiScan.AddControl(items, close.GetComponent<Button>());
         }
 
-        public override void OnEnter()
+        /// <summary>Start at the most recent line (the game adds new lines at the end); Up reads earlier ones.</summary>
+        public override int InitialFocus(IReadOnlyList<NavItem> items)
         {
-            // Start at the most recent line.
-            AccessibilityRoot.Instance.Contexts.Refresh(false);
+            for (int i = items.Count - 1; i >= 0; i--)
+            {
+                if (items[i] is TextItem) return i;
+            }
+            return -1;
         }
+
+        public override bool ResetFocusOnEnter => true;
 
         public override IEnumerable<string> HelpLines()
         {

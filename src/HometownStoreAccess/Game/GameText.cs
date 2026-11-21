@@ -8,24 +8,51 @@ namespace HometownStoreAccess.Game
     /// <summary>Names and descriptions taken from the game's own localization tables, plus summaries built from game data.</summary>
     internal static class GameText
     {
-        public static string Name(Item item) => item == null ? "?" : Safe(() => item.detailsKey.GetName(item.name, LanguageControl.CurrentLanguage), item.name);
-        public static string Description(Item item) => item == null ? string.Empty : Safe(() => item.detailsKey.GetDescription(item.name, LanguageControl.CurrentLanguage), string.Empty);
-        public static string Name(Building b) => b == null ? "?" : Safe(() => b.detailsKey.GetName(b.name, LanguageControl.CurrentLanguage), b.name);
-        public static string Description(Building b) => b == null ? string.Empty : Safe(() => b.detailsKey.GetDescription(b.name, LanguageControl.CurrentLanguage), string.Empty);
-        public static string Name(Customer c) => c == null ? "?" : Safe(() => c.detailsKey.GetName(c.name, LanguageControl.CurrentLanguage), c.name);
-        public static string Description(Customer c) => c == null ? string.Empty : Safe(() => c.detailsKey.GetDescription(c.name, LanguageControl.CurrentLanguage), string.Empty);
-        public static string Name(LocationTrade l) => l == null ? "?" : Safe(() => l.detailsKey.GetName(l.name), l.name);
-        public static string Description(LocationTrade l) => l == null ? string.Empty : Safe(() => l.detailsKey.GetDescription(l.name), string.Empty);
+        public static string Name(Item item) => item == null ? "?" : Cached(item, 0, () => Safe(() => item.detailsKey.GetName(item.name, LanguageControl.CurrentLanguage), item.name));
+        public static string Description(Item item) => item == null ? string.Empty : Cached(item, 1, () => Safe(() => item.detailsKey.GetDescription(item.name, LanguageControl.CurrentLanguage), string.Empty));
+        public static string Name(Building b) => b == null ? "?" : Cached(b, 0, () => Safe(() => b.detailsKey.GetName(b.name, LanguageControl.CurrentLanguage), b.name));
+        public static string Description(Building b) => b == null ? string.Empty : Cached(b, 1, () => Safe(() => b.detailsKey.GetDescription(b.name, LanguageControl.CurrentLanguage), string.Empty));
+        public static string Name(Customer c) => c == null ? "?" : Cached(c, 0, () => Safe(() => c.detailsKey.GetName(c.name, LanguageControl.CurrentLanguage), c.name));
+        public static string Description(Customer c) => c == null ? string.Empty : Cached(c, 1, () => Safe(() => c.detailsKey.GetDescription(c.name, LanguageControl.CurrentLanguage), string.Empty));
+        public static string Name(LocationTrade l) => l == null ? "?" : Cached(l, 0, () => Safe(() => l.detailsKey.GetName(l.name), l.name));
+        public static string Description(LocationTrade l) => l == null ? string.Empty : Cached(l, 1, () => Safe(() => l.detailsKey.GetDescription(l.name), string.Empty));
         public static string Name(CraftingRecipe r)
         {
             if (r == null) return Loc.Get("recipe_none");
-            string n = Safe(() => r.detailsKey.GetName(r.name, LanguageControl.CurrentLanguage), null);
-            if (!string.IsNullOrEmpty(n)) return n;
-            // The demo's recipes have no names of their own (the game shows none): name them after what they make.
-            string[] outputs = r.itemOutput.Where(s => s != null && s.ID != null).Select(s => Name(s.ID)).Distinct().ToArray();
-            return outputs.Length > 0 ? string.Join(", ", outputs) : TextCleaner.HumanizeName(r.name);
+            return Cached(r, 0, () =>
+            {
+                string n = Safe(() => r.detailsKey.GetName(r.name, LanguageControl.CurrentLanguage), null);
+                if (!string.IsNullOrEmpty(n)) return n;
+                // The demo's recipes have no names of their own (the game shows none): name them after what they make.
+                string[] outputs = r.itemOutput.Where(s => s != null && s.ID != null).Select(s => Name(s.ID)).Distinct().ToArray();
+                return outputs.Length > 0 ? string.Join(", ", outputs) : TextCleaner.HumanizeName(r.name);
+            });
         }
-        public static string Name(Journal j) => j == null ? "?" : Safe(() => j.detailsKey.GetName(j.name, LanguageControl.CurrentLanguage), j.name);
+        public static string Name(Journal j) => j == null ? "?" : Cached(j, 0, () => Safe(() => j.detailsKey.GetName(j.name, LanguageControl.CurrentLanguage), j.name));
+
+        // Names and descriptions do not change while the language stays the same, and reading one goes
+        // through several of the game's tables and the text cleanup: lists rebuilt four times a second
+        // (a shop, the stock list) would read them again and again. Kept until the language or a
+        // translation changes.
+        private static readonly Dictionary<long, string> TextCache = new Dictionary<long, string>();
+        private static string _cacheLanguage;
+
+        /// <summary>Forgets the kept names (the game's language or text changed).</summary>
+        public static void ForgetTexts() => TextCache.Clear();
+
+        private static string Cached(Object o, int kind, System.Func<string> read)
+        {
+            if (!string.Equals(_cacheLanguage, Loc.Language, System.StringComparison.Ordinal))
+            {
+                TextCache.Clear();
+                _cacheLanguage = Loc.Language;
+            }
+            long key = ((long)o.GetInstanceID() << 2) | (uint)kind;
+            if (TextCache.TryGetValue(key, out string s)) return s;
+            s = read();
+            TextCache[key] = s;
+            return s;
+        }
         public static string VehicleName(Vehicle v) => Safe(() => LocalizationManager.GetString(LocalizationTable.Vehicle_Name, v.ToString()), v.ToString());
 
         public static string Money(int amount) => Loc.Get("money_baht", amount);

@@ -33,7 +33,7 @@ namespace HometownStoreAccess.Contexts
             Log.Info("Accessibility contexts configured for scene '" + sceneName + "'.");
         }
 
-        private static MainMenuControl MainMenu() => Object.FindObjectOfType<MainMenuControl>();
+        private static MainMenuControl MainMenu() => SceneCache.Get<MainMenuControl>();
 
         private static ConfirmationPanel ConfirmPanel(this MainMenuControl c) => c != null ? c._confirmationPanel : null;
 

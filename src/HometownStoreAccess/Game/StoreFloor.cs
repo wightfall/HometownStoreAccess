@@ -59,7 +59,7 @@ namespace HometownStoreAccess.Game
                 floor.Rows.Add(row);
             }
 
-            DeliveryObject d = Object.FindObjectOfType<DeliveryObject>();
+            DeliveryObject d = UI.SceneCache.Get<DeliveryObject>();
             if (d != null && IsDeliveryAvailable(d) && floor.Rows.Count > 0)
             {
                 floor.Delivery = d;
@@ -72,7 +72,7 @@ namespace HometownStoreAccess.Game
         /// <summary>The truck can be opened only while it is visible and its collider is enabled, as for a mouse click.</summary>
         public static bool IsDeliveryAvailable(DeliveryObject d)
         {
-            if (d == null) return false;
+            if (d == null || !d.gameObject.activeInHierarchy) return false;
             var sr = d.GetComponent<SpriteRenderer>();
             var col = d.GetComponent<BoxCollider2D>();
             return sr != null && sr.color.a > 0.5f && col != null && col.enabled;

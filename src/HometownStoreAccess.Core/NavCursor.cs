@@ -97,7 +97,8 @@ namespace HometownStoreAccess.Core
 
         /// <summary>
         /// Moves to the first item of the next (or previous) group, where <paramref name="groups"/>
-        /// gives each item's group name. Wraps around.
+        /// gives each item's group name. Wraps around when <see cref="Wrap"/> is set; otherwise it stops
+        /// at the first and the last group.
         /// </summary>
         public MoveResult MoveGroup(int direction, IList<string> groups, IList<string> keys)
         {
@@ -119,6 +120,7 @@ namespace HometownStoreAccess.Core
             {
                 if (starts.Count == 1) return MoveResult.AtEdge;
                 if (current + 1 < starts.Count) target = starts[current + 1];
+                else if (!Wrap) return MoveResult.AtEdge;
                 else { target = starts[0]; result = MoveResult.Wrapped; }
             }
             else
@@ -126,6 +128,7 @@ namespace HometownStoreAccess.Core
                 if (Index != starts[current]) target = starts[current];
                 else if (starts.Count == 1) return MoveResult.AtEdge;
                 else if (current > 0) target = starts[current - 1];
+                else if (!Wrap) return MoveResult.AtEdge;
                 else { target = starts[starts.Count - 1]; result = MoveResult.Wrapped; }
             }
             Index = target;

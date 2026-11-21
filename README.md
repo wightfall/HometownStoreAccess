@@ -74,7 +74,8 @@ HometownStoreAccessInstaller.exe [/install | /uninstall] [/removebepinex] [/laun
 ## Getting started
 
 Start the game from Steam. When the mod has loaded you hear "Hometown Store Access loaded. Press F1
-for help."
+for help." The mod skips the game's logo intro, so the main menu follows a moment later (turn this
+off with **Skip the logo intro** in the settings).
 
 - **F1** tells you the keys for the screen you are on.
 - **Shift+F1** opens the key list: every key the mod uses, by section. It also has a section where
@@ -101,7 +102,7 @@ to repeat. On the shop floor and in walk mode, letters work without Ctrl.
 | Enter | Activate |
 | Shift+Enter | Alternative action (for example sell one, or move half a stack) |
 | Ctrl+Enter | Third action (for example move one item) |
-| Page Up, Page Down / Tab, Shift+Tab | Previous or next section |
+| Page Up, Page Down / Tab, Shift+Tab | Previous or next section (the main menu, the options and the mod settings have sections too) |
 | Home, End | First or last item |
 | Letters | Jump to the next item starting with that letter |
 | Ctrl+Up, Ctrl+Down | Previous or next category, on screens with categories (see [Categories](#categories)) |
@@ -112,6 +113,22 @@ to repeat. On the shop floor and in walk mode, letters work without Ctrl.
 | Shift+F1 | Key list and sound cue preview |
 | F5 | Mod settings |
 | Escape | Back, close, or open the pause menu, as in the game. In a text box, Escape only stops editing. |
+
+At the end of a list, Down goes round to the first item with the wrap sound, and Page Down in the
+last section goes to the first section. To stop at the ends instead (with the edge sound), turn off
+**Wrap around at the ends of lists** in the mod settings. This also applies to Left and Right on a
+choice such as the game language; Enter always goes on to the next value.
+
+### Main menu and options
+
+The main menu has two sections: Continue, New game, Load game and Exit; then, with Page Down, the
+game language, Options, Credits, Discord and the music switch. On Game language, Left and Right
+switch the language at once and Enter goes on to the next one. Continue, New game and loading a save
+say "Loading" as soon as you press Enter.
+
+Options (the pause menu in the game) has the sections General (full screen, show info, game
+language), Sound (overall, music and effects volume), Game (save, back to the main menu, quit; only
+in the game) and About (the version).
 
 ### Message history
 
@@ -187,7 +204,8 @@ appear in the output. Move them to storage with Enter.
 
 Lines are read automatically. Enter continues. Choose a reply with Up and Down, then press Enter;
 each reply also says what it leads to when the game shows that. The Speed up and Dialog log
-buttons are at the end of the list (Enter presses them; Escape closes the log).
+buttons are at the end of the list (Enter presses them). The log opens on the newest line; Up reads
+the earlier ones, and Escape closes it.
 
 | Key | Action |
 | --- | --- |
@@ -299,7 +317,7 @@ You can listen to each cue in the key list (Shift+F1, then the sound cues sectio
 | --- | --- |
 | Move | Moving in a list |
 | Wrap | The list wrapped around, or a category changed |
-| Edge | End of a list, or a wall |
+| Edge | End of a list (when wrapping around is off) or of a value, or a wall |
 | Activate | An item was activated |
 | Error | Something did not work |
 | Place OK | A building was placed |
@@ -316,7 +334,7 @@ You can listen to each cue in the key list (Shift+F1, then the sound cues sectio
 ## Mod settings
 
 F5 opens the settings. Changes are saved at once. Left and Right change a value, and Enter turns a
-setting on or off.
+setting on or off. Page Up and Page Down jump between the sections.
 
 - **Speech and language:** game language (every language the game has, plus your translation
   files), mod language, speech output (Auto, NVDA, JAWS, OneCore, SAPI and others), announce list
@@ -324,9 +342,10 @@ setting on or off.
 - **Announcements:** customers coming and going, sales at the cashier, empty shelves, deliveries
   and machines, customer speech bubbles, every change of money, read dialog automatically,
   tutorial notes and key hints
-- **Sound cues:** sound cues on or off, menu sounds, the overall sound cue volume, and a volume for
-  each cue
-- **Controls:** camera follows the shop floor cursor, controller support, controller rumble
+- **Sound cues:** sound cues on or off, menu sounds, the overall sound cue volume
+- **Volume of each sound cue:** a section of its own, so Page Down skips it
+- **Controls:** wrap around at the ends of lists, skip the logo intro and shorten the loading fade,
+  camera follows the shop floor cursor, controller support, controller rumble
 - **Reset all settings to defaults:** press Enter twice
 
 The settings are stored in `BepInEx\config\com.wightfall.hometownstoreaccess.cfg` in the game
@@ -373,6 +392,9 @@ For any other language, you can translate both the mod and the game text with pl
   (for screenshots). The mod says when it is hidden; press F3 again to show it.
 - **Saves:** saving from the pause menu (Save, then New save or an existing save) says "Saved as"
   with the name. Shift+Enter renames a save and Delete removes it, in the save and load lists.
+- **The game feels slow:** the mod itself needs well under a millisecond per frame. If you turned
+  off Skip the logo intro, the main menu appears only after the intro (about 15 seconds); any key
+  skips it.
 
 ## Building from source
 

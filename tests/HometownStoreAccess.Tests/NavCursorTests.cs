@@ -138,6 +138,40 @@ namespace HometownStoreAccess.Tests
         }
 
         [Fact]
+        public void MoveGroup_WithoutWrapStopsAtFirstAndLastGroup()
+        {
+            var c = new NavCursor { Wrap = false };
+            var keys = Keys("s1", "s2", "t1", "a1");
+            var groups = Keys("Shelf", "Shelf", "Storage", "Actions");
+            c.Reset(keys);
+            Assert.Equal(MoveResult.AtEdge, c.MoveGroup(-1, groups, keys));
+            Assert.Equal("s1", c.FocusedKey);
+            Assert.Equal(MoveResult.Moved, c.MoveGroup(1, groups, keys));
+            Assert.Equal(MoveResult.Moved, c.MoveGroup(1, groups, keys));
+            Assert.Equal("a1", c.FocusedKey);
+            Assert.Equal(MoveResult.AtEdge, c.MoveGroup(1, groups, keys));
+            Assert.Equal("a1", c.FocusedKey);
+            // Backwards from inside a group still goes to that group's start first.
+            c.MoveTo(1, keys);
+            Assert.Equal(MoveResult.Moved, c.MoveGroup(-1, groups, keys));
+            Assert.Equal("s1", c.FocusedKey);
+        }
+
+        [Fact]
+        public void Move_WithoutWrapStaysOnLastItem()
+        {
+            var c = new NavCursor { Wrap = false };
+            var keys = Keys("a", "b", "c");
+            c.Reset(keys);
+            c.MoveTo(2, keys);
+            Assert.Equal(MoveResult.AtEdge, c.Move(1, keys));
+            Assert.Equal("c", c.FocusedKey);
+            c.Wrap = true;
+            Assert.Equal(MoveResult.Wrapped, c.Move(1, keys));
+            Assert.Equal("a", c.FocusedKey);
+        }
+
+        [Fact]
         public void FindNextByPrefix_WrapsAndIgnoresCase()
         {
             var c = new NavCursor();

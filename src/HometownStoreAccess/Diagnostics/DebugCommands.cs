@@ -93,6 +93,10 @@ namespace HometownStoreAccess.Diagnostics
                 case "state":
                     Log.Info("[state] " + (StateProvider != null ? StateProvider() : "(no provider)"));
                     break;
+                case "perf":
+                    // perf [seconds]: how long the mod's parts take per frame, written to the log.
+                    Perf.Begin(arg.Length > 0 && float.TryParse(arg, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float secs) ? secs : 5f);
+                    break;
                 case "pad":
                 {
                     // pad a | pad lsdown 40 | pad rsup | pad lt: simulated controller input (frames default 2)
