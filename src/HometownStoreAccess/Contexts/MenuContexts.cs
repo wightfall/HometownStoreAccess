@@ -32,7 +32,7 @@ namespace HometownStoreAccess.Contexts
         public override string Id => "main_menu";
         public override int Priority => 10;
 
-        private static MainMenuControl Control => Object.FindObjectOfType<MainMenuControl>();
+        private static MainMenuControl Control => SceneCache.Get<MainMenuControl>();
 
         private GameObject MainRoot
         {
@@ -53,24 +53,41 @@ namespace HometownStoreAccess.Contexts
 
         public override string Title() => Loc.Get("ctx_main_menu");
 
+        /// <summary>
+        /// Two groups for Page Up and Page Down: the game buttons (Continue, New game, Load game, Exit)
+        /// without a name, then the language, options, credits, Discord and the music switch.
+        /// </summary>
         public override void Build(List<NavItem> items)
         {
             GameObject main = MainRoot;
             if (main == null) return;
-            UiScan.Add(items, main, string.Empty, includeTexts: false, skip: MenuHelpers.IsLanguageDropdown);
-            // Put the language selector after the main buttons, like on screen.
-            int insertAt = items.Count;
-            for (int i = 0; i < items.Count; i++)
+            string more = Loc.Get("group_menu_more");
+            Transform buttons = main.transform.Find("Scroll View");
+            int firstMore;
+            if (buttons != null)
             {
-                if (items[i].Target != null && items[i].Target.name == "Option") { insertAt = i; break; }
+                UiScan.Add(items, buttons.gameObject, string.Empty);
+                firstMore = items.Count;
+                UiScan.Add(items, main, more, skip: go => go.transform == buttons || MenuHelpers.IsLanguageDropdown(go));
             }
-            items.Insert(insertAt, new GameLanguageItem());
+            else
+            {
+                // Unknown layout (a later game version): one list, the language before Options.
+                UiScan.Add(items, main, string.Empty, skip: MenuHelpers.IsLanguageDropdown);
+                firstMore = items.Count;
+                for (int i = 0; i < items.Count; i++)
+                {
+                    if (items[i].Target != null && items[i].Target.name == "Option") { firstMore = i; break; }
+                }
+                more = string.Empty;
+            }
+            items.Insert(firstMore, new GameLanguageItem { Group = more });
             Transform aspect = main.transform.parent;
             Transform sound = aspect != null ? aspect.Find("SoundToggle") : null;
             if (sound != null)
             {
                 var t = sound.GetComponent<Toggle>();
-                if (t != null && t.gameObject.activeInHierarchy) items.Add(new ToggleItem(t, () => Loc.Get("label_mute_music")));
+                if (t != null && t.gameObject.activeInHierarchy) items.Add(new ToggleItem(t, () => Loc.Get("label_mute_music")) { Group = more });
             }
         }
 
@@ -98,15 +115,46 @@ namespace HometownStoreAccess.Contexts
 
         public override string Title()
         {
-            return UIPanelManager.Instance != null ? Loc.Get("ctx_pause_menu") : Loc.Get("ctx_options");
+            return AccessibilityRoot.Instance != null && AccessibilityRoot.Instance.InGame ? Loc.Get("ctx_pause_menu") : Loc.Get("ctx_options");
         }
 
+        /// <summary>
+        /// Groups for Page Up and Page Down, as the panel is laid out: Close, then General (full screen,
+        /// show info, language), Sound (the volumes), Game (save, return to the main menu, quit; only
+        /// in the game) and About (the version).
+        /// </summary>
         public override void Build(List<NavItem> items)
         {
             OptionPanel p = Panel;
             if (p == null) return;
             Transform bg = p.transform.Find("BG");
             GameObject root = bg != null ? bg.gameObject : p.gameObject;
+            Transform general = root.transform.Find("OptionBG");
+            Transform sound = root.transform.Find("SondBG") ?? root.transform.Find("SoundBG");
+            Transform footer = root.transform.Find("Footer");
+            Transform close = root.transform.Find("CloseButton");
+            Transform note = root.transform.Find("SaveNotAllowFirstDay");
+            if (general == null || sound == null)
+            {
+                BuildFlat(items, p, root, note);
+                return;
+            }
+            if (close != null) UiScan.AddControl(items, close.GetComponent<Button>());
+            string g = Loc.Get("group_options_general");
+            UiScan.Add(items, general.gameObject, g, skip: MenuHelpers.IsLanguageDropdown);
+            items.Add(new GameLanguageItem { Group = g });
+            UiScan.Add(items, sound.gameObject, Loc.Get("group_options_sound"));
+            string game = Loc.Get("group_options_game");
+            if (footer != null) UiScan.Add(items, footer.gameObject, game);
+            if (note != null && note.gameObject.activeInHierarchy) UiScan.AddText(items, note.GetComponent<TMP_Text>(), game);
+            // Anything else the panel shows (added by a later game version) is not left out.
+            var known = new HashSet<Transform> { general, sound, footer, close, note };
+            UiScan.Add(items, root, string.Empty, skip: go => known.Contains(go.transform) || MenuHelpers.IsLanguageDropdown(go) || go.name == "PAUSED");
+            UiScan.AddText(items, p.versionText, Loc.Get("group_options_about"));
+        }
+
+        private static void BuildFlat(List<NavItem> items, OptionPanel p, GameObject root, Transform note)
+        {
             UiScan.Add(items, root, string.Empty, includeTexts: false, skip: go => MenuHelpers.IsLanguageDropdown(go) || go.name == "PAUSED");
             int insertAt = 0;
             for (int i = 0; i < items.Count; i++)
@@ -115,11 +163,7 @@ namespace HometownStoreAccess.Contexts
                 insertAt = i + 1;
             }
             items.Insert(Mathf.Min(insertAt, items.Count), new GameLanguageItem());
-            Transform note = root.transform.Find("SaveNotAllowFirstDay");
-            if (note != null && note.gameObject.activeInHierarchy)
-            {
-                UiScan.AddText(items, note.GetComponent<TMP_Text>());
-            }
+            if (note != null && note.gameObject.activeInHierarchy) UiScan.AddText(items, note.GetComponent<TMP_Text>());
             UiScan.AddText(items, p.versionText);
         }
 
@@ -139,9 +183,9 @@ namespace HometownStoreAccess.Contexts
         {
             get
             {
-                foreach (SaveSlotPanel p in Object.FindObjectsOfType<SaveSlotPanel>())
+                foreach (SaveSlotPanel p in SceneCache.All<SaveSlotPanel>())
                 {
-                    if (p.gameObject.activeInHierarchy) return p;
+                    if (p != null && p.gameObject.activeInHierarchy) return p;
                 }
                 return null;
             }

@@ -160,7 +160,7 @@ namespace HometownStoreAccess.Game
             UIPanelManager ui = UIPanelManager.Instance;
             if (ui == null)
             {
-                MainMenuControl mm = Object.FindObjectOfType<MainMenuControl>();
+                MainMenuControl mm = UI.SceneCache.Get<MainMenuControl>();
                 if (mm == null) return;
                 if (mm.CheckIfConfirmActive()) mm.CancelConfirmation();
                 else if (mm.IsHavePanelToClose()) mm.CloseLastPanel();

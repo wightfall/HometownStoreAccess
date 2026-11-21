@@ -45,6 +45,8 @@ namespace HometownStoreAccess.Patches
                 }
             }
             Log.Debug("Loaded " + EnglishTables.Count + " English tables for the game text fallback");
+            // Names read before may have missed their English fallback.
+            Game.GameText.ForgetTexts();
         }
 
         private static StringTable LoadedEnglishTable(string tableName)

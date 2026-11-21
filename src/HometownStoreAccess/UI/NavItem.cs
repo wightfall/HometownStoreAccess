@@ -6,6 +6,13 @@ using UnityEngine.UI;
 
 namespace HometownStoreAccess.UI
 {
+    /// <summary>Navigation preferences shared by the lists and the value pickers.</summary>
+    internal static class NavSettings
+    {
+        /// <summary>Lists and choices go round at their ends (mod setting "Wrap around").</summary>
+        public static bool Wrap => Plugin.Settings == null || Plugin.Settings.WrapAround.Value;
+    }
+
     /// <summary>One focusable entry in a screen's navigation list.</summary>
     internal abstract class NavItem
     {
@@ -255,20 +262,18 @@ namespace HometownStoreAccess.UI
         public override bool Enabled => _dropdown.IsInteractable();
         public override GameObject Target => _dropdown.gameObject;
 
-        public override bool Adjust(int direction, bool large)
-        {
-            if (!_dropdown.IsInteractable() || _dropdown.options.Count == 0) return true;
-            int next = Mathf.Clamp(_dropdown.value + direction, 0, _dropdown.options.Count - 1);
-            if (next != _dropdown.value) _dropdown.value = next;
-            Speech.SpeechService.Say(Value());
-            return true;
-        }
+        /// <summary>Left and right: the previous or next option (round the ends when wrapping is on).</summary>
+        public override bool Adjust(int direction, bool large) => Step(direction, NavSettings.Wrap);
 
-        public override bool Activate()
+        /// <summary>Enter: the next option, always going round.</summary>
+        public override bool Activate() => Step(1, wrap: true);
+
+        private bool Step(int direction, bool wrap)
         {
             if (!_dropdown.IsInteractable() || _dropdown.options.Count == 0) return true;
-            int next = (_dropdown.value + 1) % _dropdown.options.Count;
-            _dropdown.value = next;
+            int next = ChoiceStep.Step(_dropdown.value, _dropdown.options.Count, direction, wrap, out bool atEdge);
+            if (atEdge) Audio.AudioCues.Play(Audio.Cue.Edge);
+            else if (next != _dropdown.value) _dropdown.value = next;
             Speech.SpeechService.Say(Value());
             return true;
         }

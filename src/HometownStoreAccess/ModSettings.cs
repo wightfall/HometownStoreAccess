@@ -25,6 +25,8 @@ namespace HometownStoreAccess
         public readonly ConfigEntry<bool> CameraFollowsCursor;
         public readonly ConfigEntry<bool> ControllerEnabled;
         public readonly ConfigEntry<bool> ControllerRumble;
+        public readonly ConfigEntry<bool> WrapAround;
+        public readonly ConfigEntry<bool> SkipIntro;
 
         public readonly ConfigEntry<bool> AnnounceTutorial;
         private readonly ConfigFile _config;
@@ -60,6 +62,10 @@ namespace HometownStoreAccess
             CameraFollowsCursor = config.Bind("Controls", "CameraFollowsCursor", true, "Keep the camera centred on the keyboard shop-floor cursor (arrow keys then move the cursor instead of the camera).");
             ControllerEnabled = config.Bind("Controls", "Controller", true, "Enable Xbox-compatible (XInput) controller support. Other controllers work through Steam Input.");
             ControllerRumble = config.Bind("Controls", "ControllerRumble", true, "Short controller vibration for errors and blocked placement.");
+            WrapAround = config.Bind("Controls", "WrapAround", true,
+                "Wrap around at the ends of lists: Down on the last item goes to the first, Page Down in the last group goes to the first group, and left and right on a choice go round its values. Off: the focus stops at the ends with the edge sound.");
+            SkipIntro = config.Bind("Controls", "SkipIntro", true,
+                "Skip the game's logo intro at start so the main menu is there at once (the same as pressing a key during the intro), and shorten the two-second fade to black before a game loads.");
 
             AnnounceTutorial = config.Bind("Announcements", "Tutorial", true, "Read tutorial notes and the mod's key hints for each tutorial step.");
             foreach (Audio.Cue cue in System.Enum.GetValues(typeof(Audio.Cue)))

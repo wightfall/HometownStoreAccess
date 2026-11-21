@@ -47,9 +47,18 @@ namespace HometownStoreAccess.Contexts
             {
                 foreach (string l in current.HelpLines()) parts.Add(l.Replace("\n", " "));
             }
-            if (current == null || current.UsesListNavigation) parts.Add(Loc.Get("help_list_short"));
+            if (current == null || current.UsesListNavigation)
+            {
+                parts.Add(Loc.Get("help_list_short"));
+                // Only where it does something (the list has more than one group) and the screen's own
+                // help does not already say it (key names are the same in every language).
+                ContextManager cm = AccessibilityRoot.Instance != null ? AccessibilityRoot.Instance.Contexts : null;
+                bool told = parts.Exists(p => p.IndexOf("Page Down", StringComparison.OrdinalIgnoreCase) >= 0);
+                if (!told && cm != null && cm.Current == current && cm.GroupCount > 1) parts.Add(Loc.Get("help_groups"));
+            }
             if (inGame) parts.Add(Loc.Get("help_game_short"));
-            parts.Add(Loc.Get("help_more"));
+            // "Shift+F1 lists every key, F5 opens the settings" is not news inside the key list or settings.
+            if (!IsOpen) parts.Add(Loc.Get("help_more"));
             SpeechService.Say(TextCleaner.Join(" ", parts.ToArray()), true);
         }
     }
@@ -150,13 +159,18 @@ namespace HometownStoreAccess.Contexts
             items.Add(Toggle(s.AudioCues, "set_cues", audio));
             items.Add(Toggle(s.MenuSounds, "set_menu_sounds", audio));
             items.Add(new VolumeItem(() => Loc.Get("set_cue_master"), s.AudioCueVolume, null) { Group = audio });
+
+            // The volume of each cue is a long list of its own, so Page Down can jump over it.
+            string volumes = Loc.Get("set_group_cue_volumes");
             foreach (Cue cue in Enum.GetValues(typeof(Cue)))
             {
                 Cue c = cue;
-                items.Add(new VolumeItem(() => AudioCues.Name(c), s.CueVolume(c), c) { Group = audio });
+                items.Add(new VolumeItem(() => AudioCues.Name(c), s.CueVolume(c), c) { Group = volumes });
             }
 
             string controls = Loc.Get("set_group_controls");
+            items.Add(Toggle(s.WrapAround, "set_wrap", controls));
+            items.Add(Toggle(s.SkipIntro, "set_skip_intro", controls));
             items.Add(Toggle(s.CameraFollowsCursor, "set_camera", controls));
             items.Add(Toggle(s.ControllerEnabled, "set_controller", controls));
             items.Add(Toggle(s.ControllerRumble, "set_rumble", controls));
@@ -265,20 +279,29 @@ namespace HometownStoreAccess.Contexts
 
         private int Index(List<KeyValuePair<string, string>> c) => c.FindIndex(kv => string.Equals(kv.Key, _entry.Value, StringComparison.OrdinalIgnoreCase));
 
-        public override bool Adjust(int direction, bool large)
+        /// <summary>Left and right: the previous or next value (round the ends when wrapping is on).</summary>
+        public override bool Adjust(int direction, bool large) => Step(direction, NavSettings.Wrap);
+
+        /// <summary>Enter: the next value, always going round, so one key reaches every value.</summary>
+        public override bool Activate() => Step(1, wrap: true);
+
+        private bool Step(int direction, bool wrap)
         {
             var c = _choices();
             if (c.Count == 0) return true;
-            int i = Math.Max(0, Index(c));
-            i = ((i + direction) % c.Count + c.Count) % c.Count;
+            int i = ChoiceStep.Step(Index(c), c.Count, direction, wrap, out bool atEdge);
+            if (atEdge)
+            {
+                AudioCues.Play(Cue.Edge);
+                SpeechService.Say(Value(), true);
+                return true;
+            }
             _entry.Value = c[i].Key;
             _onChanged?.Invoke();
             if (_entry.Definition.Key == "ModLanguage") GameLanguage.SyncModLanguage();
             SpeechService.Say(Value(), true);
             return true;
         }
-
-        public override bool Activate() => Adjust(1, false);
     }
 
     /// <summary>A 0-100% volume setting; with a cue, the cue plays at the new volume.</summary>

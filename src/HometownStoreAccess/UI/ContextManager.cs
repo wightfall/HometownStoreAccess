@@ -30,6 +30,25 @@ namespace HometownStoreAccess.UI
         public IReadOnlyList<NavItem> Items => _items;
         public NavItem Focused => _cursor.Index >= 0 && _cursor.Index < _items.Count ? _items[_cursor.Index] : null;
 
+        /// <summary>
+        /// The next screen announcement queues after what is being said instead of cutting it off
+        /// (set once by the welcome message, so the main menu does not interrupt it).
+        /// </summary>
+        public bool GentleNextEntry { get; set; }
+
+        /// <summary>How many groups (Page Up / Page Down stops) the current list has.</summary>
+        public int GroupCount
+        {
+            get
+            {
+                var groups = new List<string>(_items.Count);
+                foreach (NavItem i in _items) groups.Add(i.Group);
+                return ChoiceStep.GroupCount(groups);
+            }
+        }
+
+        private static bool WrapSetting => NavSettings.Wrap;
+
         public void Register(ScreenContext context) => _contexts.Add(context);
 
         public void Clear()
@@ -45,18 +64,25 @@ namespace HometownStoreAccess.UI
 
         public void Update()
         {
+            long t0 = Diagnostics.Perf.Start();
             ScreenContext active = SelectActive();
+            Diagnostics.Perf.Stop("contexts.select", t0);
             if (active != Current)
             {
                 SwitchTo(active);
             }
             if (Current == null) return;
 
+            // (The names for the perf command are only built while it measures: no garbage every frame.)
             if (Time.unscaledTime >= _nextRebuild)
             {
+                long t1 = Diagnostics.Perf.Start();
                 Rebuild(false);
+                if (t1 != 0) Diagnostics.Perf.Stop("contexts.rebuild:" + Current.Id, t1);
             }
+            long t2 = Diagnostics.Perf.Start();
             try { Current.Tick(); } catch (Exception e) { Log.Error("Context " + Current.Id + " tick failed: " + e); }
+            if (t2 != 0 && Current != null) Diagnostics.Perf.Stop("contexts.tick:" + Current.Id, t2);
             // The game closes sub-lists itself when Escape is released: say where the focus went.
             if (UnityEngine.Input.GetKeyUp(KeyCode.Escape)) _announceFocusAfterRebuild = true;
 
@@ -98,8 +124,12 @@ namespace HometownStoreAccess.UI
         private ScreenContext SelectActive()
         {
             ScreenContext best = null;
+            // Every context is asked, even below the best one found so far: some checks also tidy up
+            // state (the toolbar closes itself in build mode).
+            bool profiling = Diagnostics.Perf.Enabled;
             foreach (ScreenContext c in _contexts)
             {
+                long t = Diagnostics.Perf.Start();
                 bool active;
                 try { active = c.IsActive(); }
                 catch (Exception e)
@@ -107,6 +137,7 @@ namespace HometownStoreAccess.UI
                     Log.Debug("IsActive " + c.Id + " threw " + e.Message);
                     active = false;
                 }
+                if (profiling) Diagnostics.Perf.Stop("active:" + c.Id, t);
                 if (active && (best == null || c.Priority > best.Priority)) best = c;
             }
             return best;
@@ -133,12 +164,19 @@ namespace HometownStoreAccess.UI
             string remembered = null;
             if (!Current.ResetFocusOnEnter) _rememberedFocus.TryGetValue(Current.Id, out remembered);
             int index = remembered != null ? _keys.IndexOf(remembered) : -1;
+            if (index < 0)
+            {
+                try { index = Current.InitialFocus(_items); } catch (Exception e) { Log.Debug("InitialFocus " + Current.Id + " threw " + e.Message); }
+            }
             _cursor.Reset(_keys, preferFirst: true);
             if (index > 0) _cursor.MoveTo(index, _keys);
 
+            // After the welcome message, the first screen is queued behind it instead of cutting it off.
+            bool interrupt = !GentleNextEntry;
+            GentleNextEntry = false;
             string title = SafeString(Current.Title);
             string intro = SafeString(Current.Intro);
-            SpeechService.Say(TextCleaner.Join(". ", title, intro), true, Current.IntroCategory);
+            SpeechService.Say(TextCleaner.Join(". ", title, intro), interrupt, Current.IntroCategory);
             if (Current.UsesListNavigation && Current.AnnounceFocusOnEnter) AnnounceFocus(includeGroup: true, interrupt: false);
             else _lastAnnouncedGroup = Focused?.Group;
             ApplyVisualFocus();
@@ -268,6 +306,7 @@ namespace HometownStoreAccess.UI
         public void Move(int delta)
         {
             Rebuild(false);
+            _cursor.Wrap = WrapSetting;
             MoveResult r = _cursor.Move(delta, _keys);
             Feedback(r);
         }
@@ -292,6 +331,7 @@ namespace HometownStoreAccess.UI
             Rebuild(false);
             var groups = new List<string>(_items.Count);
             foreach (NavItem i in _items) groups.Add(i.Group);
+            _cursor.Wrap = WrapSetting;
             MoveResult r = _cursor.MoveGroup(direction, groups, _keys);
             _lastAnnouncedGroup = null;
             Feedback(r);

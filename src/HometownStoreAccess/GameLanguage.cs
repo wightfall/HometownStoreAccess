@@ -31,7 +31,16 @@ namespace HometownStoreAccess
         // (the demo has no Japanese or Chinese MainMenu table, for example). GameTextFallbackPatch serves them.
         private static readonly Dictionary<string, string> Unplaced = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        public static bool TryGetUnplaced(string tableName, string key, out string text) => Unplaced.TryGetValue(tableName + "/" + key, out text);
+        public static bool TryGetUnplaced(string tableName, string key, out string text)
+        {
+            // Asked for every text the game looks up: no string building while there is nothing to find.
+            if (Unplaced.Count == 0)
+            {
+                text = null;
+                return false;
+            }
+            return Unplaced.TryGetValue(tableName + "/" + key, out text);
+        }
         private static float _nextPoll;
         private static bool _templatesWritten;
         private static bool _gameTextDirty = true;
@@ -91,20 +100,37 @@ namespace HometownStoreAccess
 
         public static void Update()
         {
-            if (Time.unscaledTime < _nextPoll) return;
+            // The files are checked every 2 seconds; but text still waiting for the game's localization
+            // goes in the frame it is ready, so the first screen is already in the player's language
+            // (for Thai and English, which need none of it there, only after that screen has been read).
+            bool deferred = GameLanguage.StartupWorkDeferred;
+            bool waiting = _builtInLoaded && (!_templatesWritten || _gameTextDirty) && !deferred;
+            if (Time.unscaledTime < _nextPoll && !(waiting && LocalizationReady())) return;
             _nextPoll = Time.unscaledTime + 2f;
             try
             {
                 Directory.CreateDirectory(Folder);
                 bool changed = ScanForChanges();
+                var sw = System.Diagnostics.Stopwatch.StartNew();
                 if (!_builtInLoaded)
                 {
                     LoadBuiltIn();
                     changed = true;
+                    Log.Debug("Built-in translations loaded in " + sw.ElapsedMilliseconds + " ms");
                 }
                 if (changed) Reload();
-                if (!_templatesWritten && LocalizationReady()) WriteTemplates();
-                if (_gameTextDirty && LocalizationReady()) ApplyGameText();
+                if (!_templatesWritten && LocalizationReady() && !deferred)
+                {
+                    sw.Restart();
+                    WriteTemplates();
+                    Log.Debug("Translation templates checked in " + sw.ElapsedMilliseconds + " ms");
+                }
+                if (_gameTextDirty && LocalizationReady() && !deferred)
+                {
+                    sw.Restart();
+                    ApplyGameText();
+                    Log.Debug("Game text applied in " + sw.ElapsedMilliseconds + " ms");
+                }
             }
             catch (Exception e)
             {
@@ -114,6 +140,9 @@ namespace HometownStoreAccess
         }
 
         public static void MarkGameTextDirty() => _gameTextDirty = true;
+
+        /// <summary>Game text from translation files is still waiting to go into the game's tables.</summary>
+        public static bool GameTextPending => _gameTextDirty || !_builtInLoaded;
 
         private static bool LocalizationReady()
         {
@@ -287,6 +316,7 @@ namespace HometownStoreAccess
         public static void ApplyGameText()
         {
             _gameTextDirty = false;
+            Game.GameText.ForgetTexts();
             foreach (var (table, key, original, added) in Applied)
             {
                 if (table == null) continue;
@@ -338,20 +368,66 @@ namespace HometownStoreAccess
         /// <summary>Makes the game redraw localized text without changing scenes.</summary>
         public static void RefreshGameText()
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            try { LocalizationManager.PreloadTables(); }
+            catch (Exception e) { Log.Debug("Preloading the game's tables failed: " + e.Message); }
+            long tables = sw.ElapsedMilliseconds;
+            // Every listener on its own: one that fails (a destroyed object still subscribed, a table not
+            // loaded yet) must not keep the rest of the game's text in the old language.
+            int failed = 0;
+            string first = null;
             try
             {
-                LocalizationManager.PreloadTables();
                 FieldInfo evt = typeof(LocalizationManager).GetField("TablesReloaded", BindingFlags.NonPublic | BindingFlags.Static);
-                (evt?.GetValue(null) as Action)?.Invoke();
-                foreach (LocalizeStringEvent lse in Resources.FindObjectsOfTypeAll<LocalizeStringEvent>())
+                if (evt?.GetValue(null) is Action reloaded)
                 {
-                    if (lse != null && lse.gameObject.scene.IsValid()) lse.RefreshString();
+                    foreach (Delegate d in reloaded.GetInvocationList())
+                    {
+                        try { ((Action)d)(); }
+                        catch (Exception e)
+                        {
+                            failed++;
+                            if (first == null) first = d.Method.DeclaringType?.Name + "." + d.Method.Name + ": " + e.Message;
+                        }
+                    }
                 }
             }
             catch (Exception e)
             {
                 Log.Warn("Refreshing game text failed: " + e.Message);
             }
+            long listeners = sw.ElapsedMilliseconds - tables;
+            failed += RefreshShownText(ref first);
+            if (failed > 0) Log.Debug("Refreshing game text: " + failed + " listener(s) failed; first " + first);
+            Log.Debug("Game text redrawn: tables " + tables + " ms, listeners " + listeners + " ms, text components " + (sw.ElapsedMilliseconds - tables - listeners) + " ms");
+        }
+
+        /// <summary>
+        /// Redraws the scene's localized text components (labels such as the main menu buttons) with the
+        /// current language. Returns how many failed.
+        /// </summary>
+        public static int RefreshShownText(ref string firstError)
+        {
+            int failed = 0;
+            try
+            {
+                // Scene objects only (also hidden ones): searching every loaded asset as well is much slower.
+                foreach (LocalizeStringEvent lse in UnityEngine.Object.FindObjectsByType<LocalizeStringEvent>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                {
+                    if (lse == null || !lse.gameObject.scene.IsValid()) continue;
+                    try { lse.RefreshString(); }
+                    catch (Exception e)
+                    {
+                        failed++;
+                        if (firstError == null) firstError = lse.gameObject.name + ": " + e.Message;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Warn("Refreshing the game's labels failed: " + e.Message);
+            }
+            return failed;
         }
     }
 
@@ -432,7 +508,8 @@ namespace HometownStoreAccess
 
         public static void Update()
         {
-            if (Time.unscaledTime < _nextCheck) return;
+            // Every frame until the language is in place (the first screen waits for it), then twice a second.
+            if (Ready && Time.unscaledTime < _nextCheck) return;
             _nextCheck = Time.unscaledTime + 0.5f;
             try
             {
@@ -451,7 +528,8 @@ namespace HometownStoreAccess
             if (!_loggedLocales && Locales != null)
             {
                 _loggedLocales = true;
-                Log.Info("Game locales: " + string.Join(", ", Locales.Select(l => l.Identifier.Code).ToArray()) + "; selected " + Selected?.Identifier.Code);
+                Log.Info("Game locales: " + string.Join(", ", Locales.Select(l => l.Identifier.Code).ToArray()) + "; selected " + Selected?.Identifier.Code
+                    + " (ready " + Time.realtimeSinceStartup.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s after the start, frame " + Time.frameCount + ")");
             }
             ApplyOverride();
             if (!Ready && OverrideSettled())
@@ -459,18 +537,43 @@ namespace HometownStoreAccess
                 Ready = true;
                 SyncModLanguage();
                 _fallbackPending = true;
+                // The game has all of its Thai and English text, so the mod's language work (templates,
+                // translation files, English fallback) can wait until the main menu has been read; the
+                // other languages need it for that first screen already.
+                if (SelectedIsComplete) _startupWorkNotBefore = Time.unscaledTime + 1.5f;
             }
-            if (_fallbackPending && Ready)
+            if (_fallbackPending && Ready && !StartupWorkDeferred)
             {
                 // After Unity has released the previous language's tables: load the English fallback
                 // tables, then let the game redraw its text with them.
                 _fallbackPending = false;
+                var sw = System.Diagnostics.Stopwatch.StartNew();
                 Patches.GameTextFallbackPatch.PreloadEnglish();
+                long english = sw.ElapsedMilliseconds;
                 LanguageFiles.RefreshGameText();
+                Log.Debug("English fallback tables " + english + " ms, game text redrawn " + (sw.ElapsedMilliseconds - english) + " ms");
             }
         }
 
         private static bool _fallbackPending;
+        private static float _startupWorkNotBefore = -1f;
+
+        /// <summary>
+        /// Right after the start, the mod's own language work waits a moment so that the first screen is
+        /// read without delay (only for Thai and English, which the game has complete).
+        /// </summary>
+        public static bool StartupWorkDeferred => Time.unscaledTime < _startupWorkNotBefore;
+
+        /// <summary>The game has all of its text in the selected language (Thai and English).</summary>
+        public static bool SelectedIsComplete
+        {
+            get
+            {
+                string code = Selected != null ? Selected.Identifier.Code : string.Empty;
+                if (!string.IsNullOrEmpty(Plugin.Settings.GameLocale.Value) && !string.Equals(Plugin.Settings.GameLocale.Value, code, StringComparison.OrdinalIgnoreCase)) return false;
+                return code.StartsWith("th", StringComparison.OrdinalIgnoreCase) || code.StartsWith("en", StringComparison.OrdinalIgnoreCase);
+            }
+        }
 
         /// <summary>
         /// True once the game's localization has started and a language chosen through the mod is in place,
@@ -513,7 +616,14 @@ namespace HometownStoreAccess
             LocalizationSettings.SelectedLocale = l;
         }
 
-        public static void Select(string code)
+        // Until then a locale change was asked for (and announced) by Select, so the locale event stays quiet.
+        private static float _selectedAnnouncedUntil = -1f;
+
+        /// <summary>
+        /// Shows the game in the chosen language (the mod's messages follow it when the mod language is
+        /// Automatic) and says the new language at once, whatever the game does with the change.
+        /// </summary>
+        public static void Select(string code, string name)
         {
             Plugin.Settings.GameLocale.Value = code;
             string target = TargetLocaleCode(code);
@@ -527,8 +637,42 @@ namespace HometownStoreAccess
             {
                 Log.Debug("Could not sync LanguageControl: " + e.Message);
             }
-            if (l != null && l != Selected) LocalizationSettings.SelectedLocale = l;
-            else OnLocaleChanged(Selected);
+            // The game finishes the change a frame or more later; its event must not say it again.
+            _selectedAnnouncedUntil = Time.unscaledTime + 3f;
+            try
+            {
+                if (l != null && l != Selected) LocalizationSettings.SelectedLocale = l;
+                else OnLocaleChanged(Selected);
+            }
+            catch (Exception e)
+            {
+                Log.Warn("Changing the game language failed: " + e.Message);
+            }
+            // With the mod language on Automatic, the message is already in the new language.
+            SyncModLanguage();
+            SpeechService.Say(Loc.Get("language_changed", name), true);
+        }
+
+        /// <summary>
+        /// The language the mod can speak before the game's localization has started: the mod language
+        /// setting, the language chosen through the mod, or the game's own saved choice (English or
+        /// Thai). Null when only the game can tell.
+        /// </summary>
+        public static string EarlyLanguage()
+        {
+            string setting = Plugin.Settings.ModLanguage.Value;
+            if (!string.IsNullOrEmpty(setting) && !string.Equals(setting, "Auto", StringComparison.OrdinalIgnoreCase)) return setting;
+            string wanted = Plugin.Settings.GameLocale.Value;
+            if (!string.IsNullOrEmpty(wanted)) return wanted;
+            try
+            {
+                if (PlayerPrefs.HasKey("Language")) return PlayerPrefs.GetInt("Language") == (int)Language.Thai ? "th" : "en";
+            }
+            catch (Exception e)
+            {
+                Log.Debug("Could not read the game's language choice: " + e.Message);
+            }
+            return null;
         }
 
         /// <summary>Called when the player uses the game's own dropdown: their choice wins over the mod's.</summary>
@@ -540,10 +684,11 @@ namespace HometownStoreAccess
         private static void OnLocaleChanged(Locale locale)
         {
             _fallbackPending = true;
+            Game.GameText.ForgetTexts();
             SyncModLanguage();
             LanguageFiles.MarkGameTextDirty();
             LanguageFiles.ApplyGameText();
-            bool quiet = _quietChange || !Ready;
+            bool quiet = _quietChange || !Ready || Time.unscaledTime < _selectedAnnouncedUntil;
             _quietChange = false;
             if (quiet) return;
             string wanted = Plugin.Settings.GameLocale.Value;
@@ -587,16 +732,25 @@ namespace HometownStoreAccess
 
         public override string Detail() => Loc.Get("hint_language");
 
-        public override bool Adjust(int direction, bool large)
+        /// <summary>Left and right: the previous or next language (round the ends when wrapping is on).</summary>
+        public override bool Adjust(int direction, bool large) => Step(direction, NavSettings.Wrap);
+
+        /// <summary>Enter: the next language, always going round.</summary>
+        public override bool Activate() => Step(1, wrap: true);
+
+        private bool Step(int direction, bool wrap)
         {
             var choices = GameLanguage.Choices();
             if (choices.Count == 0) return true;
-            int i = Math.Max(0, GameLanguage.CurrentChoiceIndex(choices));
-            i = ((i + direction) % choices.Count + choices.Count) % choices.Count;
-            GameLanguage.Select(choices[i].code);
+            int i = ChoiceStep.Step(GameLanguage.CurrentChoiceIndex(choices), choices.Count, direction, wrap, out bool atEdge);
+            if (atEdge)
+            {
+                Audio.AudioCues.Play(Audio.Cue.Edge);
+                SpeechService.Say(Value(), true);
+                return true;
+            }
+            GameLanguage.Select(choices[i].code, choices[i].name);
             return true;
         }
-
-        public override bool Activate() => Adjust(1, false);
     }
 }

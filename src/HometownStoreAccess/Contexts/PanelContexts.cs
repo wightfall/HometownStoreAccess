@@ -269,9 +269,9 @@ namespace HometownStoreAccess.Contexts
         {
             get
             {
-                foreach (StorageSummaryPanel p in Object.FindObjectsOfType<StorageSummaryPanel>())
+                foreach (StorageSummaryPanel p in SceneCache.All<StorageSummaryPanel>())
                 {
-                    if (p.panelRoot != null && p.panelRoot.activeInHierarchy) return p;
+                    if (p != null && p.panelRoot != null && p.panelRoot.activeInHierarchy) return p;
                 }
                 return null;
             }

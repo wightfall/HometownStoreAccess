@@ -61,6 +61,12 @@ namespace HometownStoreAccess.UI
         /// </summary>
         public virtual string PreferredFocusKey() => null;
 
+        /// <summary>
+        /// Where focus starts when the screen opens and no earlier focus is remembered; -1 (or 0) is the
+        /// first item.
+        /// </summary>
+        public virtual int InitialFocus(IReadOnlyList<NavItem> items) => -1;
+
         /// <summary>Help lines specific to this screen, appended to the general help.</summary>
         public virtual IEnumerable<string> HelpLines() { yield break; }
 

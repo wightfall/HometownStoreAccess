@@ -34,7 +34,8 @@ namespace HometownStoreAccess.Input
                 }
                 else
                 {
-                    Overlay.SpeakContextHelp(Overlay.IsOpen ? root.Contexts.Current : root.Contexts.Current, root.InGame);
+                    // The game's keys do not work while the key list or the settings are open.
+                    Overlay.SpeakContextHelp(root.Contexts.Current, root.InGame && !Overlay.IsOpen);
                 }
                 return true;
             }

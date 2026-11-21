@@ -16,6 +16,10 @@ namespace HometownStoreAccess.Game
             }
             _uiHidden = hidden;
 
+            // GameControl exists only in the game: asked for anywhere else, the game searches the whole
+            // scene for it (twice) on every call.
+            AccessibilityRoot root = AccessibilityRoot.Instance;
+            if (root == null || !root.InGame) return;
             GameControl gc = GameControl.Instance;
             if (gc == null) return;
             // F1 is the mod's help key. The game turns on hidden developer cheats (F2 money, F4 every
