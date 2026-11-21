@@ -199,6 +199,22 @@ namespace HometownStoreAccess.Diagnostics
                     else UIPanelManager.Instance.OpenTradePanel(shop);
                     break;
                 }
+                case "unlock":
+                {
+                    // unlock <place>: makes a place of the map available, as a reward does (test saves only)
+                    LocationTrade place = null;
+                    foreach (LocationTrade t in Resources.FindObjectsOfTypeAll<LocationTrade>())
+                    {
+                        if (t.name.IndexOf(arg, StringComparison.OrdinalIgnoreCase) >= 0) { place = t; break; }
+                    }
+                    if (place == null) Log.Warn("unlock: no place matches " + arg);
+                    else
+                    {
+                        LocationTradeManager.Instance.UnlockLocationProfile(place);
+                        Log.Info("[unlock] " + place.name);
+                    }
+                    break;
+                }
                 case "reward":
                 {
                     // reward money 50 | item <name> [n] | blueprint <name> | customer <name> | trust <customer> | budget <customer> | trade <shop> | vehicle Car

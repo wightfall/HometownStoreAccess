@@ -67,6 +67,14 @@ namespace HometownStoreAccess.Contexts
             if (buttons != null)
             {
                 UiScan.Add(items, buttons.gameObject, string.Empty);
+                // Neither asks first: Exit closes the game at once (unlike Quit in the pause menu), and a
+                // new game's autosave (from its second day) replaces the one Continue loads.
+                foreach (NavItem item in items)
+                {
+                    if (!(item is ButtonItem b) || b.Target == null) continue;
+                    if (b.Target.name == "Exit") b.ValueFunc = () => Loc.Get("menu_exit_value");
+                    else if (b.Target.name == "New Game") b.ValueFunc = () => Loc.Get("menu_new_game_value");
+                }
                 firstMore = items.Count;
                 UiScan.Add(items, main, more, skip: go => go.transform == buttons || MenuHelpers.IsLanguageDropdown(go));
             }

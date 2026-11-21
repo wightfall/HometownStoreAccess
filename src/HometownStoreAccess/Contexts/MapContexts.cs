@@ -107,7 +107,33 @@ namespace HometownStoreAccess.Contexts
                 if (loc.LocationID.lotteryPanel) parts.Add(Loc.Get("map_lottery"));
                 if (loc.LocationID.vehiclePanel) parts.Add(Loc.Get("map_vehicle_shop"));
             }
+            else if (n is Content_SelectSign sign && sign.TargetMap != null)
+            {
+                string there = SignMarker(sign.TargetMap);
+                if (there != null) parts.Add(there);
+            }
             return string.Join(", ", parts.ToArray());
+        }
+
+        /// <summary>
+        /// The game marks a road sign when a place in the area it leads to has an event or is new (the
+        /// first such place decides, as in the game).
+        /// </summary>
+        private static string SignMarker(Content_Map target)
+        {
+            SelectLocationPanel p = Panel;
+            if (p == null || p.allSelectLocation == null || !p.allSelectLocation.TryGetValue(target, out List<Content_SelectForMap> places)) return null;
+            LocationTradeManager lt = LocationTradeManager.Instance;
+            foreach (Content_SelectForMap place in places)
+            {
+                if (!(place is Content_SelectLocation loc) || loc.LocationID == null || !loc.gameObject.activeSelf) continue;
+                foreach (Journal j in EventJournalManager.Instance.CurrentJournals)
+                {
+                    if (j != null && j.showToPlayer && j.haveLocationCondition && j.locationTradeThatTrigger == loc.LocationID) return Loc.Get("map_sign_event");
+                }
+                if (!lt.locationAlreadyNotify.Contains(loc.LocationID)) return Loc.Get("map_sign_new");
+            }
+            return null;
         }
 
         private static string Distance(Content_SelectForMap n)

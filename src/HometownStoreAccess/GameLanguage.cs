@@ -71,14 +71,8 @@ namespace HometownStoreAccess
 
         public static string DisplayName(string code)
         {
-            switch ((code ?? string.Empty).ToLowerInvariant())
-            {
-                case "en": return "English";
-                case "th": return "ไทย";
-                case "ja": return "日本語";
-                case "id": return "Bahasa Indonesia";
-                case "zh": return "繁體中文";
-            }
+            string builtIn = LanguageNames.Spoken(code);
+            if (builtIn != null) return builtIn;
             string n = Loc.ExternalName(code);
             if (!string.IsNullOrEmpty(n)) return n;
             if (GameFiles.TryGetValue(code ?? string.Empty, out LangFile g) && !string.IsNullOrEmpty(g.Name)) return g.Name;
