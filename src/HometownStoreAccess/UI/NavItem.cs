@@ -69,6 +69,25 @@ namespace HometownStoreAccess.UI
         public override string Detail() => _detail?.Invoke();
     }
 
+    /// <summary>A section heading in a list with heading items (see ScreenContext.HeadingItems).</summary>
+    internal sealed class HeadingItem : NavItem
+    {
+        private readonly string _name;
+        private readonly int _count;
+
+        public HeadingItem(string name, int count)
+        {
+            _name = name;
+            _count = count;
+            Group = name;
+        }
+
+        public override string Key => "heading:" + _name;
+        public override string Label() => _name;
+        public override string Value() => Loc.Get("heading_items", _count);
+        public override string Role() => Loc.Get("role_heading");
+    }
+
     /// <summary>A custom action with optional alternates and adjust handler.</summary>
     internal sealed class ActionItem : NavItem
     {

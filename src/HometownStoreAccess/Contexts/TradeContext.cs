@@ -37,10 +37,17 @@ namespace HometownStoreAccess.Contexts
 
         public override bool IsActive() => Panel != null && Panel.gameObject.activeInHierarchy;
 
+        // A new visit (another shop, or the same shop opened again) starts at the top of the list;
+        // coming back from a popup over the shop keeps the focus where it was.
+        private bool _freshVisit;
+
+        public override bool ResetFocusOnEnter => _freshVisit;
+
         public override void OnEnter()
         {
             TradePanel p = Panel;
-            if (p != null && p.locationProfile != _profile)
+            _freshVisit = p != null && p.locationProfile != _profile;
+            if (_freshVisit)
             {
                 // A different shop: start again with every product.
                 _profile = p.locationProfile;

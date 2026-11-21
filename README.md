@@ -78,8 +78,10 @@ for help." The mod skips the game's logo intro, so the main menu follows a momen
 off with **Skip the logo intro** in the settings).
 
 - **F1** tells you the keys for the screen you are on.
-- **Shift+F1** opens the key list: every key the mod uses, by section. It also has a section where
-  you can listen to each sound cue. Page Up and Page Down jump between sections.
+- **Shift+F1** opens the key list: every key the mod uses, by section, one line at a time. It also
+  has a section where you can listen to each sound cue. Each section starts with a heading of its
+  own (for example "Actions, heading, 2 items"): Page Up and Page Down jump to the headings, and
+  Down reads the first line of the section.
 - **F5** opens the mod settings.
 
 A new game starts with a letter: first choose whether you want the tutorial, then press Enter on
@@ -157,10 +159,17 @@ Hold Ctrl while a list is open.
 | P | Pause or resume while the shop is open |
 | 1, 2, 3 | Normal, double, fast game speed |
 | N | Next phase: open the shop, go to the map, or end the day |
-| B | Build mode |
+| B | Build mode; B again closes it |
 | K | Customers in the shop and what they are doing |
 | J | Current goal or tutorial step |
 | G | Everything in storage |
+
+Many events in the demo have no name in any language (the game's event journal shows an empty
+title). The mod names them after what they ask for: the place they send you to ("Event at
+Temple"), else the goods or buildings they need ("Event: Paper"), else the shop level. The game
+strikes a task through when it is done; the mod says "done" after it, in J and in the event
+journal. When every task is done the event ends quietly, as in the game: what it leads to may come
+later (another day, or a customer in the shop).
 
 ### Shop floor
 
@@ -174,6 +183,11 @@ Hold Ctrl while a list is open.
 | Enter | Open what is under the cursor: shelf, storage, machine, cashier, or the delivery truck at the far left |
 | I | Full details of the cell |
 | Tab | Switch to the toolbar (the game's on-screen buttons) |
+
+Walking onto a shelf reads every stack on it (a wooden shelf has 8 slots, so up to 8 kinds of
+goods), and walking onto storage says how full it is and what is in it. All storage buildings
+share one storage, so each one reads the same goods. The delivery truck also lists everything it
+carries.
 
 ### Build mode (B)
 
@@ -189,6 +203,7 @@ Hold Ctrl while a list is open.
 | Enter (on the floor) | Lift a building to move it |
 | Delete (on the floor) | Put a building back into your blueprints |
 | M (Ctrl+M in the list) | Toggle move mode |
+| B (Ctrl+B in the list) | Close build mode (the Close item in the tools section does the same) |
 
 ### Shelves, storage, cashier and delivery truck
 
@@ -231,14 +246,25 @@ These two keys work only during a conversation. On a controller, hold the left t
 | W (walk mode) | Leave walk mode |
 
 Each place also says when it has an event from the event journal or is new, and a road sign says
-when the area it leads to has such a place, like the game's markers on the map.
+when the area it leads to has such a place, like the game's markers on the map. A place's details
+also name its events ("Events here: Event at Temple").
 
 End of the day finishes the evening. The map's own buttons (customers, event journal, daily summary,
 all stock, settings) are in the map section at the end of the list.
 
-If you closed a shop with Escape, choose the place you are at again: its button says **Go in
-again** and opens the shop without using a travel point. Your own shop is only a marker on the map;
-you go back to it with End of the day.
+After a trip the focus is on the place you arrived at ("Temple, you are here"), also when you
+close a shop or come into another area by a road sign. If you closed a shop with Escape, press
+Enter on it again: its button says **Go in again** and opens the shop without using a travel
+point. This is how the game works, at every place: going back into the place you are at is free,
+only moving to another place costs a point.
+
+Some places sell nothing (the temple, the school, the village head's house and others in the
+demo). The game opens no screen there, so you only hear that you arrived; an event can still ask
+you to go there, and arriving is what completes that task.
+
+A shop always opens at the top of its list (the filters); only coming back from a popup inside the
+shop keeps your place. Your own shop is only a marker on the map; you go back to it with End of
+the day.
 
 ### Shops on the map
 
@@ -247,13 +273,17 @@ The screen has these sections, and Page Up and Page Down move between them:
 - **Filters**: the Category item and the search box. Ctrl+Up and Ctrl+Down (or Left and Right on
   Category) step through: all products, all goods, each kind of goods, all buildings, and each kind
   of building. The game's own tabs follow, so a sighted helper sees the same list.
-- **Goods** and **Buildings**: everything this place sells, with price and stock ("sold out" when
+- **Goods** and **Buildings**: everything this place sells today, with price and stock ("sold out" when
   none is left). Right adds one to the basket, Left removes one, and holding Shift changes ten at
   a time. Ctrl+I describes an item and the profit you make on it.
 - **Basket**: what you are buying (change amounts here too), the total and what money is left,
   then Check out and Close.
 
 The goods arrive in your delivery truck the next morning.
+
+What a shop sells is chosen by the game: it changes from day to day (some goods are picked at
+random, and the amounts too), and more goods appear as your shop level goes up. The mod lists
+everything the shop has that day, even what the game's own list hides behind its tabs and filters.
 
 ### Controller
 
@@ -341,7 +371,8 @@ You can listen to each cue in the key list (Shift+F1, then the sound cues sectio
 ## Mod settings
 
 F5 opens the settings. Changes are saved at once. Left and Right change a value, and Enter turns a
-setting on or off. Page Up and Page Down jump between the sections.
+setting on or off. Each section starts with a heading of its own: Page Up and Page Down jump to the
+headings, so you hear the section name alone, and Down goes to its first setting.
 
 - **Speech and language:** game language (every language the game has, plus your translation
   files), mod language, speech output (Auto, NVDA, JAWS, OneCore, SAPI and others), announce list
@@ -422,6 +453,109 @@ powershell -ExecutionPolicy Bypass -File tools\build-release.ps1
 
 `DeployToGame` copies the plugin into the game. `build-release.ps1` runs the tests and writes the
 release zip and the installer to `dist\`.
+
+### Test commands
+
+The mod has commands for testing it in the running game. They change the game like cheats do, so
+use them only on a test save:
+
+- **Back up your saves first.** The game always autosaves to AutoSave, the save that Continue
+  loads, even when you loaded another slot. Copy the folder
+  `%USERPROFILE%\AppData\LocalLow\Circle Cat\Hometown Store\saves` before testing and put it
+  back afterwards (Continue loads the save with the newest file time, so keep the times).
+- Load your test save with **Load game**, never with Continue.
+
+To turn them on, close the game and set `TestHooks = true` in the `[Debug]` section of
+`BepInEx\config\com.wightfall.hometownstoreaccess.cfg` (`Verbose = true` adds detail to the log).
+Then every line written to `BepInEx\hsa_cmd.txt` in the game folder runs as a command: the mod
+reads the file five times a second, runs each line and deletes the file. For example, in a command
+prompt in the game folder:
+
+```
+echo state> BepInEx\hsa_cmd.txt
+```
+
+The results, and everything the mod says (lines with `[Speech]`), are written to
+`BepInEx\LogOutput.log`. The game only runs while its window has the focus, so a command waits
+until you switch back to the game. Write the next command only after the file is gone: two key
+presses that arrive in the same moment count as one. Lines that start with `#` are skipped.
+
+Names are the game's English asset names, and part of a name is enough, in any case (`Incense`
+finds "Incense Sticks"). `buildings`, `trades`, `places` and `journals` list them. When you are
+done, set `TestHooks = false` again and delete `BepInEx\hsa_dumps` and any `BepInEx\hsa_*` files.
+
+**The mod itself**
+
+| Command | What it does |
+| --- | --- |
+| `help` | Writes the list of commands to the log. |
+| `state` | The active mod screen, how many items its list has, and what is focused. |
+| `say <text>` | Speaks the text. |
+| `key <KeyCode> [shift] [ctrl] [alt]` | Presses a mod key, with Unity key names such as `DownArrow`, `Return`, `PageDown`, `F1` or `B`. Only the mod sees it: keys the game reads itself (Escape, the speed keys 1 to 3, typing into a text field) need a real key press. |
+| `pad <buttons> [frames]` | Controller input, held for that many frames (2 if not given; holding about 0.6 s, as for the key list, needs about 240). Buttons: `a b x y start back lb rb ls rs up down left right lt rt`, sticks: `lsup lsdown lsleft lsright rsup rsdown rsleft rsright`. |
+| `click <path>` | Presses the button at that path in the scene (the paths are in a dump). |
+| `dump [name]` | Writes the screen's interface tree to `BepInEx\hsa_dumps\ui_<name>_<time>.txt`. |
+| `world` | Writes the shop grid, the buildings and the customers to `BepInEx\hsa_dumps\world_<time>.txt`. |
+| `perf [seconds]` | Measures for 5 seconds (or as many as given) how long each part of the mod takes per frame, and logs `[perf]` lines. |
+
+**Money, goods and buildings**
+
+| Command | What it does |
+| --- | --- |
+| `cash <n>` | Adds money; a minus sign takes it away. |
+| `item <name> [n]` | Puts goods into the storage. |
+| `stock <item> [n]` | Puts goods straight onto the first placed shelf that can hold them. When no placed shelf can, the log names the shelves that can. Events that ask for goods on shelves count these. |
+| `blueprint <name> [n]` | Adds buildings to your blueprints, to place in build mode. |
+| `buildings` | Lists every building with its kind and category. |
+
+**Shops and the map**
+
+| Command | What it does |
+| --- | --- |
+| `trades` | Every shop, how many goods and buildings it sells today, and whether it is unlocked. |
+| `trade <shop>` | Opens that shop's screen without travelling. |
+| `places` | Every area of the map with its places and road signs: name, unlocked or not, today's stock, lottery or vehicle shop, where you are, the events waiting there, and the places the map hides. Open the map once first. |
+| `unlock <place>`, `unlock all` | Makes that place, or every place, available on the map, as a reward does. |
+| `points <n>` | Sets today's travel points. |
+| `goto <place>` | Does what arriving at the place does: uses a travel point if you move, checks the events, and opens the shop, lottery or vehicle screen. Your token on the map does not move. |
+| `open lottery`, `open vehicle`, `open characters` | Opens the lottery, the vehicle shop or the character collection. |
+
+**Events, story and rewards**
+
+| Command | What it does |
+| --- | --- |
+| `journals` | Every event of the event journal: its name (or the name the mod gives one without a name), whether it is not started, in progress or finished, hidden or repeating, and its tasks. |
+| `journal <name>` | Starts that event: it is added to the event journal. |
+| `journal check` | Checks the tasks of every event now, as the game does when you arrive at a place. |
+| `events` | Lists every story event the game's own developer tool can run. |
+| `event <name>` | Runs that story event now. |
+| `dialog`, `dialog <name>` | Lists the conversations that have replies; shows that conversation. |
+| `reward money <n>`, `reward item <name>`, `reward blueprint <name>`, `reward customer <name>`, `reward trust <customer>`, `reward budget <customer>`, `reward wish <customer>`, `reward trade <place>`, `reward vehicle <Motorcycle or Car>` | Shows that kind of reward screen, to hear how it is read. It only shows the screen and gives nothing. |
+
+**Game text**
+
+| Command | What it does |
+| --- | --- |
+| `table <table> [entry]` | How each language resolves a game text table, and one entry of it. |
+| `export <locale>` | Writes the game's own texts in that language (`th`, `ja`, `zh-HK`, `id`, `en`) to `BepInEx\hsa_export_<locale>.txt`. |
+| `missing <locale>` | Writes the game texts that language lacks to `BepInEx\hsa_missing_<locale>.txt`, as a template for a translation file (see `docs/TRANSLATING.md`). |
+
+**How to test with them**
+
+- **A full shelf:** `stock Candy 5`, `stock Bread 5` and so on put each kind of goods on the first
+  placed shelf that holds it (for another shelf: `blueprint Wooden Shelf` and place it in build
+  mode first). Walking onto the shelf reads every stack.
+- **Every place on the map:** in the evening, `unlock all`, `points 40` and `places`. Then go to
+  each place with Up, Down and Enter (or `goto <place>`), and close each shop with Escape. After
+  each trip the focus is on the place you arrived at.
+- **An event:** `journals` shows them all. `journal Shaman` starts the temple event and you hear
+  "New event: Event at Temple"; J reads its tasks. For its goods: `blueprint Altar`, place the
+  altar shelf, `stock Incense`, `stock holy water` and `stock Sacred Thread`. Then travel to the
+  temple (or `goto Temple`): every task is done and the event ends.
+- **Rewards and conversations:** `reward trade VillageHead`, `reward item Candy`; `dialog` lists
+  the conversations with replies, `dialog <name>` plays one.
+- **The controller:** `pad a`, `pad back 240` (holds Back: the key list).
+- **A translation:** `missing ja` writes what the Japanese game text lacks.
 
 The code is organized like this:
 

@@ -231,6 +231,7 @@ namespace HometownStoreAccess.UI
             {
                 Log.Error("Context " + Current.Id + " build failed: " + e);
             }
+            if (Current.HeadingItems) InsertHeadings(_items);
             // Keys must be unique for focus tracking: suffix duplicates.
             var seen = new Dictionary<string, int>();
             foreach (NavItem item in _items)
@@ -248,6 +249,23 @@ namespace HometownStoreAccess.UI
                 }
                 _keys.Add(k);
             }
+        }
+
+        /// <summary>Puts a heading item in front of each section (lists with HeadingItems).</summary>
+        internal static void InsertHeadings(List<NavItem> items)
+        {
+            var groups = new List<string>(items.Count);
+            foreach (NavItem i in items) groups.Add(i.Group);
+            var starts = new Dictionary<int, int>();
+            foreach (KeyValuePair<int, int> s in ChoiceStep.SectionStarts(groups)) starts[s.Key] = s.Value;
+            var result = new List<NavItem>(items.Count + starts.Count);
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (starts.TryGetValue(i, out int n)) result.Add(new HeadingItem(items[i].Group, n));
+                result.Add(items[i]);
+            }
+            items.Clear();
+            items.AddRange(result);
         }
 
         private void HandleListInput()
@@ -410,15 +428,22 @@ namespace HometownStoreAccess.UI
             }
             string text = SafeString(f.Speak);
             string group = f.Group ?? string.Empty;
-            if (includeGroup && group.Length > 0 && group != _lastAnnouncedGroup)
+            // With heading items the heading says the section: items are read on their own.
+            bool headings = Current != null && Current.HeadingItems;
+            if (includeGroup && !headings && group.Length > 0 && group != _lastAnnouncedGroup)
             {
                 text = TextCleaner.Join(", ", group, text);
             }
             _lastAnnouncedGroup = group;
+            if (f is HeadingItem)
+            {
+                SpeechService.Say(text, interrupt);
+                return;
+            }
             int pos = 0, total = 0;
             for (int i = 0; i < _items.Count; i++)
             {
-                if ((_items[i].Group ?? string.Empty) != group) continue;
+                if ((_items[i].Group ?? string.Empty) != group || _items[i] is HeadingItem) continue;
                 total++;
                 if (i <= _cursor.Index) pos++;
             }

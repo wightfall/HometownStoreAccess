@@ -42,6 +42,18 @@ namespace HometownStoreAccess.Input
             }
             if (ModInput.Down(KeyCode.B))
             {
+                // B again closes build mode, as the Close button of the build panel does (not while a
+                // building is being placed: Escape cancels that first).
+                BuildingPanel panel = ui.buildingPanelGameObject != null ? ui.buildingPanelGameObject.GetComponent<BuildingPanel>() : null;
+                if (panel != null && panel.gameObject.activeInHierarchy && !Placement.Active)
+                {
+                    Transform close = panel.transform.Find("Close Panel");
+                    if (close != null)
+                    {
+                        GameActions.ClickIfAvailable(close.GetComponent<UnityEngine.UI.Button>());
+                        return true;
+                    }
+                }
                 Transform build = FindHudButton("BuildButton");
                 if (build != null) GameActions.ClickIfAvailable(build.GetComponent<UnityEngine.UI.Button>());
                 else SpeechService.Say(Loc.Get("not_available_now"), true);
@@ -99,9 +111,9 @@ namespace HometownStoreAccess.Input
             var parts = new List<string>
             {
                 Loc.Get("storage_long", rm.storage.ItemList.Count, rm.storage.slotLimit),
-                GameText.Contents(rm.storage, 30),
+                GameText.Contents(rm.storage),
             };
-            if (rm.delivery.ItemList.Count > 0) parts.Add(Loc.Get("delivery_has_items", GameText.Contents(rm.delivery, 30)));
+            if (rm.delivery.ItemList.Count > 0) parts.Add(Loc.Get("delivery_has_items", GameText.Contents(rm.delivery)));
             return TextCleaner.Join(". ", parts.ToArray());
         }
 
@@ -118,7 +130,8 @@ namespace HometownStoreAccess.Input
                 {
                     if (j == null || !j.showToPlayer) continue;
                     var tasks = ej.GetJournalDescription(j);
-                    string taskText = tasks != null ? string.Join("; ", tasks.Keys.Select(TextCleaner.Clean).ToArray()) : string.Empty;
+                    // Done tasks are struck through in the game: say "done" for them.
+                    string taskText = tasks != null ? string.Join("; ", tasks.Keys.Select(k => JournalTasks.Describe(k, markDone: true)).ToArray()) : string.Empty;
                     parts.Add(TextCleaner.Join(": ", GameText.Name(j), taskText));
                 }
                 if (parts.Count > 0) return TextCleaner.Join(". ", parts.ToArray());

@@ -66,7 +66,7 @@ namespace HometownStoreAccess.Game
                     int id = m.GetInstanceID();
                     if (MachineDone.TryGetValue(id, out int before) && m.todayDoneTime > before && s.AnnounceStock.Value)
                     {
-                        SpeechService.Say(Loc.Get("machine_done", GameText.Name(m.ID), GameText.Contents(m.OutputInventory, 3)), false, MsgCategory.Shop);
+                        SpeechService.Say(Loc.Get("machine_done", GameText.Name(m.ID), GameText.Contents(m.OutputInventory)), false, MsgCategory.Shop);
                     }
                     MachineDone[id] = m.todayDoneTime;
                 }
@@ -76,7 +76,7 @@ namespace HometownStoreAccess.Game
             bool truckVisiblePhase = gc.CurrentGamePhase == GamePhase.Morning || gc.CurrentGamePhase == GamePhase.Noon;
             if (_deliveryCount >= 0 && delivery > 0 && _deliveryCount == 0 && truckVisiblePhase)
             {
-                SpeechService.Say(Loc.Get("delivery_arrived", GameText.Contents(ResourceManager.Instance.delivery, 5)), false, MsgCategory.Shop);
+                SpeechService.Say(Loc.Get("delivery_arrived", GameText.Contents(ResourceManager.Instance.delivery)), false, MsgCategory.Shop);
             }
             _deliveryCount = delivery;
 
@@ -163,7 +163,7 @@ namespace HometownStoreAccess.Game
                     SpeechService.Say(Loc.Get("phase_morning_start", TimeControl.Instance.DayPlayerPlay), false, MsgCategory.Events);
                     if (ResourceManager.Instance.delivery.ItemList.Count > 0)
                     {
-                        SpeechService.Say(Loc.Get("delivery_arrived", GameText.Contents(ResourceManager.Instance.delivery, 5)), false, MsgCategory.Shop);
+                        SpeechService.Say(Loc.Get("delivery_arrived", GameText.Contents(ResourceManager.Instance.delivery)), false, MsgCategory.Shop);
                     }
                     break;
                 case GamePhase.Noon:
@@ -228,7 +228,7 @@ namespace HometownStoreAccess.Game
         {
             __state = (0, string.Empty, string.Empty);
             if (customer == null || customer.focusToCashier) return;
-            __state = (Mathf.RoundToInt(customer.inventoryBasket.CalculateAllItemsValue()), GameText.Contents(customer.inventoryBasket, 4), GameText.CustomerName(customer));
+            __state = (Mathf.RoundToInt(customer.inventoryBasket.CalculateAllItemsValue()), GameText.Contents(customer.inventoryBasket), GameText.CustomerName(customer));
         }
 
         private static void Postfix((int value, string items, string name) __state)

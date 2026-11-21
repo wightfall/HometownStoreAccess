@@ -153,16 +153,28 @@ namespace HometownStoreAccess.Contexts
             EventJournalPanel p = Panel;
             if (p == null) return;
             int i = 0;
+            // The panel lists the events shown to the player in the game's order: used to name an event
+            // whose title is empty.
+            EventJournalManager ej = EventJournalManager.Instance;
+            List<Journal> shown = ej == null ? new List<Journal>()
+                : (p.checkDoneJournals ? ej.DoneJournals : ej.CurrentJournals).Where(x => x != null && x.showToPlayer).ToList();
             foreach (Transform t in p.contentParent)
             {
                 var j = t.GetComponent<Content_Journal>();
                 if (j == null || !t.gameObject.activeInHierarchy) continue;
-                Content_Journal journal = j;
                 string title = UiUtil.Text(j.titleEventJournalText);
+                if (string.IsNullOrEmpty(title)) title = i < shown.Count ? GameText.Name(shown[i]) : Loc.Get("journal_untitled");
                 var tasks = new List<string>();
                 foreach (Content_TaskJournal task in j.ChildContent.GetComponentsInChildren<Content_TaskJournal>(false))
                 {
-                    tasks.Add(UiUtil.Text(task.descriptionText));
+                    // The game strikes through the tasks that are already done (an event in progress can
+                    // have some done); in the finished events every task is done, so it is not repeated.
+                    TMP_Text line = task.descriptionText;
+                    string raw = line != null ? line.text : null;
+                    bool done = JournalTasks.IsDone(raw) || (line != null && (line.fontStyle & FontStyles.Strikethrough) != 0);
+                    string text = JournalTasks.Describe(raw, markDone: false);
+                    if (text.Length == 0) continue;
+                    tasks.Add(done && !p.checkDoneJournals ? Loc.Get("task_done", text) : text);
                 }
                 string group = title;
                 items.Add(new TextItem(() => Loc.Get("task_count", tasks.Count), "j" + i) { Group = group });

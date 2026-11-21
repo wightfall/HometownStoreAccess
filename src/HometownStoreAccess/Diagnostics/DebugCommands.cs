@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using HometownStoreAccess.Input;
 using HometownStoreAccess.Speech;
 using UnityEngine;
@@ -8,14 +10,9 @@ using UnityEngine.UI;
 namespace HometownStoreAccess.Diagnostics
 {
     /// <summary>
-    /// Developer test hook (Debug.TestHooks = true). Reads one command per line from
-    /// BepInEx/hsa_cmd.txt and deletes the file. Commands:
-    ///   dump [tag]            write the UI hierarchy
-    ///   world                 write the shop grid / buildings / customers
-    ///   key KeyCode [shift] [ctrl] [alt]   simulate a mod key press
-    ///   click Path/To/Button  invoke a button's onClick
-    ///   say text              speak text
-    ///   state                 log the current accessibility context and focus
+    /// Developer test hook (setting Debug.TestHooks = true). Reads one command per line from
+    /// BepInEx/hsa_cmd.txt, runs them and deletes the file; results go to BepInEx/LogOutput.log.
+    /// "help" writes the list of commands to the log. The README ("Test commands") describes each one.
     /// </summary>
     internal static class DebugCommands
     {
@@ -201,7 +198,13 @@ namespace HometownStoreAccess.Diagnostics
                 }
                 case "unlock":
                 {
-                    // unlock <place>: makes a place of the map available, as a reward does (test saves only)
+                    // unlock <place> | unlock all: makes places of the map available, as a reward does (test saves only)
+                    if (arg.Equals("all", StringComparison.OrdinalIgnoreCase))
+                    {
+                        LocationTradeManager.Instance.UnlockAllLocationProfiles();
+                        Log.Info("[unlock] every place");
+                        break;
+                    }
                     LocationTrade place = null;
                     foreach (LocationTrade t in Resources.FindObjectsOfTypeAll<LocationTrade>())
                     {
@@ -322,6 +325,67 @@ namespace HometownStoreAccess.Diagnostics
                     else GameProgressionControl.Instance.ForceRunEvent(found);
                     break;
                 }
+                case "help":
+                    foreach (string l in HelpText) Log.Info("[help] " + l);
+                    break;
+                case "places":
+                    Places();
+                    break;
+                case "points":
+                {
+                    // points <n>: sets today's travel points (the map shows the new number at once)
+                    if (!int.TryParse(arg, out int pts)) { Log.Warn("points: give a number"); break; }
+                    LocationTradeManager.Instance.currentTravelPoint = pts;
+                    SelectLocationPanel slp = UIPanelManager.Instance.GetSelectLocationPanel();
+                    if (slp != null && slp.gameObject.activeInHierarchy) slp.Refresh();
+                    Log.Info("[points] " + pts + " of " + LocationTradeManager.Instance.maxTravelPoint);
+                    break;
+                }
+                case "goto":
+                {
+                    // goto <place>: does what arriving there does (uses a travel point when you move,
+                    // checks the events, opens the shop, lottery or vehicle screen), without walking the map
+                    LocationTrade place = FindAsset<LocationTrade>(arg);
+                    if (place == null) { Log.Warn("goto: no place matches " + arg); break; }
+                    if (LocationTradeManager.Instance.GetLocationProfile(place) == null) { Log.Warn("goto: " + place.name + " has no profile in this save"); break; }
+                    LocationTradeManager.Instance.ReadLocationProfile(place);
+                    Log.Info("[goto] " + place.name + ", travel points left " + LocationTradeManager.Instance.currentTravelPoint);
+                    break;
+                }
+                case "journals":
+                    Journals();
+                    break;
+                case "journal":
+                {
+                    // journal <name>: adds that event to the event journal | journal check: checks every event's tasks now
+                    EventJournalManager ej = EventJournalManager.Instance;
+                    if (arg.Equals("check", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ej.CheckJournalCondition();
+                        Log.Info("[journal] checked; in progress: " + string.Join(", ", ej.CurrentJournals.Select(j => j.name).ToArray()));
+                        break;
+                    }
+                    Journal found = FindAsset<Journal>(arg);
+                    if (found == null) { Log.Warn("journal: nothing matches " + arg); break; }
+                    if (ej.CurrentJournals.Contains(found) || ej.DoneJournals.Contains(found)) { Log.Warn("journal: " + found.name + " is already " + (ej.CurrentJournals.Contains(found) ? "in progress" : "finished")); break; }
+                    ej.AddJournal(found);
+                    Log.Info("[journal] added " + found.name);
+                    break;
+                }
+                case "stock":
+                {
+                    // stock <item> [amount]: puts goods straight onto the first placed shelf that can hold them
+                    string[] parts = arg.Split(' ');
+                    bool counted = parts.Length > 1 && int.TryParse(parts[parts.Length - 1], out _);
+                    int n = counted ? int.Parse(parts[parts.Length - 1]) : 1;
+                    Item it = FindAsset<Item>(counted ? string.Join(" ", parts, 0, parts.Length - 1) : arg);
+                    if (it == null) { Log.Warn("stock: nothing matches " + arg); break; }
+                    ShelfObject shelf = BuildingSystem.Instance.allBuildings.OfType<ShelfObject>().FirstOrDefault(sh => sh.ShelfInventory.IsItemsStoreAble(it));
+                    if (shelf == null) { Log.Warn("stock: no placed shelf can hold " + it.name + " (shelves for it: " + string.Join(", ", ResourceManager.Instance.AllStorableShelves(it).Select(b => b.name).Distinct().ToArray()) + ")"); break; }
+                    shelf.ShelfInventory.AddItem(it, n);
+                    Log.Info("[stock] " + n + " x " + it.name + " on " + shelf.ID.name);
+                    break;
+                }
                 case "buildings":
                     // buildings: lists every building asset name (for the blueprint command)
                     foreach (Building b in Resources.FindObjectsOfTypeAll<Building>()) Log.Info("[buildings] " + b.name + " (" + b.GetType().Name + ", " + b.buildingCategory + ")");
@@ -371,9 +435,96 @@ namespace HometownStoreAccess.Diagnostics
                     break;
                 }
                 default:
-                    Log.Warn("Unknown debug command: " + cmd);
+                    Log.Warn("Unknown debug command: " + cmd + " (help lists the commands)");
                     break;
             }
         }
+
+        /// <summary>The asset of that type with exactly that name, else the first whose name contains the text (any case).</summary>
+        private static T FindAsset<T>(string query) where T : UnityEngine.Object
+        {
+            if (string.IsNullOrEmpty(query)) return null;
+            List<T> all = AllAssets<T>();
+            return all.FirstOrDefault(o => o.name.Equals(query, StringComparison.OrdinalIgnoreCase))
+                ?? all.FirstOrDefault(o => o.name.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        /// <summary>Loaded assets plus those in the game's Resources folders, each once, sorted by name.</summary>
+        private static List<T> AllAssets<T>() where T : UnityEngine.Object
+        {
+            var set = new HashSet<T>(Resources.FindObjectsOfTypeAll<T>());
+            foreach (T o in Resources.LoadAll<T>("")) set.Add(o);
+            return set.OrderBy(o => o.name, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        /// <summary>places: every map with its places and road signs, as the map shows them.</summary>
+        private static void Places()
+        {
+            SelectLocationPanel panel = UIPanelManager.Instance.GetSelectLocationPanel();
+            LocationTradeManager lt = LocationTradeManager.Instance;
+            if (panel == null || panel.allSelectLocation.Count == 0)
+            {
+                Log.Warn("places: the map has not been opened yet in this session (open it in the evening first)");
+                return;
+            }
+            foreach (KeyValuePair<Content_Map, List<Content_SelectForMap>> kv in panel.allSelectLocation)
+            {
+                Log.Info("[places] map " + kv.Key.name + " '" + Core.TextCleaner.Clean(kv.Key.detailsKey.GetName(kv.Key.name)) + "'" + (kv.Key == panel.currentMap ? " (current)" : ""));
+                foreach (Content_SelectForMap n in kv.Value)
+                {
+                    string what;
+                    if (n is Content_SelectLocation loc && loc.LocationID != null)
+                    {
+                        LocationTrade id = loc.LocationID;
+                        LocationProfile prof = lt.GetLocationProfile(id);
+                        what = "place " + id.name + " '" + Game.GameText.Name(id) + "'";
+                        what += prof == null ? ", no profile" : ", unlocked=" + prof.unlocked + ", " + prof.currentItemList.Count + " goods, " + prof.currentShelfList.Count + " buildings";
+                        if (id.lotteryPanel) what += ", lottery";
+                        if (id.vehiclePanel) what += ", vehicle shop";
+                        if (prof != null && lt.CurrentAtLocationProfile == prof) what += ", you are here";
+                        string[] events = EventJournalManager.Instance.CurrentJournals.Where(j => j != null && j.haveLocationCondition && j.locationTradeThatTrigger == id).Select(j => j.name).ToArray();
+                        if (events.Length > 0) what += ", events: " + string.Join(", ", events);
+                    }
+                    else if (n is Content_SelectSign sign && sign.TargetMap != null) what = "road sign to " + sign.TargetMap.name;
+                    else what = "marker";
+                    Log.Info("[places]   " + n.name + ": " + what + (n.gameObject.activeSelf ? "" : " (hidden on the map)"));
+                }
+            }
+        }
+
+        /// <summary>journals: every event of the event journal, its name, state and tasks.</summary>
+        private static void Journals()
+        {
+            EventJournalManager ej = EventJournalManager.Instance;
+            foreach (Journal j in AllAssets<Journal>())
+            {
+                string state = ej.CurrentJournals.Contains(j) ? "in progress" : ej.DoneJournals.Contains(j) ? "finished" : "not started";
+                string title = Core.TextCleaner.Clean(j.detailsKey != null ? j.detailsKey.GetName(j.name, LanguageControl.CurrentLanguage) : null);
+                var tasks = new List<string>();
+                if (j.haveStoreLevelCondition) tasks.Add("shop level " + j.storeLevel);
+                if (j.haveBuildingCondition) tasks.Add("buildings " + string.Join("+", j.buildingShouldHave.Where(b => b != null).Select(b => b.name).ToArray()));
+                if (j.haveItemCondition) tasks.Add("on shelves " + string.Join("+", j.itemShouldHave.Where(x => x != null && x.ID != null).Select(x => x.ID.name + " x" + x.currentAmount).ToArray()));
+                if (j.haveLocationCondition && j.locationTradeThatTrigger != null) tasks.Add("go to " + j.locationTradeThatTrigger.name);
+                if (j.haveCustomerCondition && j.customerLevelRequiredWrapper != null && j.customerLevelRequiredWrapper.id != null) tasks.Add("trust " + j.customerLevelRequiredWrapper.id.name + " " + j.customerLevelRequiredWrapper.levelRequired);
+                if (j.haveCustomerUnlockAmountCondition) tasks.Add("customers " + j.customerUnlockAmount);
+                if (j.haveMoneyCondition) tasks.Add("money " + j.moneyAmount);
+                if (j.haveDialogCondition && j.dialogEvent != null) tasks.Add("dialogs " + string.Join("+", j.dialogEvent.Where(d => d != null).Select(d => d.name).ToArray()));
+                Log.Info("[journals] " + j.name + " '" + (string.IsNullOrEmpty(title) ? "(no name; the mod says: " + Game.GameText.Name(j) + ")" : title) + "', " + state
+                    + (j.showToPlayer ? "" : ", hidden") + (j.isLoopJournal ? ", repeats" : "") + (tasks.Count > 0 ? ", tasks: " + string.Join("; ", tasks.ToArray()) : ""));
+            }
+        }
+
+        /// <summary>Written to the log by "help".</summary>
+        private static readonly string[] HelpText =
+        {
+            "help: this list",
+            "state: the active screen and focus | say <text>: speak | key <KeyCode> [shift] [ctrl] [alt]: a mod key press | pad <buttons> [frames]: controller input",
+            "click <path>: press a button | dump [tag]: the UI tree | world: the shop grid | perf [seconds]: the mod's cost per frame",
+            "cash <n>: add money | item <name> [n]: goods into storage | stock <item> [n]: goods onto a shelf | blueprint <name> [n]: buildings | buildings: building names",
+            "trades: every shop's stock today | trade <shop>: open a shop | places: every map place | points <n>: travel points | goto <place>: arrive at a place | unlock <place>|all",
+            "journals: every event and its tasks | journal <name>: start an event | journal check: check the events now | events / event <name>: story events | dialog [name]: conversations",
+            "reward money|item|blueprint|customer|trust|budget|wish|trade|vehicle <arg>: a reward screen | open lottery|vehicle|characters",
+            "table <table> [entry] | export <locale> | missing <locale>: game text",
+        };
     }
 }

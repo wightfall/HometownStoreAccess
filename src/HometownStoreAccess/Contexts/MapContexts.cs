@@ -83,6 +83,40 @@ namespace HometownStoreAccess.Contexts
             return new GridPoint(c.x, c.y);
         }
 
+        private static bool TokenOn(Content_SelectForMap n)
+        {
+            GridPoint? at = TokenCoord(Board);
+            return at.HasValue && n != null && n.spawnCoordinate.x == at.Value.X && n.spawnCoordinate.y == at.Value.Y;
+        }
+
+        private static string NodeKey(Content_SelectForMap n) => "node:" + n.GetInstanceID();
+
+        /// <summary>The list key of the place the token stands on, or null.</summary>
+        private static string HereKey()
+        {
+            Content_SelectForMap here = Nodes().FirstOrDefault(TokenOn);
+            return here != null ? NodeKey(here) : null;
+        }
+
+        /// <summary>
+        /// When the focused item goes away (the place's details close as you arrive somewhere that opens
+        /// no screen), the focus goes to the place you are at, not to the next item in the list (which
+        /// could be End of the day).
+        /// </summary>
+        public override string PreferredFocusKey() => HereKey();
+
+        /// <summary>Coming back to the map (a shop closed): start on the place you are at.</summary>
+        public override int InitialFocus(IReadOnlyList<NavItem> items)
+        {
+            string key = HereKey();
+            if (key == null) return -1;
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i].Key == key) return i;
+            }
+            return -1;
+        }
+
         private static string NodeName(Content_SelectForMap n)
         {
             if (n is Content_SelectLocation loc && loc.LocationID != null) return GameText.Name(loc.LocationID);
@@ -98,7 +132,8 @@ namespace HometownStoreAccess.Contexts
             {
                 LocationTradeManager lt = LocationTradeManager.Instance;
                 LocationProfile prof = lt.GetLocationProfile(loc.LocationID);
-                if (prof != null && lt.CurrentAtLocationProfile == prof) parts.Add(Loc.Get("map_you_are_here"));
+                // (Standing on it, the distance already says "you are here".)
+                if (prof != null && lt.CurrentAtLocationProfile == prof && !TokenOn(n)) parts.Add(Loc.Get("map_you_are_here"));
                 foreach (Journal j in EventJournalManager.Instance.CurrentJournals)
                 {
                     if (j != null && j.showToPlayer && j.haveLocationCondition && j.locationTradeThatTrigger == loc.LocationID) { parts.Add(Loc.Get("map_quest")); break; }
@@ -161,7 +196,7 @@ namespace HometownStoreAccess.Contexts
             foreach (Content_SelectForMap n in Nodes())
             {
                 Content_SelectForMap node = n;
-                items.Add(new ActionItem(() => NodeName(node), () => SelectNode(node), "node:" + node.GetInstanceID())
+                items.Add(new ActionItem(() => NodeName(node), () => SelectNode(node), NodeKey(node))
                 {
                     Group = places,
                     ValueFunc = () => TextCleaner.Join(", ", NodeMarkers(node), Distance(node)),
@@ -174,7 +209,10 @@ namespace HometownStoreAccess.Contexts
             {
                 string info = UiUtil.Text(p.titleProfile);
                 UiScan.AddText(items, p.descriptionProfile, info);
-                UiScan.AddText(items, p.journalDisplay, info, s => Loc.Get("map_quests_here", s));
+                // The game lists the events of this place by name; some events have no name in any
+                // language and leave an empty line, so the mod names them.
+                string events = EventsLine(p);
+                if (events != null) items.Add(new TextItem(events, "events_here") { Group = info });
                 LocationProfile prof = InfoProfile(p);
                 if (prof != null)
                 {
@@ -217,6 +255,32 @@ namespace HometownStoreAccess.Contexts
             if (hud != null) UiScan.Add(items, hud.gameObject, map);
             Transform stock = p.transform.Find("StorageSummary/StorageButton");
             if (stock != null && stock.gameObject.activeInHierarchy) UiScan.AddControl(items, stock.GetComponent<Button>(), map, () => Loc.Get("label_storage_summary"));
+        }
+
+        /// <summary>"Events here: ..." for the details panel, or null.</summary>
+        private static string EventsLine(SelectLocationPanel p)
+        {
+            LocationProfile prof = InfoProfile(p);
+            if (prof != null)
+            {
+                List<string> events = EventsAt(prof.locationTradeID);
+                return events.Count > 0 ? Loc.Get("map_quests_here", string.Join(", ", events.ToArray())) : null;
+            }
+            string signText = UiUtil.Text(p.journalDisplay);
+            return signText.Length > 0 ? Loc.Get("map_quests_here", signText) : null;
+        }
+
+        /// <summary>The events whose task is to go to this place, as the game's info panel lists them.</summary>
+        private static List<string> EventsAt(LocationTrade place)
+        {
+            var names = new List<string>();
+            EventJournalManager ej = EventJournalManager.Instance;
+            if (ej == null || place == null) return names;
+            foreach (Journal j in ej.CurrentJournals)
+            {
+                if (j != null && j.haveLocationCondition && j.locationTradeThatTrigger == place) names.Add(GameText.Name(j));
+            }
+            return names;
         }
 
         private static LocationProfile InfoProfile(SelectLocationPanel p)
@@ -269,10 +333,12 @@ namespace HometownStoreAccess.Contexts
                 _wasMoving = b._isMoving;
                 AudioCues.Play(Cue.Arrive);
                 SpeechService.Say(Title(), false, MsgCategory.Events);
-                // The places of the old map are gone: start at the first place of the new one.
+                // The places of the old map are gone: start where you stand in the new one (the road
+                // sign you came by), as after every other trip.
                 ContextManager cm = AccessibilityRoot.Instance.Contexts;
                 cm.Refresh(false);
-                cm.MoveToSilently(0);
+                int here = InitialFocus(cm.Items);
+                cm.MoveToSilently(here >= 0 ? here : 0);
                 return;
             }
             // Steps of the token while it walks.
@@ -298,7 +364,7 @@ namespace HometownStoreAccess.Contexts
                 _lastInfoKey = key;
                 if (key != null)
                 {
-                    SpeechService.Say(TextCleaner.Join(". ", UiUtil.Text(p.titleProfile), UiUtil.Text(p.descriptionProfile), UiUtil.Text(p.travelToLocationButton.GetComponentInChildren<TMPro.TMP_Text>())), true);
+                    SpeechService.Say(TextCleaner.Join(". ", UiUtil.Text(p.titleProfile), UiUtil.Text(p.descriptionProfile), EventsLine(p), UiUtil.Text(p.travelToLocationButton.GetComponentInChildren<TMPro.TMP_Text>())), true);
                     FocusTravel();
                 }
             }
