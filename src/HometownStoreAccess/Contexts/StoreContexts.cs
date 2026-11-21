@@ -94,7 +94,7 @@ namespace HometownStoreAccess.Contexts
                 BuildingObject b = FloorCursor.Building;
                 string text;
                 if (Placement.Active) text = Placement.DescribeSpot();
-                else if (FloorCursor.OnDelivery) text = TextCleaner.Join(". ", Loc.Get("delivery_truck"), Loc.Get("contents", GameText.Contents(ResourceManager.Instance.delivery, 30)));
+                else if (FloorCursor.OnDelivery) text = TextCleaner.Join(". ", Loc.Get("delivery_truck"), Loc.Get("contents", GameText.Contents(ResourceManager.Instance.delivery)));
                 else if (b != null) text = GameText.BuildingDetails(b);
                 else text = FloorCursor.Describe();
                 text = TextCleaner.Join(". ", text, CustomerInfo.AtCursor());
@@ -473,7 +473,7 @@ namespace HometownStoreAccess.Contexts
             }
             if (c.inventoryBasket != null && c.inventoryBasket.ItemList.Count > 0)
             {
-                parts.Add(Loc.Get("customer_basket", GameText.Contents(c.inventoryBasket, 6)));
+                parts.Add(Loc.Get("customer_basket", GameText.Contents(c.inventoryBasket)));
             }
             if (relativeToCursor && BuildingSystem.Instance != null)
             {

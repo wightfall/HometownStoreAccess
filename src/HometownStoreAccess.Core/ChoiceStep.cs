@@ -41,5 +41,24 @@ namespace HometownStoreAccess.Core
             }
             return n;
         }
+
+        /// <summary>
+        /// Where each named section of a list starts and how many items it has (for heading items).
+        /// Items without a section get no heading.
+        /// </summary>
+        public static List<KeyValuePair<int, int>> SectionStarts(IList<string> groups)
+        {
+            var result = new List<KeyValuePair<int, int>>();
+            if (groups == null) return result;
+            for (int i = 0; i < groups.Count; i++)
+            {
+                string g = groups[i] ?? string.Empty;
+                if (g.Length == 0 || (i > 0 && string.Equals(groups[i - 1] ?? string.Empty, g, StringComparison.Ordinal))) continue;
+                int n = 0;
+                for (int k = i; k < groups.Count && string.Equals(groups[k] ?? string.Empty, g, StringComparison.Ordinal); k++) n++;
+                result.Add(new KeyValuePair<int, int>(i, n));
+            }
+            return result;
+        }
     }
 }

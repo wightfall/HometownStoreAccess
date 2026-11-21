@@ -78,8 +78,10 @@ for help." The mod skips the game's logo intro, so the main menu follows a momen
 off with **Skip the logo intro** in the settings).
 
 - **F1** tells you the keys for the screen you are on.
-- **Shift+F1** opens the key list: every key the mod uses, by section. It also has a section where
-  you can listen to each sound cue. Page Up and Page Down jump between sections.
+- **Shift+F1** opens the key list: every key the mod uses, by section, one line at a time. It also
+  has a section where you can listen to each sound cue. Each section starts with a heading of its
+  own (for example "Actions, heading, 2 items"): Page Up and Page Down jump to the headings, and
+  Down reads the first line of the section.
 - **F5** opens the mod settings.
 
 A new game starts with a letter: first choose whether you want the tutorial, then press Enter on
@@ -162,6 +164,9 @@ Hold Ctrl while a list is open.
 | J | Current goal or tutorial step |
 | G | Everything in storage |
 
+A few events in the demo have no name in any language (the game's event journal shows an empty
+title). The mod names them after the place they send you to, for example "Event at Temple".
+
 ### Shop floor
 
 | Key | Action |
@@ -174,6 +179,11 @@ Hold Ctrl while a list is open.
 | Enter | Open what is under the cursor: shelf, storage, machine, cashier, or the delivery truck at the far left |
 | I | Full details of the cell |
 | Tab | Switch to the toolbar (the game's on-screen buttons) |
+
+Walking onto a shelf reads every stack on it (a wooden shelf has 8 slots, so up to 8 kinds of
+goods), and walking onto storage says how full it is and what is in it. All storage buildings
+share one storage, so each one reads the same goods. The delivery truck also lists everything it
+carries.
 
 ### Build mode (B)
 
@@ -237,7 +247,12 @@ End of the day finishes the evening. The map's own buttons (customers, event jou
 all stock, settings) are in the map section at the end of the list.
 
 If you closed a shop with Escape, choose the place you are at again: its button says **Go in
-again** and opens the shop without using a travel point. Your own shop is only a marker on the map;
+again** and opens the shop without using a travel point. This is how the game works, at every
+place: going back into the place you are at is free, only moving to another place costs a point.
+Some places sell nothing (the temple in the demo); the game opens no screen there, and the mod
+says so when you arrive. An event can still ask you to visit such a place.
+A shop always opens at the top of its list (the filters); only coming back from a popup inside the
+shop keeps your place. Your own shop is only a marker on the map;
 you go back to it with End of the day.
 
 ### Shops on the map
@@ -247,13 +262,17 @@ The screen has these sections, and Page Up and Page Down move between them:
 - **Filters**: the Category item and the search box. Ctrl+Up and Ctrl+Down (or Left and Right on
   Category) step through: all products, all goods, each kind of goods, all buildings, and each kind
   of building. The game's own tabs follow, so a sighted helper sees the same list.
-- **Goods** and **Buildings**: everything this place sells, with price and stock ("sold out" when
+- **Goods** and **Buildings**: everything this place sells today, with price and stock ("sold out" when
   none is left). Right adds one to the basket, Left removes one, and holding Shift changes ten at
   a time. Ctrl+I describes an item and the profit you make on it.
 - **Basket**: what you are buying (change amounts here too), the total and what money is left,
   then Check out and Close.
 
 The goods arrive in your delivery truck the next morning.
+
+What a shop sells is chosen by the game: it changes from day to day (some goods are picked at
+random, and the amounts too), and more goods appear as your shop level goes up. The mod lists
+everything the shop has that day, even what the game's own list hides behind its tabs and filters.
 
 ### Controller
 
@@ -341,7 +360,8 @@ You can listen to each cue in the key list (Shift+F1, then the sound cues sectio
 ## Mod settings
 
 F5 opens the settings. Changes are saved at once. Left and Right change a value, and Enter turns a
-setting on or off. Page Up and Page Down jump between the sections.
+setting on or off. Each section starts with a heading of its own: Page Up and Page Down jump to the
+headings, so you hear the section name alone, and Down goes to its first setting.
 
 - **Speech and language:** game language (every language the game has, plus your translation
   files), mod language, speech output (Auto, NVDA, JAWS, OneCore, SAPI and others), announce list

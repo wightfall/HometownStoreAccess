@@ -153,12 +153,17 @@ namespace HometownStoreAccess.Contexts
             EventJournalPanel p = Panel;
             if (p == null) return;
             int i = 0;
+            // The panel lists the events shown to the player in the game's order: used to name an event
+            // whose title is empty.
+            EventJournalManager ej = EventJournalManager.Instance;
+            List<Journal> shown = ej == null ? new List<Journal>()
+                : (p.checkDoneJournals ? ej.DoneJournals : ej.CurrentJournals).Where(x => x != null && x.showToPlayer).ToList();
             foreach (Transform t in p.contentParent)
             {
                 var j = t.GetComponent<Content_Journal>();
                 if (j == null || !t.gameObject.activeInHierarchy) continue;
-                Content_Journal journal = j;
                 string title = UiUtil.Text(j.titleEventJournalText);
+                if (string.IsNullOrEmpty(title)) title = i < shown.Count ? GameText.Name(shown[i]) : Loc.Get("journal_untitled");
                 var tasks = new List<string>();
                 foreach (Content_TaskJournal task in j.ChildContent.GetComponentsInChildren<Content_TaskJournal>(false))
                 {

@@ -156,7 +156,7 @@ namespace HometownStoreAccess.Game
                 DeliveryObject d = Floor.Delivery;
                 parts.Add(Loc.Get("delivery_truck"));
                 parts.Add(d != null && ResourceManager.Instance.delivery.ItemList.Count > 0
-                    ? Loc.Get("delivery_has_items", GameText.Contents(ResourceManager.Instance.delivery, 4))
+                    ? Loc.Get("delivery_has_items", GameText.Contents(ResourceManager.Instance.delivery))
                     : Loc.Get("delivery_empty"));
             }
             else

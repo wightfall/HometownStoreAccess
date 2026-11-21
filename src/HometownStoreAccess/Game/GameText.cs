@@ -28,7 +28,17 @@ namespace HometownStoreAccess.Game
                 return outputs.Length > 0 ? string.Join(", ", outputs) : TextCleaner.HumanizeName(r.name);
             });
         }
-        public static string Name(Journal j) => j == null ? "?" : Cached(j, 0, () => Safe(() => j.detailsKey.GetName(j.name, LanguageControl.CurrentLanguage), j.name));
+        public static string Name(Journal j) => j == null ? "?" : Cached(j, 0, () => Safe(() => j.detailsKey.GetName(j.name, LanguageControl.CurrentLanguage), UntitledJournal(j)));
+
+        /// <summary>
+        /// Some demo events have no name in any language (the game shows an empty title): name them after
+        /// the place they lead to instead of reading the internal asset name ("J_Event_Shaman_Request_Help").
+        /// </summary>
+        public static string UntitledJournal(Journal j)
+        {
+            if (j != null && j.haveLocationCondition && j.locationTradeThatTrigger != null) return Loc.Get("journal_untitled_at", Name(j.locationTradeThatTrigger));
+            return Loc.Get("journal_untitled");
+        }
 
         // Names and descriptions do not change while the language stays the same, and reading one goes
         // through several of the game's tables and the text cleanup: lists rebuilt four times a second
@@ -61,7 +71,7 @@ namespace HometownStoreAccess.Game
         public static string Stack(ItemSlotData s) => s == null || s.ID == null ? "?" : Loc.Get("item_stack", Name(s.ID), s.currentAmount);
 
         /// <summary>"Candy 12, Gum 5" — combines stacks of the same item.</summary>
-        public static string Contents(Inventory inv, int maxEntries = 8)
+        public static string Contents(Inventory inv, int maxEntries = int.MaxValue)
         {
             if (inv == null || inv.ItemList.Count == 0) return Loc.Get("state_empty");
             var parts = new List<string>();
@@ -89,9 +99,12 @@ namespace HometownStoreAccess.Game
             switch (b)
             {
                 case ShelfObject shelf:
-                    return TextCleaner.Join(", ", name, shelf.ShelfInventory.ItemList.Count == 0 ? Loc.Get("state_empty") : Contents(shelf.ShelfInventory, 4));
+                    // Every stack the shelf holds (a wooden shelf has 8 slots, a big freezer more).
+                    return TextCleaner.Join(", ", name, Contents(shelf.ShelfInventory));
                 case StorageObject _:
-                    return TextCleaner.Join(", ", name, Loc.Get("storage_short", ResourceManager.Instance.storage.ItemList.Count, ResourceManager.Instance.storage.slotLimit));
+                    // All storage buildings share one back-room inventory: say how full it is and what is in it.
+                    Inventory storage = ResourceManager.Instance.storage;
+                    return TextCleaner.Join(", ", name, Loc.Get("storage_short", storage.ItemList.Count, storage.slotLimit), Contents(storage));
                 case ManufactureObject m:
                     return TextCleaner.Join(", ", name, Name(m.currentRecipe));
                 case CashierObject c:
@@ -112,12 +125,12 @@ namespace HometownStoreAccess.Game
             {
                 case ShelfObject shelf:
                     parts.Add(Slots(shelf.ShelfInventory));
-                    parts.Add(Loc.Get("contents", Contents(shelf.ShelfInventory, 20)));
+                    parts.Add(Loc.Get("contents", Contents(shelf.ShelfInventory)));
                     parts.Add(Loc.Get("can_hold", string.Join(", ", shelf.ShelfID.storeAbleItems.Select(Name).ToArray())));
                     break;
                 case StorageObject _:
                     parts.Add(Loc.Get("storage_long", ResourceManager.Instance.storage.ItemList.Count, ResourceManager.Instance.storage.slotLimit));
-                    parts.Add(Loc.Get("contents", Contents(ResourceManager.Instance.storage, 20)));
+                    parts.Add(Loc.Get("contents", Contents(ResourceManager.Instance.storage)));
                     break;
                 case ManufactureObject m:
                     parts.Add(RecipeSummary(m.currentRecipe));

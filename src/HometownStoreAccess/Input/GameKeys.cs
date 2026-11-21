@@ -99,9 +99,9 @@ namespace HometownStoreAccess.Input
             var parts = new List<string>
             {
                 Loc.Get("storage_long", rm.storage.ItemList.Count, rm.storage.slotLimit),
-                GameText.Contents(rm.storage, 30),
+                GameText.Contents(rm.storage),
             };
-            if (rm.delivery.ItemList.Count > 0) parts.Add(Loc.Get("delivery_has_items", GameText.Contents(rm.delivery, 30)));
+            if (rm.delivery.ItemList.Count > 0) parts.Add(Loc.Get("delivery_has_items", GameText.Contents(rm.delivery)));
             return TextCleaner.Join(". ", parts.ToArray());
         }
 

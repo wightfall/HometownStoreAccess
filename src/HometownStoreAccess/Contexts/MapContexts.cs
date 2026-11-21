@@ -286,7 +286,13 @@ namespace HometownStoreAccess.Contexts
                 AudioCues.Play(Cue.Arrive);
                 GridPoint? at = TokenCoord(b);
                 Content_SelectForMap here = at.HasValue ? Nodes().FirstOrDefault(n => n.spawnCoordinate.x == at.Value.X && n.spawnCoordinate.y == at.Value.Y) : null;
-                if (here != null && !_walkMode) SpeechService.Say(Loc.Get("map_arrived", NodeName(here)), false, MsgCategory.Events);
+                if (here != null && !_walkMode)
+                {
+                    string arrived = Loc.Get("map_arrived", NodeName(here));
+                    // Some places (the temple in the demo) sell nothing: the game opens no screen there.
+                    if (here is Content_SelectLocation loc && loc.LocationID != null && SellsNothing(loc.LocationID)) arrived = TextCleaner.Join(" ", arrived, Loc.Get("map_nothing_here"));
+                    SpeechService.Say(arrived, false, MsgCategory.Events);
+                }
             }
             if (!_wasMoving && b._isMoving && !_walkMode) SpeechService.Say(Loc.Get("map_traveling"), true);
             _wasMoving = b._isMoving;
@@ -302,6 +308,14 @@ namespace HometownStoreAccess.Contexts
                     FocusTravel();
                 }
             }
+        }
+
+        /// <summary>True when the game opens no shop, lottery or vehicle screen at this place today.</summary>
+        private static bool SellsNothing(LocationTrade id)
+        {
+            if (id.lotteryPanel || id.vehiclePanel) return false;
+            LocationProfile prof = LocationTradeManager.Instance != null ? LocationTradeManager.Instance.GetLocationProfile(id) : null;
+            return prof != null && (prof.currentItemList == null || prof.currentItemList.Count == 0) && (prof.currentShelfList == null || prof.currentShelfList.Count == 0);
         }
 
         private static float PanOf(RectTransform rt)

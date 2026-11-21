@@ -68,6 +68,7 @@ namespace HometownStoreAccess.Contexts
     {
         public override string Id => "key_list";
         public override int Priority => 1000;
+        public override bool HeadingItems => true;
         public override bool ResetFocusOnEnter => true;
         public override bool IsActive() => Overlay.Open == Overlay.Kind.KeyList;
         public override string Title() => Loc.Get("ctx_key_list");
@@ -132,6 +133,7 @@ namespace HometownStoreAccess.Contexts
 
         public override string Id => "mod_settings";
         public override int Priority => 1001;
+        public override bool HeadingItems => true;
         public override bool IsActive() => Overlay.Open == Overlay.Kind.Settings;
         public override string Title() => Loc.Get("ctx_mod_settings");
         public override string Intro() => Loc.Get("hint_settings");

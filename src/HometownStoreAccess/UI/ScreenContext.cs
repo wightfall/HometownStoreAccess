@@ -52,6 +52,13 @@ namespace HometownStoreAccess.UI
         /// <summary>When false, the context handles all arrow keys itself (shop floor, placement).</summary>
         public virtual bool UsesListNavigation => true;
 
+        /// <summary>
+        /// When true, each section starts with a heading item of its own (the key list and the mod
+        /// settings): Page Up / Page Down land on the heading alone, and items are read without the
+        /// section name in front of them.
+        /// </summary>
+        public virtual bool HeadingItems => false;
+
         /// <summary>Return to the first item each time the context is entered instead of the last focus.</summary>
         public virtual bool ResetFocusOnEnter => false;
 
