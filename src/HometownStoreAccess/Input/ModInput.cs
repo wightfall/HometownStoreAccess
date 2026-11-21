@@ -25,9 +25,41 @@ namespace HometownStoreAccess.Input
             _pendAlt |= alt;
         }
 
+        // Keyboard key codes (below the mouse and joystick codes), for telling keyboard use from controller use.
+        private static KeyCode[] _keyboardKeys;
+
+        // Pressing these does not mean the player took up the keyboard: Ctrl stops screen reader speech,
+        // Insert and Caps Lock are screen reader keys, the number pad is the review cursor, and modifiers,
+        // lock keys, Windows, Menu and Print Screen are used outside the game. (Number pad Enter still counts.)
+        private static bool IgnoredForDevice(KeyCode k) =>
+            (k >= KeyCode.Keypad0 && k <= KeyCode.KeypadPlus) || k == KeyCode.KeypadEquals ||
+            k == KeyCode.Insert || (k >= KeyCode.Numlock && k <= KeyCode.Menu);
+
+        /// <summary>True when a real keyboard key went down this frame (not a mouse or controller button).</summary>
+        private static bool KeyboardKeyDown()
+        {
+            if (!UnityEngine.Input.anyKeyDown) return false;
+            if (_keyboardKeys == null)
+            {
+                var list = new List<KeyCode>();
+                foreach (KeyCode k in System.Enum.GetValues(typeof(KeyCode)))
+                {
+                    if (k != KeyCode.None && k < KeyCode.Mouse0 && !IgnoredForDevice(k)) list.Add(k);
+                }
+                _keyboardKeys = list.ToArray();
+            }
+            foreach (KeyCode k in _keyboardKeys)
+            {
+                if (UnityEngine.Input.GetKeyDown(k)) return true;
+            }
+            return false;
+        }
+
         /// <summary>Called at the start of the mod's frame: promotes injected keys to "down this frame".</summary>
         public static void BeginFrame()
         {
+            // Back to keyboard instructions as soon as the keyboard is used.
+            if (Core.Loc.PadMode && KeyboardKeyDown()) Core.Loc.PadMode = false;
             _injectedDown.Clear();
             foreach (KeyCode k in _pendingInjected) _injectedDown.Add(k);
             _pendingInjected.Clear();

@@ -50,6 +50,7 @@ namespace HometownStoreAccess.Core
         KeyList,
         ModSettings,
         RecallStory,
+        Goal,
     }
 
     /// <summary>Snapshot of a controller in logical form (after the stick dead zone).</summary>
@@ -90,8 +91,8 @@ namespace HometownStoreAccess.Core
         /// <summary>Holding Back or Start this long (seconds) gives their second action.</summary>
         public const double LongPress = 0.6;
 
-        private double _backDownAt = -1, _startDownAt = -1, _ltDownAt = -1;
-        private bool _backLongFired, _startLongFired, _ltLongFired;
+        private double _backDownAt = -1, _startDownAt = -1, _ltDownAt = -1, _rtDownAt = -1;
+        private bool _backLongFired, _startLongFired, _ltLongFired, _rtLongFired;
 
         private static readonly (PadButtons button, PadAction action)[] Presses =
         {
@@ -129,7 +130,8 @@ namespace HometownStoreAccess.Core
             TapOrHold((state.Buttons & PadButtons.Start) != 0, (_previous.Buttons & PadButtons.Start) != 0, now, ref _startDownAt, ref _startLongFired, PadAction.Pause, PadAction.ModSettings, actions);
             // Left trigger: tap repeats the last message, hold repeats the latest conversation line.
             TapOrHold(state.LeftTriggerDown, _previous.LeftTriggerDown, now, ref _ltDownAt, ref _ltLongFired, PadAction.Repeat, PadAction.RecallStory, actions);
-            if (state.RightTriggerDown && !_previous.RightTriggerDown) actions.Add(PadAction.Status);
+            // Right trigger: status; held, the current goal or tutorial step (J on the keyboard).
+            TapOrHold(state.RightTriggerDown, _previous.RightTriggerDown, now, ref _rtDownAt, ref _rtLongFired, PadAction.Status, PadAction.Goal, actions);
             // Right stick: up and down step the category, left and right the message history.
             if (state.RightStickUp && !_previous.RightStickUp) actions.Add(PadAction.CategoryPrevious);
             if (state.RightStickDown && !_previous.RightStickDown) actions.Add(PadAction.CategoryNext);

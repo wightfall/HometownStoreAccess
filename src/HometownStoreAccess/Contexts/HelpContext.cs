@@ -90,6 +90,9 @@ namespace HometownStoreAccess.Contexts
             {
                 foreach (string l in under.HelpLines()) Section(Loc.Get("keys_this_screen"), l);
             }
+            // With a controller in use, its buttons come first.
+            bool pad = Loc.PadMode;
+            if (pad) Section(Loc.Get("keys_controller"), Loc.Get("help_controller"));
             Section(Loc.Get("keys_general"), Loc.Get("help_general"));
             Section(Loc.Get("keys_history"), Loc.Get("help_history"));
             if (Overlay.InGame)
@@ -99,7 +102,7 @@ namespace HometownStoreAccess.Contexts
                 Section(Loc.Get("keys_build"), Loc.Get("help_build"));
                 Section(Loc.Get("keys_map"), Loc.Get("help_map"));
             }
-            Section(Loc.Get("keys_controller"), Loc.Get("help_controller"));
+            if (!pad) Section(Loc.Get("keys_controller"), Loc.Get("help_controller"));
             string sounds = Loc.Get("keys_sounds");
             foreach (Cue cue in Enum.GetValues(typeof(Cue)))
             {
@@ -156,6 +159,7 @@ namespace HometownStoreAccess.Contexts
             items.Add(Toggle(s.AnnounceCashChanges, "set_cash", ann));
             items.Add(Toggle(s.ReadDialogAutomatically, "set_dialog", ann));
             items.Add(Toggle(s.AnnounceTutorial, "set_tutorial", ann));
+            items.Add(Toggle(s.AnnounceAchievements, "set_achievements", ann));
 
             string audio = Loc.Get("set_group_audio");
             items.Add(Toggle(s.AudioCues, "set_cues", audio));

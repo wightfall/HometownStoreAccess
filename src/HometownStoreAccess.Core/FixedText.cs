@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace HometownStoreAccess.Core
@@ -100,12 +101,15 @@ namespace HometownStoreAccess.Core
             public string Key;
         }
 
-        private static readonly Regex Baht = new Regex(@"^(-?\d+) baht$", RegexOptions.IgnoreCase);
-        private static readonly Regex InnerBaht = new Regex(@"(?<![\w.])(-?\d+) baht\b", RegexOptions.IgnoreCase);
+        // Amounts may have thousands separators ("1,000 baht"): the whole number is one amount.
+        private static readonly Regex Baht = new Regex(@"^(-?\d{1,3}(?:,\d{3})+|-?\d+) baht$", RegexOptions.IgnoreCase);
+        private static readonly Regex InnerBaht = new Regex(@"(?<![\w.,])(-?\d{1,3}(?:,\d{3})+|-?\d+) baht\b", RegexOptions.IgnoreCase);
+
+        private static int Amount(string digits) => int.Parse(digits.Replace(",", string.Empty), CultureInfo.InvariantCulture);
 
         private static readonly Pattern[] Patterns =
         {
-            new Pattern { Regex = new Regex(@"^(-?\d+) baht$", RegexOptions.IgnoreCase), Key = "money_baht" },
+            new Pattern { Regex = Baht, Key = "money_baht" },
             new Pattern { Regex = new Regex(@"^Level (\d+)$"), Key = "reward_level" },
             new Pattern { Regex = new Regex(@"^Day (\d+)$"), Key = "fixed_day" },
             new Pattern { Regex = new Regex(@"^Size ?: ?(\d+)$"), Key = "fixed_size" },
@@ -132,7 +136,7 @@ namespace HometownStoreAccess.Core
             // Amounts the game writes in English inside other text ("Upgrade: 500 baht").
             if (text.IndexOf(" baht", StringComparison.OrdinalIgnoreCase) > 0 && !Baht.IsMatch(text))
             {
-                text = InnerBaht.Replace(text, m => Loc.Get("money_baht", int.Parse(m.Groups[1].Value)));
+                text = InnerBaht.Replace(text, m => Loc.Get("money_baht", Amount(m.Groups[1].Value)));
             }
             char first = text[0];
             // Cheap filter: every pattern starts with a digit, '-' or one of these letters.
@@ -141,7 +145,7 @@ namespace HometownStoreAccess.Core
             {
                 Match m = p.Regex.Match(text);
                 if (!m.Success) continue;
-                if (p.Key == "money_baht") return Loc.Get(p.Key, int.Parse(m.Groups[1].Value));
+                if (p.Key == "money_baht") return Loc.Get(p.Key, Amount(m.Groups[1].Value));
                 var args = new object[m.Groups.Count - 1];
                 for (int i = 1; i < m.Groups.Count; i++) args[i - 1] = m.Groups[i].Value;
                 return Loc.Get(p.Key, args);

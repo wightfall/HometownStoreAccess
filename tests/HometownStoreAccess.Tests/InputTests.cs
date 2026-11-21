@@ -120,7 +120,19 @@ namespace HometownStoreAccess.Tests
             Assert.DoesNotContain(PadAction.Repeat, m.Update(new PadState { LeftTrigger = 200 }, 0));
             Assert.DoesNotContain(PadAction.Repeat, m.Update(new PadState { LeftTrigger = 255 }, 0.1));
             Assert.Contains(PadAction.Repeat, m.Update(new PadState(), 0.2));
-            Assert.Contains(PadAction.Status, m.Update(new PadState { RightTrigger = 200 }, 0.3));
+            // Right trigger: a tap gives the status when it is let go.
+            Assert.DoesNotContain(PadAction.Status, m.Update(new PadState { RightTrigger = 200 }, 0.3));
+            Assert.Contains(PadAction.Status, m.Update(new PadState(), 0.4));
+        }
+
+        [Fact]
+        public void HoldingTheRightTriggerGivesTheGoal()
+        {
+            var m = new ControllerMapping();
+            m.Update(new PadState { RightTrigger = 255 }, 0);
+            Assert.Contains(PadAction.Goal, m.Update(new PadState { RightTrigger = 255 }, ControllerMapping.LongPress + 0.01));
+            Assert.DoesNotContain(PadAction.Goal, m.Update(new PadState { RightTrigger = 255 }, 2));
+            Assert.DoesNotContain(PadAction.Status, m.Update(new PadState(), 2.1));
         }
 
         [Fact]

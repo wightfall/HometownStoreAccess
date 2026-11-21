@@ -12,7 +12,7 @@ All translation files live in the mod's `lang` folder:
 The mod writes two templates there the first time the game runs, and updates them when a new
 version adds text:
 
-- `template.mod.txt` has every message of the mod (about 600).
+- `template.mod.txt` has every message of the mod (about 700).
 - `template.game.txt` has every text of the game (about 3200), such as menus, items, characters
   and dialog.
 
@@ -48,6 +48,10 @@ reloaded." You do not need to restart the game.
 - Lines that start with `#` are comments.
 - An entry with no text keeps the original. You can translate a little at a time.
 - `\n` is a line break.
+- A key that ends in `.pad` is the controller version of the key before it (for example
+  `hint_open_building.pad`). The mod uses it instead while the player uses a controller, so it names
+  the controller's buttons. Keep the button names printed on the controller (A, B, X, Y, LB, RB,
+  Back, Start) as they are.
 - Keep `{0}`, `{1}` and so on. The mod fills in names, numbers and amounts there, and you can move
   them to wherever your language needs them.
 - In game text, keep tags in angle brackets such as `<b>` or `<color=#ff0000>` and placeholders in

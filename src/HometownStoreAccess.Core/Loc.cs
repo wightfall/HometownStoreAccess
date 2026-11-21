@@ -84,10 +84,29 @@ namespace HometownStoreAccess.Core
 
         public static bool IsExternalOnly(string language) => language != null && External.ContainsKey(language) && !SupportedLanguages.Contains(language, StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>Ending of the controller version of a text ("tg_build.pad").</summary>
+        public const string PadSuffix = ".pad";
+
+        /// <summary>
+        /// True while the player uses a controller. Texts that have a controller version (the same key
+        /// with <see cref="PadSuffix"/>) then give that version, so instructions name the controller's
+        /// buttons instead of keyboard keys.
+        /// </summary>
+        public static bool PadMode { get; set; }
+
+        /// <summary>The key actually looked up: the controller version when <see cref="PadMode"/> is on and one exists.</summary>
+        public static string EffectiveKey(string key)
+        {
+            if (!PadMode || string.IsNullOrEmpty(key) || key.EndsWith(PadSuffix, StringComparison.Ordinal)) return key;
+            string pad = key + PadSuffix;
+            bool external = External.TryGetValue(_language, out var ext) && ext.ContainsKey(pad);
+            return external || Has(_language, pad) || Has(English, pad) ? pad : key;
+        }
+
         /// <summary>Returns the translated string for <paramref name="key"/>, formatted with args.</summary>
         public static string Get(string key, params object[] args)
         {
-            string template = Lookup(_language, key);
+            string template = Lookup(_language, EffectiveKey(key));
             if (args == null || args.Length == 0) return template;
             try
             {

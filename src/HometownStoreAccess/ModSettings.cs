@@ -15,6 +15,7 @@ namespace HometownStoreAccess
         public readonly ConfigEntry<bool> AnnounceCustomerMessages;
         public readonly ConfigEntry<bool> AnnounceCashChanges;
         public readonly ConfigEntry<bool> ReadDialogAutomatically;
+        public readonly ConfigEntry<bool> AnnounceAchievements;
 
         public readonly ConfigEntry<bool> AnnouncePosition;
         public readonly ConfigEntry<string> GameLocale;
@@ -55,6 +56,7 @@ namespace HometownStoreAccess
             AnnounceCustomerMessages = config.Bind("Announcements", "CustomerMessages", true, "Read customer speech bubbles from the message box.");
             AnnounceCashChanges = config.Bind("Announcements", "CashChanges", false, "Announce every change of cash (can be chatty).");
             ReadDialogAutomatically = config.Bind("Announcements", "ReadDialog", true, "Read story dialog lines automatically as they appear.");
+            AnnounceAchievements = config.Bind("Announcements", "Achievements", true, "Say Steam achievements when the game unlocks them (Steam shows them only in its overlay).");
 
             AudioCues = config.Bind("Audio", "Cues", true, "Play positional audio cues for the shop floor cursor, placement, customers and menus.");
             MenuSounds = config.Bind("Audio", "MenuSounds", true, "Play short sounds when moving through menus, wrapping around and reaching the edge of a list.");

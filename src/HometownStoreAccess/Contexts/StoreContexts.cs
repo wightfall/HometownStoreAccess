@@ -201,6 +201,10 @@ namespace HometownStoreAccess.Contexts
                     }
                 }
             }
+            // The tutorial moves the build button into its highlight layer, outside the HUD: still list it
+            // (with a controller it is the only way into build mode).
+            Transform build = Input.GameKeys.FindHudButton("BuildButton");
+            Add(build != null ? build.GetComponent<Button>() : null, () => Loc.Get("label_build_mode"));
         }
 
         public static string NextPhaseLabel()

@@ -97,6 +97,14 @@ namespace HometownStoreAccess.Diagnostics
                 case "pad":
                 {
                     // pad a | pad lsdown 40 | pad rsup | pad lt: simulated controller input (frames default 2)
+                    // pad connect | pad disconnect: what plugging a controller in or out does
+                    string what = arg.Trim().ToLowerInvariant();
+                    if (what == "connect" || what == "disconnect")
+                    {
+                        Controller.ConnectionChanged(what == "connect");
+                        Log.Info("[cmd] controller " + what + "ed (simulated); real controller connected: " + Controller.Connected);
+                        break;
+                    }
                     var st = new Core.PadState();
                     int frames = 2;
                     foreach (string tok in arg.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
@@ -386,6 +394,28 @@ namespace HometownStoreAccess.Diagnostics
                     Log.Info("[stock] " + n + " x " + it.name + " on " + shelf.ID.name);
                     break;
                 }
+                case "achievements":
+                {
+                    // achievements: every Steam achievement of the game, its Steam name and whether it is unlocked (reads only)
+                    SteamIntegration steam = SteamIntegration.instance;
+                    bool connected = steam != null && steam.connectedToSteam;
+                    Log.Info("[achievements] Steam " + (connected ? "connected" : "not connected"));
+                    foreach (E_Achievement a in Enum.GetValues(typeof(E_Achievement)))
+                    {
+                        string state = connected ? (steam.IsAchievementUnlocked(a) ? "unlocked" : "locked") : "?";
+                        Log.Info("[achievements] " + (int)a + " " + a + ": " + state + " - " + Patches.AchievementPatch.Describe(a));
+                    }
+                    break;
+                }
+                case "achievement":
+                {
+                    // achievement <name or number>: says the announcement of that achievement, without unlocking it on Steam
+                    E_Achievement a;
+                    if (int.TryParse(arg, out int number) && Enum.IsDefined(typeof(E_Achievement), number)) a = (E_Achievement)number;
+                    else if (!Enum.TryParse(arg, true, out a)) { Log.Warn("achievement: give a name or number (achievements lists them)"); break; }
+                    SpeechService.Say(Patches.AchievementPatch.Describe(a), false, Core.MsgCategory.Events);
+                    break;
+                }
                 case "buildings":
                     // buildings: lists every building asset name (for the blueprint command)
                     foreach (Building b in Resources.FindObjectsOfTypeAll<Building>()) Log.Info("[buildings] " + b.name + " (" + b.GetType().Name + ", " + b.buildingCategory + ")");
@@ -518,12 +548,13 @@ namespace HometownStoreAccess.Diagnostics
         private static readonly string[] HelpText =
         {
             "help: this list",
-            "state: the active screen and focus | say <text>: speak | key <KeyCode> [shift] [ctrl] [alt]: a mod key press | pad <buttons> [frames]: controller input",
+            "state: the active screen and focus | say <text>: speak | key <KeyCode> [shift] [ctrl] [alt]: a mod key press | pad <buttons> [frames]: controller input | pad connect, pad disconnect: what plugging a controller in or out does",
             "click <path>: press a button | dump [tag]: the UI tree | world: the shop grid | perf [seconds]: the mod's cost per frame",
             "cash <n>: add money | item <name> [n]: goods into storage | stock <item> [n]: goods onto a shelf | blueprint <name> [n]: buildings | buildings: building names",
             "trades: every shop's stock today | trade <shop>: open a shop | places: every map place | points <n>: travel points | goto <place>: arrive at a place | unlock <place>|all",
             "journals: every event and its tasks | journal <name>: start an event | journal check: check the events now | events / event <name>: story events | dialog [name]: conversations",
             "reward money|item|blueprint|customer|trust|budget|wish|trade|vehicle <arg>: a reward screen | open lottery|vehicle|characters",
+            "achievements: the game's Steam achievements | achievement <name or number>: say its announcement (unlocks nothing)",
             "table <table> [entry] | export <locale> | missing <locale>: game text",
         };
     }
