@@ -80,6 +80,16 @@ namespace HometownStoreAccess.Input
 
         public static bool Connected => _padIndex >= 0;
 
+        /// <summary>
+        /// Plugging a controller in makes instructions name its buttons (until a keyboard key is used);
+        /// unplugging it brings back the keyboard keys. Both are said. (Also the test command "pad connect".)
+        /// </summary>
+        public static void ConnectionChanged(bool connected)
+        {
+            Loc.PadMode = connected;
+            SpeechService.Say(Loc.Get(connected ? "controller_connected" : "controller_disconnected"), false);
+        }
+
         public static void Update()
         {
             if (Plugin.Settings == null || !Plugin.Settings.ControllerEnabled.Value) return;
@@ -95,7 +105,9 @@ namespace HometownStoreAccess.Input
                 {
                     _simulatedRelease = false;
                 }
-                foreach (PadAction a in Mapping.Update(sim, Time.unscaledTime)) Dispatch(a);
+                List<PadAction> simActions = Mapping.Update(sim, Time.unscaledTime);
+                if (simActions.Count > 0) Loc.PadMode = true;
+                foreach (PadAction a in simActions) Dispatch(a);
                 return;
             }
             if (_disabled) return;
@@ -113,7 +125,7 @@ namespace HometownStoreAccess.Input
                             if (!_announcedConnect)
                             {
                                 _announcedConnect = true;
-                                SpeechService.Say(Loc.Get("controller_connected"), false);
+                                ConnectionChanged(true);
                             }
                             break;
                         }
@@ -125,7 +137,7 @@ namespace HometownStoreAccess.Input
                 {
                     _padIndex = -1;
                     _announcedConnect = false;
-                    SpeechService.Say(Loc.Get("controller_disconnected"), false);
+                    ConnectionChanged(false);
                     return;
                 }
                 if (_rumbleUntil > 0f && Time.unscaledTime > _rumbleUntil) StopRumble();
@@ -139,6 +151,7 @@ namespace HometownStoreAccess.Input
                 ControllerMapping.NormalizeStick(s.Gamepad.sThumbLX, s.Gamepad.sThumbLY, LeftStickDeadZone, out state.LeftX, out state.LeftY);
                 ControllerMapping.NormalizeStick(s.Gamepad.sThumbRX, s.Gamepad.sThumbRY, RightStickDeadZone, out state.RightX, out state.RightY);
                 List<PadAction> actions = Mapping.Update(state, Time.unscaledTime);
+                if (actions.Count > 0) Loc.PadMode = true;
                 foreach (PadAction a in actions) Dispatch(a);
             }
             catch (DllNotFoundException)
@@ -189,6 +202,7 @@ namespace HometownStoreAccess.Input
                 case PadAction.KeyList: ModInput.Inject(KeyCode.F1, shift: true); break;
                 case PadAction.ModSettings: ModInput.Inject(KeyCode.F5); break;
                 case PadAction.RecallStory: ModInput.Inject(KeyCode.Backslash); break;
+                case PadAction.Goal: ModInput.Inject(KeyCode.J, ctrl: true); break;
                 case PadAction.Back: GameActions.Back(); break;
                 case PadAction.Pause:
                     if (Contexts.Overlay.IsOpen) Contexts.Overlay.Close();

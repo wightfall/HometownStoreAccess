@@ -77,7 +77,7 @@ namespace HometownStoreAccess.Input
             return false;
         }
 
-        private static Transform FindHudButton(string name)
+        internal static Transform FindHudButton(string name)
         {
             UIPanelManager ui = UIPanelManager.Instance;
             if (ui?.mainInterface == null) return null;

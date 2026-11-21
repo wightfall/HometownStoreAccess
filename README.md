@@ -22,6 +22,7 @@ other screen readers, and falls back to Windows speech (OneCore or SAPI) when no
 - [Shop floor scanner](#shop-floor-scanner)
 - [Message history](#message-history)
 - [Sound cues](#sound-cues)
+- [Steam achievements](#steam-achievements)
 - [Mod settings](#mod-settings)
 - [Languages and translation](#languages-and-translation)
 - [Troubleshooting](#troubleshooting)
@@ -83,11 +84,14 @@ off with **Skip the logo intro** in the settings).
   own (for example "Actions, heading, 2 items"): Page Up and Page Down jump to the headings, and
   Down reads the first line of the section.
 - **F5** opens the mod settings.
+- **With a controller**, Back tells you the buttons for the screen you are on, holding Back opens
+  the key list, and holding Start opens the mod settings. See [Controller](#controller).
 
 A new game starts with a letter: first choose whether you want the tutorial, then press Enter on
 **Open letter**, read it with the arrow keys, and press Enter on the letter to go on. The game's own
-tutorial runs on the first day. The mod adds a key hint to each tutorial step. Press **J** (Ctrl+J
-in lists) to hear the current goal again.
+tutorial runs on the first day. The mod adds a key hint to each tutorial step, naming the controller's buttons
+while you play with a controller. Press **J** (Ctrl+J in lists), or hold the right trigger, to hear
+the current goal again.
 
 ## Keys
 
@@ -302,6 +306,14 @@ everything the shop has that day, even what the game's own list hides behind its
 
 Xbox-compatible (XInput) controllers work directly. Other controllers work through Steam Input.
 
+The mod says when you plug a controller in or out. While you play with the controller, what the mod
+tells you names its buttons instead of keys: the tutorial hints, the help for each screen (Back),
+the hints on items, and the prompts for placing a building and for starting the day. The key list
+(hold Back) then starts with the controller section. When you press a key on the keyboard, the mod
+names the keyboard keys again, until you use the controller again. Ctrl, Shift, Alt, Insert, Caps
+Lock and the number pad do not count, so your screen reader's keys (such as Ctrl to stop speech)
+leave it as it is.
+
 | Button | Action |
 | --- | --- |
 | D-pad, left stick | Arrow keys |
@@ -313,11 +325,18 @@ Xbox-compatible (XInput) controllers work directly. Other controllers work throu
 | Start | Pause menu; hold for the mod settings (F5) |
 | Back | Help for this screen (F1); hold for the key list (Shift+F1) |
 | Left trigger | Repeat; in a conversation, hold to hear the line again (Backslash) |
-| Right trigger | Status (day and time) |
+| Right trigger | Status (day and time); hold for the current goal or tutorial step (J) |
 | Left stick click | Customers |
 | Right stick click | Pause or resume |
 | Right stick up, down | Previous, next category (Ctrl+Up, Ctrl+Down) |
 | Right stick left, right | Older, newer message (Comma, Period) |
+
+On the shop floor, RB (like Tab) switches to the toolbar, the game's own buttons: the next phase
+(open the shop, go to the map), build mode, the game speed, all stock, customers, the event journal
+and the others. That is how you open build mode and move the day on with a controller. A few things
+need the keyboard: typing (naming a save), deleting a save, moving a single item (Ctrl+Enter), the
+first and last item (Home, End), walk mode on the map (Ctrl+W), the categories of the message
+history, and F3.
 
 ## Categories
 
@@ -381,6 +400,12 @@ You can listen to each cue in the key list (Shift+F1, then the sound cues sectio
 | Beacon | Reached a place on the map |
 | Open, Close | A panel opened or closed |
 
+## Steam achievements
+
+Steam shows an unlocked achievement only in its overlay, which screen readers cannot read. When the
+game unlocks one, the mod says "Achievement unlocked:" with its name and description as Steam gives
+them. To turn this off, use **Steam achievements** in the mod settings.
+
 ## Mod settings
 
 F5 opens the settings. Changes are saved at once. Left and Right change a value, and Enter turns a
@@ -392,7 +417,7 @@ headings, so you hear the section name alone, and Down goes to its first setting
   positions, write speech to the log
 - **Announcements:** customers coming and going, sales at the cashier, empty shelves, deliveries
   and machines, customer speech bubbles, every change of money, read dialog automatically,
-  tutorial notes and key hints
+  tutorial notes and key hints, Steam achievements
 - **Sound cues:** sound cues on or off, menu sounds, the overall sound cue volume
 - **Volume of each sound cue:** a section of its own, so Page Down skips it
 - **Controls:** wrap around at the ends of lists, skip the logo intro and shorten the loading fade,
@@ -508,6 +533,9 @@ done, set `TestHooks = false` again and delete `BepInEx\hsa_dumps` and any `BepI
 | `say <text>` | Speaks the text. |
 | `key <KeyCode> [shift] [ctrl] [alt]` | Presses a mod key, with Unity key names such as `DownArrow`, `Return`, `PageDown`, `F1` or `B`. Only the mod sees it: keys the game reads itself (Escape, the speed keys 1 to 3, typing into a text field) need a real key press. |
 | `pad <buttons> [frames]` | Controller input, held for that many frames (2 if not given; holding about 0.6 s, as for the key list, needs about 240). Buttons: `a b x y start back lb rb ls rs up down left right lt rt`, sticks: `lsup lsdown lsleft lsright rsup rsdown rsleft rsright`. |
+| `pad connect`, `pad disconnect` | Does what plugging a controller in or out does: says so, and makes the instructions name the controller's buttons, or the keyboard keys again. |
+| `achievements` | The game's Steam achievements: whether Steam is connected, whether each one is unlocked, and what the mod says when it unlocks. |
+| `achievement <name or number>` | Says that achievement's announcement, to hear how it is read. It unlocks nothing. |
 | `click <path>` | Presses the button at that path in the scene (the paths are in a dump). |
 | `dump [name]` | Writes the screen's interface tree to `BepInEx\hsa_dumps\ui_<name>_<time>.txt`. |
 | `world` | Writes the shop grid, the buildings and the customers to `BepInEx\hsa_dumps\world_<time>.txt`. |
@@ -569,7 +597,12 @@ done, set `TestHooks = false` again and delete `BepInEx\hsa_dumps` and any `BepI
   temple (or `goto Temple`): every task is done and the event ends.
 - **Rewards and conversations:** `reward trade VillageHead`, `reward item Candy`; `dialog` lists
   the conversations with replies, `dialog <name>` plays one.
-- **The controller:** `pad a`, `pad back 240` (holds Back: the key list).
+- **The controller:** `pad a`, `pad back 240` (holds Back: the key list), `pad rt 240` (holds the
+  right trigger: the current goal). After a `pad` command the instructions name the controller's
+  buttons (F1 or `pad back` tells), and a real key press brings back the keyboard keys.
+  `pad connect` and `pad disconnect` say what plugging a controller in and out says.
+- **Achievements:** `achievements` lists them; `achievement Money1000` says how "Money 1,000" is
+  announced. No test command unlocks an achievement.
 - **A translation:** `missing ja` writes what the Japanese game text lacks.
 
 The code is organized like this:
