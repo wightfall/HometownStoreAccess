@@ -59,6 +59,12 @@ namespace HometownStoreAccess.UI
         /// </summary>
         public virtual bool HeadingItems => false;
 
+        /// <summary>
+        /// Start at the first item when the screen was closed since it was last used (a new visit), but
+        /// keep the focus when it was only covered by a popup (a confirmation, a notice).
+        /// </summary>
+        public virtual bool ResetFocusOnNewVisit => false;
+
         /// <summary>Return to the first item each time the context is entered instead of the last focus.</summary>
         public virtual bool ResetFocusOnEnter => false;
 

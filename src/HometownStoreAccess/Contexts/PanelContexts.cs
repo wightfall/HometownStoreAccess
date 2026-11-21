@@ -253,10 +253,12 @@ namespace HometownStoreAccess.Contexts
                 var c = t.GetComponent<Content_CharacterPortrait>();
                 if (c == null || !t.gameObject.activeInHierarchy) continue;
                 Content_CharacterPortrait portrait = c;
+                int number = i + 1;
                 items.Add(new TextItem(() =>
                 {
                     string n = UiUtil.Text(portrait.nameText);
-                    return n == "???" ? Loc.Get("character_unknown") : TextCleaner.Join(", ", n, UiUtil.Text(portrait.descriptionText));
+                    // Characters not met yet all look the same ("???"): say which one it is.
+                    return n == "???" ? Loc.Get("character_numbered", number, Loc.Get("character_unknown")) : TextCleaner.Join(", ", n, UiUtil.Text(portrait.descriptionText));
                 }, "char" + i++));
             }
             Transform close = p.transform.Find("Close");
@@ -353,6 +355,7 @@ namespace HometownStoreAccess.Contexts
     {
         public override string Id => "cashier_skin";
         public override int Priority => 53;
+        public override bool ResetFocusOnNewVisit => true;
 
         private static SelectCashierSkinPanel Panel => UIPanelManager.Instance != null ? UIPanelManager.Instance.selectCashierSkinPanel : null;
 
@@ -364,7 +367,11 @@ namespace HometownStoreAccess.Contexts
             if (s == null) return "?";
             string n = s.name.StartsWith("Cashier_") ? s.name.Substring(8) : s.name;
             n = System.Text.RegularExpressions.Regex.Replace(n, @"_\d+$", string.Empty);
-            return TextCleaner.HumanizeName(n);
+            // The game shows only pictures; the mod names a look after its file. Plain words (default,
+            // cat, frozen) are translated; names of people stay as they are.
+            string name = TextCleaner.HumanizeName(n);
+            string key = "skin_" + name.ToLowerInvariant().Replace(' ', '_');
+            return Loc.Has(Loc.Language, key) || Loc.Has(Loc.English, key) ? Loc.Get(key) : System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(name);
         }
 
         public override void Build(List<NavItem> items)
@@ -400,6 +407,7 @@ namespace HometownStoreAccess.Contexts
     {
         public override string Id => "vehicle";
         public override int Priority => 63;
+        public override bool ResetFocusOnNewVisit => true;
 
         private static VehiclePanel Panel => UIPanelManager.Instance != null ? UIPanelManager.Instance.vehiclePanel : null;
 
@@ -440,6 +448,7 @@ namespace HometownStoreAccess.Contexts
     {
         public override string Id => "lottery";
         public override int Priority => 64;
+        public override bool ResetFocusOnNewVisit => true;
 
         private static LotteryPanel Panel => UIPanelManager.Instance != null ? UIPanelManager.Instance.lotteryPanel : null;
 

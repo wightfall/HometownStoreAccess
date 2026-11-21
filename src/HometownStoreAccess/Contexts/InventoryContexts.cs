@@ -107,6 +107,7 @@ namespace HometownStoreAccess.Contexts
     {
         public override string Id => "shelf";
         public override int Priority => 54;
+        public override bool ResetFocusOnNewVisit => true;
 
         private static ShelfPanel Target => UIPanelManager.Instance != null ? UIPanelManager.Instance._refShelfPanel : null;
         private static ShelfPanel Source => UIPanelManager.Instance != null ? UIPanelManager.Instance._refTransferPanel : null;
@@ -190,6 +191,7 @@ namespace HometownStoreAccess.Contexts
     {
         public override string Id => "manufacture";
         public override int Priority => 55;
+        public override bool ResetFocusOnNewVisit => true;
 
         private static ManufacturePanel Panel => UIPanelManager.Instance != null ? UIPanelManager.Instance._refManufacturePanel : null;
         private static ShelfPanel Storage => UIPanelManager.Instance != null ? UIPanelManager.Instance._refTransferPanel : null;

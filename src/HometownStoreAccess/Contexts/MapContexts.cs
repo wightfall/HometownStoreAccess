@@ -24,6 +24,8 @@ namespace HometownStoreAccess.Contexts
         private bool _wasMoving;
         private string _lastInfoKey;
         private Content_Map _lastMap;
+        // The place whose details were opened last (its list key).
+        private string _detailsNode;
 
         public override string Id => "map";
         public override int Priority => 60;
@@ -42,6 +44,7 @@ namespace HometownStoreAccess.Contexts
             _wasMoving = false;
             _lastInfoKey = Panel?.previousShowTarget;
             _lastMap = CurrentMap;
+            _detailsNode = null;
         }
 
         public override string Title()
@@ -99,11 +102,15 @@ namespace HometownStoreAccess.Contexts
         }
 
         /// <summary>
-        /// When the focused item goes away (the place's details close as you arrive somewhere that opens
-        /// no screen), the focus goes to the place you are at, not to the next item in the list (which
-        /// could be End of the day).
+        /// When the focused item goes away because a place's details closed (Escape, or arriving somewhere
+        /// that opens no screen), the focus goes back to that place, not to the next item in the list
+        /// (which could be End of the day). Otherwise to the place you are at.
         /// </summary>
-        public override string PreferredFocusKey() => HereKey();
+        public override string PreferredFocusKey()
+        {
+            if (_detailsNode != null && Nodes().Any(n => NodeKey(n) == _detailsNode)) return _detailsNode;
+            return HereKey();
+        }
 
         /// <summary>Coming back to the map (a shop closed): start on the place you are at.</summary>
         public override int InitialFocus(IReadOnlyList<NavItem> items)
@@ -228,10 +235,11 @@ namespace HometownStoreAccess.Contexts
                     }
                 }
                 LocationTradeManager ltm = LocationTradeManager.Instance;
-                if (prof != null && ltm != null && ltm.CurrentAtLocationProfile == prof && p.travelToLocationButton != null)
+                if (GoInAgain(prof) && p.travelToLocationButton != null)
                 {
-                    // Already here (the shop was closed with Escape): the game's Travel button does nothing
-                    // when the player does not move, so open the place again directly (it costs no travel point).
+                    // Already here (its screen was closed): open it again, without a travel point, as the
+                    // game's Travel button does for the place you stand on. Places that open no screen
+                    // (the temple) keep the game's own button: there is nothing to go back into.
                     LocationProfile here = prof;
                     items.Add(new ActionItem(() => Loc.Get("map_go_in_again"), () => ltm.ReadLocationProfile(here.locationTradeID), "travel_here")
                     {
@@ -250,11 +258,39 @@ namespace HometownStoreAccess.Contexts
             items.Add(new TextItem(PurchasedToday, "basket") { Group = map });
             UiScan.AddControl(items, p.endOfTheDayButton, map);
             Transform close = p.transform.Find("CloseMap");
-            if (close != null) UiScan.AddControl(items, close.GetComponent<Button>(), map, () => Loc.Get("label_close_map"));
+            if (close != null)
+            {
+                // The game's close button first closes a place's details that are open, then the map.
+                Button closeButton = close.GetComponent<Button>();
+                items.Add(new ActionItem(() => DetailsOpen(p) ? Loc.Get("label_close_details") : Loc.Get("label_close_map"), () =>
+                {
+                    bool details = DetailsOpen(p);
+                    UiUtil.Click(closeButton.gameObject);
+                    if (details) SpeechService.Say(Loc.Get("map_details_closed"), true);
+                }, "close_map")
+                {
+                    Group = map,
+                    TargetObject = closeButton.gameObject,
+                });
+            }
             Transform hud = p.transform.Find("MainButton (1)");
             if (hud != null) UiScan.Add(items, hud.gameObject, map);
             Transform stock = p.transform.Find("StorageSummary/StorageButton");
             if (stock != null && stock.gameObject.activeInHierarchy) UiScan.AddControl(items, stock.GetComponent<Button>(), map, () => Loc.Get("label_storage_summary"));
+        }
+
+        /// <summary>
+        /// True for the place you are at when it has a screen to open again (a shop with stock today, the
+        /// lottery, the vehicle shop), as the game decides when you arrive.
+        /// </summary>
+        private static bool GoInAgain(LocationProfile prof)
+        {
+            LocationTradeManager ltm = LocationTradeManager.Instance;
+            if (prof == null || prof.locationTradeID == null || ltm == null || ltm.CurrentAtLocationProfile != prof) return false;
+            LocationTrade id = prof.locationTradeID;
+            return id.lotteryPanel || id.vehiclePanel
+                || (prof.currentItemList != null && prof.currentItemList.Count > 0)
+                || (prof.currentShelfList != null && prof.currentShelfList.Count > 0);
         }
 
         /// <summary>"Events here: ..." for the details panel, or null.</summary>
@@ -282,6 +318,8 @@ namespace HometownStoreAccess.Contexts
             }
             return names;
         }
+
+        private static bool DetailsOpen(SelectLocationPanel p) => p.infoPanel != null && p.infoPanel.activeInHierarchy && !string.IsNullOrEmpty(p.previousShowTarget);
 
         private static LocationProfile InfoProfile(SelectLocationPanel p)
         {
@@ -316,6 +354,11 @@ namespace HometownStoreAccess.Contexts
                 SpeechService.Say(Loc.Get("map_your_shop_hint"), true);
                 return;
             }
+            _detailsNode = NodeKey(node);
+            // The game closes and reopens the details in the same frame when the place shown is chosen
+            // again (after closing its shop, for example): forget what was read so they are read again
+            // and the focus goes to the Travel (or Go in again) button.
+            _lastInfoKey = null;
             UiUtil.Click(node.gameObject);
         }
 
@@ -329,6 +372,7 @@ namespace HometownStoreAccess.Contexts
             if (map != _lastMap)
             {
                 _lastMap = map;
+                _detailsNode = null;
                 _lastIndex = b._currentIndex;
                 _wasMoving = b._isMoving;
                 AudioCues.Play(Cue.Arrive);
@@ -364,7 +408,8 @@ namespace HometownStoreAccess.Contexts
                 _lastInfoKey = key;
                 if (key != null)
                 {
-                    SpeechService.Say(TextCleaner.Join(". ", UiUtil.Text(p.titleProfile), UiUtil.Text(p.descriptionProfile), EventsLine(p), UiUtil.Text(p.travelToLocationButton.GetComponentInChildren<TMPro.TMP_Text>())), true);
+                    string travel = GoInAgain(InfoProfile(p)) ? Loc.Get("map_go_in_again") : UiUtil.Text(p.travelToLocationButton.GetComponentInChildren<TMPro.TMP_Text>());
+                    SpeechService.Say(TextCleaner.Join(". ", UiUtil.Text(p.titleProfile), UiUtil.Text(p.descriptionProfile), EventsLine(p), travel), true);
                     FocusTravel();
                 }
             }

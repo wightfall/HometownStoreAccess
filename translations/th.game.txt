@@ -1,5 +1,13 @@
 # Game text translation shipped with Hometown Store Access.
-# Entries the game already translates are not listed; the game's own text is used for those.
+# Entries the game already translates are not listed (the game's own text is used for those),
+# except a few spelling fixes at the end.
 # To improve a line, put it in lang/th.game.txt: your file goes on top of this one.
 
 Dialog_Response_Name/Response_Event_Sell_TaoYeabLok_0_R2 = เซลส์แมนเต่าเหยียบโลก
+
+# Spelling mistakes in the game's own Thai text that make a voice misread them.
+Product_Name/Washing Powder = ผงซักฟอก
+Product_Description/[Manufacture] Ice Maker = อยากได้น้ำแข็งเย็นแค่ไหน เครื่องนี้จัดให้!
+Shelf_Description/[Manufacture] Ice Maker = อยากได้น้ำแข็งเย็นแค่ไหน เครื่องนี้จัดให้!
+Dialog_Name/Event_Grandma_Reveal_Locations_15 = ยายสมศรี
+ConfirmAndNotify/Warning: All items in Delivery Storage = คำเตือน: สินค้าทั้งหมดในรถจัดส่งสินค้า จะถูกขายทันทีในราคา {v1} บาท \nหมายเหตุ: รถจัดส่งสินค้าอยู่หน้าร้าน

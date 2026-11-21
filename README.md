@@ -213,6 +213,15 @@ moves one. Ctrl+I describes an item: price, how it stacks, and which shelves it 
 actions section has the move-everything buttons and Close. When the goods belong to more than one
 category, Ctrl+Up and Ctrl+Down (or the Category item at the top) show one category at a time.
 
+Enter on a cashier opens its looks. The game shows them only as pictures, so the mod names them:
+plain ones in your language (Default, Cat, Frozen), the others by their own names.
+
+I on the shop floor, and Ctrl+I in build mode, describe a building like the game's tooltip: name,
+description, size, value, and what a shelf holds.
+
+The character collection says each character's number, so the ones not met yet ("Character 3: not
+met yet") can be told apart.
+
 ### Machines
 
 Choose a recipe (the list opens on the recipe the machine uses now), set the daily amount with
@@ -253,18 +262,22 @@ End of the day finishes the evening. The map's own buttons (customers, event jou
 all stock, settings) are in the map section at the end of the list.
 
 After a trip the focus is on the place you arrived at ("Temple, you are here"), also when you
-close a shop or come into another area by a road sign. If you closed a shop with Escape, press
-Enter on it again: its button says **Go in again** and opens the shop without using a travel
-point. This is how the game works, at every place: going back into the place you are at is free,
-only moving to another place costs a point.
+close a shop or come into another area by a road sign. To go back into a shop, the lottery or the
+vehicle shop after closing it (with its Close item or Escape), press Enter on the place again: its
+button says **Go in again** and opens it without using a travel point, even with no points left.
+This is how the game works at every place: going back into the place you are at is free, only
+moving to another place costs a point.
 
-Some places sell nothing (the temple, the school, the village head's house and others in the
-demo). The game opens no screen there, so you only hear that you arrived; an event can still ask
-you to go there, and arriving is what completes that task.
+Some places have no screen at all (the temple, the school, the village head's house, the farm and
+others in the demo). The game opens nothing there, so you only hear that you arrived, and their
+button is the game's own "Travel: 0", which opens nothing either. An event can still ask you to go
+there: arriving is what completes that task.
 
-A shop always opens at the top of its list (the filters); only coming back from a popup inside the
-shop keeps your place. Your own shop is only a marker on the map; you go back to it with End of
-the day.
+A shop, the lottery and the vehicle shop always open at the top of their list, and so do shelves,
+machines and the cashier's looks; only coming back from a popup inside them keeps your place.
+When a place's details are open, the map's last item says **Close the place's details**; after that
+it closes the map. Your own shop is only a marker on the map; you go back to it with End of the
+day.
 
 ### Shops on the map
 
@@ -400,7 +413,9 @@ The game's Japanese, Indonesian and Chinese text is mostly untranslated in the d
 complete translations of the game text for these languages (story, items, places, customers and
 menus), in `BepInEx\plugins\HometownStoreAccess\translations`. Text the game still lacks falls back
 to English instead of showing an error. Some captions the game leaves in English in every language
-("Next Day", "Quit To OS", the reward screen and others) are spoken in your language too.
+("Next Day", "Quit To OS", the reward screen and others) are spoken in your language too. A few
+spelling mistakes in the game's Thai text that make a voice misread them are corrected (for example
+the detergent, "ผงซักฟอก"); the game shows the corrected text too.
 
 Language names are also said in English ("ไทย, Thai", "日本語, Japanese"), so you always hear which
 language you picked. With the mod language on Automatic, the mod speaks the game's language. If your
