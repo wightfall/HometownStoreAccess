@@ -15,10 +15,13 @@ namespace HometownStoreAccess.Patches
     [HarmonyPriority(Priority.First)]
     internal static class TestAchievementGuard
     {
+        // The game's money check asks every frame: each achievement is logged once.
+        private static readonly System.Collections.Generic.HashSet<E_Achievement> Logged = new System.Collections.Generic.HashSet<E_Achievement>();
+
         private static bool Prefix(E_Achievement achievement)
         {
             if (Plugin.Settings == null || !Plugin.Settings.TestHooks.Value) return true;
-            Log.Info("[test] achievement " + achievement + " not unlocked: the test commands are on");
+            if (Logged.Add(achievement)) Log.Info("[test] achievement " + achievement + " not unlocked: the test commands are on");
             return false;
         }
     }

@@ -394,7 +394,8 @@ namespace HometownStoreAccess.Diagnostics
                                     PortraitData pdi = dli.GetPortraitData(pp);
                                     if (pdi != null && pdi.portrait != null) shown.Add(pp + " " + pdi.portrait.name + " " + pdi.transitionType);
                                 }
-                                Log.Info("[pictures] " + d.name + " " + li + " " + dli.dialogLine.GetName(d.name, LanguageControl.CurrentLanguage) + ": " + string.Join(", ", shown.ToArray()));
+                                string who = dli.dialogLine != null ? dli.dialogLine.GetName(d.name, LanguageControl.CurrentLanguage) : "?";
+                                Log.Info("[pictures] " + d.name + " " + li + " " + who + ": " + string.Join(", ", shown.ToArray()));
                             }
                             continue;
                         }
@@ -434,13 +435,13 @@ namespace HometownStoreAccess.Diagnostics
                     CharacterCollectionManager picCollection = CharacterCollectionManager.Instance;
                     if (picCollection != null)
                     {
-                        Log.Info("[pictures] collection: " + picCollection.allCharacterPortraits.Count + " entries, " + picCollection.metCharacters.Count + " met: " + string.Join(", ", picCollection.allCharacterPortraits.Where(x => x != null).Select(x => x.name + "=" + (x.portrait != null ? x.portrait.name : "-") + (x.isSecret ? " secret" : string.Empty) + " (" + x.detailsKey.GetName(x.name, LanguageControl.CurrentLanguage) + " / " + x.detailsKey.GetDescription(x.name, LanguageControl.CurrentLanguage) + ")").ToArray()));
+                        Log.Info("[pictures] collection: " + picCollection.allCharacterPortraits.Count + " entries, " + picCollection.metCharacters.Count + " met: " + string.Join(", ", picCollection.allCharacterPortraits.Where(x => x != null).Select(x => x.name + "=" + (x.portrait != null ? x.portrait.name : "-") + (x.isSecret ? " secret" : string.Empty) + (x.detailsKey == null ? " (no text)" : " (" + x.detailsKey.GetName(x.name, LanguageControl.CurrentLanguage) + " / " + x.detailsKey.GetDescription(x.name, LanguageControl.CurrentLanguage) + ")")).ToArray()));
                     }
                     else Log.Info("[pictures] collection: none");
                     foreach (string picName in used.Keys)
                     {
                         CharacterPortrait picEntry = picCollection != null ? picCollection.allCharacterPortraits.FirstOrDefault(x => x != null && x.portrait != null && x.portrait.name == picName) : null;
-                        Log.Info("[pictures] " + picName + ": " + (picEntry == null ? "not in the portrait collection" : "named " + picEntry.detailsKey.GetName(picEntry.name, LanguageControl.CurrentLanguage)));
+                        Log.Info("[pictures] " + picName + ": " + (picEntry == null ? "not in the portrait collection" : picEntry.detailsKey == null ? "in the collection, no text" : "named " + picEntry.detailsKey.GetName(picEntry.name, LanguageControl.CurrentLanguage)));
                     }
                     break;
                 }
@@ -549,9 +550,27 @@ namespace HometownStoreAccess.Diagnostics
                 case "achievement":
                 {
                     // achievement <name or number>: says the announcement of that achievement, without unlocking it on Steam
+                    // achievement lock <name or number>: locks it again on Steam (undoes a test that let the game unlock it)
+                    bool lockIt = arg.StartsWith("lock ", StringComparison.OrdinalIgnoreCase);
+                    string which = lockIt ? arg.Substring(5).Trim() : arg;
                     E_Achievement a;
-                    if (int.TryParse(arg, out int number) && Enum.IsDefined(typeof(E_Achievement), number)) a = (E_Achievement)number;
-                    else if (!Enum.TryParse(arg, true, out a)) { Log.Warn("achievement: give a name or number (achievements lists them)"); break; }
+                    if (int.TryParse(which, out int number) && Enum.IsDefined(typeof(E_Achievement), number)) a = (E_Achievement)number;
+                    else if (!Enum.TryParse(which, true, out a)) { Log.Warn("achievement: give a name or number (achievements lists them)"); break; }
+                    if (lockIt)
+                    {
+                        SteamIntegration lockSteam = SteamIntegration.instance;
+                        if (lockSteam == null || !lockSteam.connectedToSteam)
+                        {
+                            Log.Warn("achievement lock: Steam is not connected");
+                            break;
+                        }
+                        // The game names its achievements "Achievement_<number>" (SteamIntegration.UnlockAchievement).
+                        var steamAchievement = new Steamworks.Data.Achievement("Achievement_" + (int)a);
+                        bool cleared = steamAchievement.Clear();
+                        bool stored = Steamworks.SteamUserStats.StoreStats();
+                        Log.Info("[achievement] " + a + " locked again: cleared " + cleared + ", stored " + stored + ", now " + (lockSteam.IsAchievementUnlocked(a) ? "unlocked" : "locked"));
+                        break;
+                    }
                     SpeechService.Say(Patches.AchievementPatch.Describe(a), false, Core.MsgCategory.Events);
                     break;
                 }
@@ -693,7 +712,7 @@ namespace HometownStoreAccess.Diagnostics
             "trades: every shop's stock today | trade <shop>: open a shop | places: every map place | points <n>: travel points | goto <place>: arrive at a place | unlock <place>|all",
             "journals: every event and its tasks | journal <name>: start an event | journal check: check the events now | events / event <name>: story events | dialog [name]: conversations",
             "reward money|item|blueprint|customer|trust|budget|wish|trade|vehicle <arg>: a reward screen | open lottery|vehicle|characters",
-            "achievements: the game's Steam achievements | achievement <name or number>: say its announcement (unlocks nothing)",
+            "achievements: the game's Steam achievements | achievement <name or number>: say its announcement (unlocks nothing) | achievement lock <name or number>: lock it again on Steam",
             "cues: every sound cue's length, peak and volume | cues play: also plays them one by one",
             "table <table> [entry] | export <locale> | missing <locale>: game text",
             "pictures [conversation]: conversation pictures, faces and effects | pick <dropdown> <item>: click a dropdown item",

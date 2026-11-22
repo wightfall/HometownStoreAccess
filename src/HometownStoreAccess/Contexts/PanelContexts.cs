@@ -253,11 +253,18 @@ namespace HometownStoreAccess.Contexts
         {
             CharacterCollectionPanel p = Panel;
             if (p == null) return;
-            int i = 0;
+            var entries = new List<Content_CharacterPortrait>();
             foreach (Transform t in p.contentParent)
             {
                 var c = t.GetComponent<Content_CharacterPortrait>();
-                if (c == null || !t.gameObject.activeInHierarchy) continue;
+                if (c != null && t.gameObject.activeInHierarchy) entries.Add(c);
+            }
+            // While the game rebuilds the book, its old entries are still there for a frame: the new ones come last.
+            int total = CharacterCollectionManager.Instance?.GetCollectibleCharacters()?.Count ?? entries.Count;
+            if (total > 0 && entries.Count > total) entries.RemoveRange(0, entries.Count - total);
+            int i = 0;
+            foreach (Content_CharacterPortrait c in entries)
+            {
                 Content_CharacterPortrait portrait = c;
                 int number = i + 1;
                 items.Add(new TextItem(() =>

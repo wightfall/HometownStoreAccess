@@ -22,3 +22,7 @@ Dialog_Name/Event_Manufacture_Introduce_10 = นายทุน
 Dialog_Name/Event_TaoYeablok_FirstMeet_Otaku_0 = โอตาคุ
 Journal_Name/J_FreshMarket_0 = ไปหายายที่ตลาดสด
 Customer_Name/Thug = อันธพาล
+# Sara am typed as two characters, and a vowel typed twice around its tone mark (found in 1.4.5).
+Dialog_Description/Event_Grandma_Reveal_Locations_15 = เออ ๆ ไปได้ละ ข้าจะตำน้ำพริก
+Dialog_Description/Event_Tutorial_Visit_SurplusMaket_5 = ไอ้ตลาดที่เราจะไปกันเนี่ยมันเป็นตลาดของเหลือสต็อก มันจะมีของขายไม่ซ้ำทุกวัน
+Customer_Description/[2] Otaku = กลุ่มคน "แห่งวัฒนธรรม"

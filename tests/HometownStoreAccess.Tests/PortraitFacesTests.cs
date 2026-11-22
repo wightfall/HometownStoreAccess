@@ -90,6 +90,8 @@ namespace HometownStoreAccess.Tests
             Assert.Equal("Collegian", PortraitFaces.SpacedWords("Collegian"));
             Assert.True(PortraitFaces.HasFace(new[] { "face_smile", "face_shake" }));
             Assert.False(PortraitFaces.HasFace(new[] { "face_shake" }));
+            Assert.Equal("face_leave", PortraitFaces.LeaveKey(1));
+            Assert.Equal("face_leave_many", PortraitFaces.LeaveKey(3));
         }
 
         [Fact]
@@ -147,7 +149,7 @@ namespace HometownStoreAccess.Tests
         [Fact]
         public void EveryTextItCanSayExistsInEveryLanguage()
         {
-            string[] keys = { "face_smile", "face_surprised", "face_calm", "face_better_glasses", "face_usual", "face_changed", "story_picture", "face_of", "set_pictures", "face_shake", "set_shaking", "face_appears", "character_number" };
+            string[] keys = { "face_smile", "face_surprised", "face_calm", "face_better_glasses", "face_usual", "face_changed", "story_picture", "face_of", "set_pictures", "face_shake", "set_shaking", "face_appears", "character_number", "face_leave", "face_leave_many" };
             foreach (string lang in Loc.SupportedLanguages)
             {
                 Loc.SetLanguage(lang);

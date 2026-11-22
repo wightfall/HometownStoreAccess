@@ -255,7 +255,7 @@ A reward after a conversation is read as soon as it appears. If you press Enter 
 reads it, and the next Enter closes it.
 
 The pictures the game shows without words are said before the line: who appears while someone
-else is speaking (the narrator, say), a character's new face (the college student smiling or
+else is speaking (the narrator, say), who leaves, a character's new face (the college student smiling or
 surprised, the otaku after his makeover and back), a picture that shakes (the game shakes it on a
 strong reaction) and a story picture. When someone else is
 speaking, they come with the character's name. The demo has no story pictures, but later versions
@@ -575,6 +575,7 @@ done, set `TestHooks = false` again and delete `BepInEx\hsa_dumps` and any `BepI
 | `pad connect`, `pad disconnect` | Does what plugging a controller in or out does: says so, and makes the instructions name the controller's buttons, or the keyboard keys again. |
 | `achievements` | The game's Steam achievements: whether Steam is connected, whether each one is unlocked, what the mod says when it unlocks, and whether the guard below is on. |
 | `achievement <name or number>` | Says that achievement's announcement, to hear how it is read. It unlocks nothing. |
+| `achievement lock <name or number>` | Locks that achievement again on Steam, to undo a test that let the game unlock it. |
 | `cues`, `cues play` | Every sound cue: its length, its loudest point and its volume setting. `cues play` also says each one's name and plays it. |
 | `click <path>` | Presses the button at that path in the scene (the paths are in a dump). |
 | `pictures [conversation]` | Lists the conversations' story pictures, every portrait that changes from one line to the next, how often the pictures fade, dim or shake, and the portraits' entries in the game's collection. With a conversation name (or part of it): each of its lines with its speaker and its pictures. |

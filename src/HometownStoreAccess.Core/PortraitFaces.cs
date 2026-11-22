@@ -109,6 +109,9 @@ namespace HometownStoreAccess.Core
             return keys;
         }
 
+        /// <summary>The text key for characters whose pictures fade out (they leave): one, or several at once.</summary>
+        public static string LeaveKey(int count) => count > 1 ? "face_leave_many" : "face_leave";
+
         /// <summary>A story picture appears, or another one replaces it: the text key, or null.</summary>
         public static string StoryPictureKey(string before, string now) =>
             !string.IsNullOrEmpty(now) && now != before ? "story_picture" : null;

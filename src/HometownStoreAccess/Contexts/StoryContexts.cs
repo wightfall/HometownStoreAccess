@@ -64,13 +64,19 @@ namespace HometownStoreAccess.Contexts
             _pendingAdvance = false;
             _lastResponseCount = 0;
             _announcedLine = null;
-            _shown.Clear();
-            _seenHere.Clear();
-            _localDialog = null;
-            _storyPicture = null;
+            _resumed = _resumeConversation;
+            // Coming back to the same conversation (its log, a reward, the settings): its pictures are still
+            // the ones already said. A new one starts afresh.
+            if (!_resumed) _picturesDialog = null;
             if (!_resumeConversation) SpeechService.Recall.StartConversation();
             _resumeConversation = false;
         }
+
+        // Set while coming back to the conversation left: the line then is said as it was the first time.
+        private bool _resumed;
+        private DialogEvent _resumeDialog;
+        private int _resumeLine = -1;
+        private string _resumeText;
 
         /// <summary>Left for the game's Log view or a popup while the conversation is still open.</summary>
         private bool _resumeConversation;
@@ -79,6 +85,9 @@ namespace HometownStoreAccess.Contexts
         {
             DialogPanel p = Panel;
             _resumeConversation = p != null && p.gameObject.activeInHierarchy;
+            _resumeDialog = _lastDialog;
+            _resumeLine = _lastLine;
+            _resumeText = _announcedLine;
         }
 
         public override string Title() => null;
@@ -89,6 +98,13 @@ namespace HometownStoreAccess.Contexts
             if (p == null || p._shownDialog == null) return null;
             _lastDialog = p._shownDialog;
             _lastLine = p._shownLineIndex;
+            if (_resumed && p._shownDialog == _resumeDialog && p._shownLineIndex == _resumeLine && !string.IsNullOrEmpty(_resumeText))
+            {
+                // Back on the line already heard: the same words (the history keeps it once).
+                _announcedLine = _resumeText;
+                SpeechService.Recall.AddLine(_announcedLine);
+                return _announcedLine;
+            }
             // Only with a line on screen: as a new conversation starts, the panel still holds the last one's
             // data (its text already cleared), and its pictures are not this conversation's.
             string text = CurrentLineText();
@@ -107,6 +123,9 @@ namespace HometownStoreAccess.Contexts
         // The shown conversation's own names (a character can go by another name in it).
         private readonly PortraitNames _local = new PortraitNames();
         private DialogEvent _localDialog;
+        private string _localLanguage;
+        // The conversation the picture state belongs to: another one (queued right after, say) starts afresh.
+        private DialogEvent _picturesDialog;
 
         /// <summary>
         /// What the shown line's pictures show that the last line's did not: who appears while someone else
@@ -121,11 +140,19 @@ namespace HometownStoreAccess.Contexts
             DialogLine line = p._shownDialog.dialogLines[index];
             if (line == null) return null;
             Learn(p._shownDialog);
-            if (p._shownDialog != _localDialog)
+            if (p._shownDialog != _localDialog || _namesLanguage != _localLanguage)
             {
                 _local.Clear();
                 _localDialog = p._shownDialog;
+                _localLanguage = _namesLanguage;
                 LearnLines(_local, _localDialog);
+            }
+            if (p._shownDialog != _picturesDialog)
+            {
+                _shown.Clear();
+                _seenHere.Clear();
+                _storyPicture = null;
+                _picturesDialog = p._shownDialog;
             }
             string speaker = UiUtil.Text(p.CharacterLabel);
             bool faces = Plugin.Settings.AnnouncePictures.Value;
@@ -135,17 +162,16 @@ namespace HometownStoreAccess.Contexts
             string lit = LitCharacter(line, out PortraitPosition litPlace);
             bool speakerIsCharacter = speaker.Length > 0 && !Names.IsGeneric(speaker);
             var now = new Dictionary<string, string>(System.StringComparer.Ordinal);
-            var notes = new List<string>();
+            // Notes about others (with their names), and the speaker's own (no name): the speaker's come last,
+            // right before the line, so an unnamed "smiling" is heard as the speaker's.
+            var others = new List<string>();
+            var own = new List<string>();
+            var leaving = new List<string>();
             foreach (PortraitPosition place in Places)
             {
                 PortraitData data = line.GetPortraitData(place);
-                if (data == null || data.portrait == null) continue;
-                // A picture fading out is leaving: nothing to say about it, and it is not there afterwards.
-                if (data.transitionType == PortraitTransitionType.FadeOut)
-                {
-                    _seenHere.Remove(PortraitFaces.CharacterKey(data.portrait.name));
-                    continue;
-                }
+                // A picture fading out counts as gone (see below, after the loop).
+                if (data == null || data.portrait == null || data.transitionType == PortraitTransitionType.FadeOut) continue;
                 string picture = data.portrait.name;
                 string character = PortraitFaces.CharacterKey(picture);
                 if (character.Length == 0 || now.ContainsKey(character)) continue;
@@ -166,14 +192,29 @@ namespace HometownStoreAccess.Contexts
                     name = null;
                 }
                 // Someone who comes in while another speaks: the line does not say who that is.
-                bool appeared = faces && isNew && !speaking && name != null && !PortraitFaces.HasFace(keys);
+                bool appeared = faces && isNew && !speaking && name != null;
                 if (keys.Count == 0 && !appeared) continue;
                 var texts = new List<string>();
                 foreach (string k in keys) texts.Add(Loc.Get(k));
                 string what = TextCleaner.Join(", ", texts.ToArray());
-                if (appeared) notes.Add(TextCleaner.Join(", ", Loc.Get("face_appears", name), what));
-                else notes.Add(name != null ? Loc.Get("face_of", name, what) : what);
+                if (appeared) others.Add(TextCleaner.Join(", ", Loc.Get("face_appears", name), what));
+                else if (name != null) others.Add(Loc.Get("face_of", name, what));
+                else own.Add(what);
             }
+            // Whoever was shown and is not any more (faded out, or simply gone, also when lines were skipped):
+            // they leave. One who only moved to another place is still there.
+            foreach (KeyValuePair<string, string> kv in _shown)
+            {
+                if (now.ContainsKey(kv.Key)) continue;
+                _seenHere.Remove(kv.Key);
+                if (!faces) continue;
+                string goneName = _local.NameOf(kv.Key, Names.IsGeneric) ?? NameForCharacter(kv.Key, kv.Value);
+                if (goneName != null) leaving.Add(goneName);
+            }
+            var notes = new List<string>();
+            if (leaving.Count > 0) notes.Add(Loc.Get(PortraitFaces.LeaveKey(leaving.Count), string.Join(", ", leaving.ToArray())));
+            notes.AddRange(others);
+            notes.AddRange(own);
             // Followed even while the settings are off, so turning them on says only what changes from then on.
             _shown.Clear();
             foreach (KeyValuePair<string, string> kv in now)
@@ -232,7 +273,7 @@ namespace HometownStoreAccess.Contexts
                 string speaker;
                 try
                 {
-                    speaker = TextCleaner.Clean(dl.dialogLine.GetName(d.name, LanguageControl.CurrentLanguage));
+                    speaker = UsableName(dl.dialogLine.GetName(d.name, LanguageControl.CurrentLanguage));
                 }
                 catch
                 {
@@ -280,7 +321,7 @@ namespace HometownStoreAccess.Contexts
                     if (cp == null || cp.detailsKey == null) continue;
                     bool same = PortraitFaces.CharacterKey(cp.name) == character || (cp.portrait != null && PortraitFaces.CharacterKey(cp.portrait.name) == character);
                     if (!same) continue;
-                    string n = TextCleaner.Clean(cp.detailsKey.GetName(cp.name, LanguageControl.CurrentLanguage));
+                    string n = UsableName(cp.detailsKey.GetName(cp.name, LanguageControl.CurrentLanguage));
                     if (n.Length > 0) return n;
                 }
             }
@@ -289,6 +330,13 @@ namespace HometownStoreAccess.Contexts
                 Log.Debug("Portrait collection name: " + e.Message);
             }
             return null;
+        }
+
+        /// <summary>A name as the game gives it, cleaned; empty for none or the game's error text ("Key '...' not found").</summary>
+        private static string UsableName(string raw)
+        {
+            if (string.IsNullOrEmpty(raw) || raw.StartsWith("Key '", System.StringComparison.Ordinal) || raw.StartsWith("Table '", System.StringComparison.Ordinal)) return string.Empty;
+            return TextCleaner.Clean(raw);
         }
 
         /// <summary>A portrait's character by the game's customer names ("Collegian", "Street Racer"), when it is one of them.</summary>
@@ -335,6 +383,7 @@ namespace HometownStoreAccess.Contexts
             {
                 _lastDialog = p._shownDialog;
                 _lastLine = p._shownLineIndex;
+                if (p._shownDialog == null) _picturesDialog = null;
                 string line = p._shownDialog != null ? CurrentLineText() : null;
                 // What the line's pictures show anew (a face, a story picture) comes first.
                 if (!string.IsNullOrEmpty(line)) line = TextCleaner.Join(". ", PictureNote(p), line);
