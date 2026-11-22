@@ -102,6 +102,7 @@ namespace HometownStoreAccess.Input
             _enabled = false;
             if (_padIndex >= 0) StopRumble();
             _padIndex = -1;
+            _probeFound = -1;
             _announcedConnect = false;
             _seedNext = false;
             Mapping.Reset();
@@ -116,7 +117,12 @@ namespace HometownStoreAccess.Input
                 if (_enabled) TurnedOff();
                 return;
             }
-            _enabled = true;
+            if (!_enabled)
+            {
+                // Turned back on: a controller found before or while it was off may be gone, so look again.
+                _enabled = true;
+                _probeFound = -1;
+            }
             if (_simulatedFrames > 0 || _simulatedRelease)
             {
                 PadState sim = _simulatedFrames > 0 ? _simulated : default(PadState);

@@ -35,12 +35,20 @@ namespace HometownStoreAccess.Patches
         private static System.Exception Finalizer(ContentSaveSlot __instance, System.Exception __exception)
         {
             _depth--;
-            // Renaming onto an existing name makes the game move the file twice; the second move fails
-            // after the file already has its unique name. Nothing is lost, so do not pass the error on.
-            bool io = __exception is System.IO.IOException;
-            if (io) Log.Debug("Save rename: " + __exception.Message);
-            if (_depth == 0 && __instance != null && _oldName != __instance._currentSaveFileName) Rebuild(__instance);
-            return io ? null : __exception;
+            // An inner call (the game looking for a unique name): the outer one decides.
+            if (_depth > 0) return __exception;
+            bool renamed = __instance != null && _oldName != __instance._currentSaveFileName;
+            if (renamed) Rebuild(__instance);
+            // Renaming onto an existing name makes the game move the file twice; the second move fails after
+            // the file already has its unique name. Nothing is lost, so that error is not passed on. Any other
+            // failure (the file locked by cloud sync, say) goes on to the game as before, and to the log.
+            if (__exception is System.IO.IOException && renamed)
+            {
+                Log.Debug("Save rename: " + __exception.Message);
+                return null;
+            }
+            if (__exception != null) Log.Warn("Save rename failed: " + __exception.Message);
+            return __exception;
         }
 
         private static void Rebuild(ContentSaveSlot slot)

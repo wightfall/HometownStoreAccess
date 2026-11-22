@@ -27,6 +27,8 @@
     <Reference Include="UnityEngine.UI" Publicize="true"><HintPath>$(GameManaged)\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Unity.Localization"><HintPath>$(GameManaged)\Unity.Localization.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Unity.ResourceManager"><HintPath>$(GameManaged)\Unity.ResourceManager.dll</HintPath><Private>false</Private></Reference>
+    <!-- LocalizedString derives from a UI Toolkit binding type: needed to read a label's loading state. -->
+    <Reference Include="UnityEngine.UIElementsModule"><HintPath>$(GameManaged)\UnityEngine.UIElementsModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="DOTween"><HintPath>$(GameManaged)\DOTween.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Facepunch.Steamworks.Win64"><HintPath>$(GameManaged)\Facepunch.Steamworks.Win64.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(GameManaged)\UnityEngine.dll</HintPath><Private>false</Private></Reference>

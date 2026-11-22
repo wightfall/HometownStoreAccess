@@ -33,6 +33,8 @@ namespace HometownStoreAccess.Diagnostics
 
         public static Func<string> StateProvider;
 
+        private static bool _accessWarned;
+
         public static void Poll()
         {
             if (Time.realtimeSinceStartup < _nextPoll) return;
@@ -47,6 +49,14 @@ namespace HometownStoreAccess.Diagnostics
             }
             catch (IOException)
             {
+                return;
+            }
+            catch (System.UnauthorizedAccessException e)
+            {
+                // A read-only command file or folder: said once in the log, then looked at less often.
+                if (!_accessWarned) Log.Warn("Test commands: cannot read or delete " + file + ": " + e.Message);
+                _accessWarned = true;
+                _nextPoll = Time.realtimeSinceStartup + 5f;
                 return;
             }
             foreach (string raw in lines)
@@ -94,6 +104,33 @@ namespace HometownStoreAccess.Diagnostics
                     var button = go != null ? go.GetComponent<Button>() : null;
                     if (button == null) Log.Warn("click: no active button at " + arg);
                     else button.onClick.Invoke();
+                    break;
+                }
+                case "pick":
+                {
+                    // pick <dropdown name> <item from 0>: opens that dropdown and clicks the item, as the mouse does.
+                    int pickAt = arg.LastIndexOf(' ');
+                    int pickIndex = pickAt > 0 && int.TryParse(arg.Substring(pickAt + 1), out int pickNumber) ? pickNumber : -1;
+                    string pickName = pickAt > 0 ? arg.Substring(0, pickAt) : arg;
+                    TMPro.TMP_Dropdown pickDrop = UnityEngine.Object.FindObjectsByType<TMPro.TMP_Dropdown>(FindObjectsInactive.Exclude, FindObjectsSortMode.None).FirstOrDefault(d => d.name == pickName);
+                    if (pickDrop == null || pickIndex < 0 || pickIndex >= pickDrop.options.Count)
+                    {
+                        Log.Warn("pick: no shown dropdown " + pickName + " with item " + pickIndex);
+                        break;
+                    }
+                    pickDrop.Show();
+                    // The list's first child is its hidden template; item k follows it.
+                    Transform pickList = pickDrop.transform.Find("Dropdown List/Viewport/Content");
+                    Toggle pickToggle = pickList != null && pickList.childCount > pickIndex + 1 ? pickList.GetChild(pickIndex + 1).GetComponent<Toggle>() : null;
+                    if (pickToggle == null)
+                    {
+                        Log.Warn("pick: the list of " + pickName + " has no item " + pickIndex);
+                        pickDrop.Hide();
+                        break;
+                    }
+                    // A click flips the item's toggle; the dropdown picks the item on that change.
+                    pickToggle.isOn = !pickToggle.isOn;
+                    Log.Info("[pick] " + pickName + " item " + pickIndex + " (" + pickDrop.options[pickIndex].text + "); value now " + pickDrop.value);
                     break;
                 }
                 case "say":

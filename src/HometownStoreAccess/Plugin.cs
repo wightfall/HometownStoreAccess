@@ -14,7 +14,7 @@ namespace HometownStoreAccess
     {
         public const string Guid = "com.wightfall.hometownstoreaccess";
         public const string Name = "Hometown Store Access";
-        public const string Version = "1.4.3";
+        public const string Version = "1.4.4";
 
         internal static Plugin Instance { get; private set; }
         internal static ModSettings Settings { get; private set; }
@@ -35,7 +35,19 @@ namespace HometownStoreAccess
             try
             {
                 Harmony = new Harmony(Guid);
-                Harmony.PatchAll(typeof(Plugin).Assembly);
+                // One class at a time: a patch whose game method is gone (after a game update) is skipped and
+                // said in the log, and every other patch still applies.
+                foreach (Type type in AccessTools.GetTypesFromAssembly(typeof(Plugin).Assembly))
+                {
+                    try
+                    {
+                        Harmony.CreateClassProcessor(type).Patch();
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Error("Harmony patch " + type.FullName + " could not be applied: " + (e.InnerException ?? e).Message);
+                    }
+                }
                 Log.Info("Harmony patches applied: " + string.Join(", ", Harmony.GetPatchedMethods().Select(m => m.DeclaringType?.Name + "." + m.Name).ToArray()));
             }
             catch (Exception e)

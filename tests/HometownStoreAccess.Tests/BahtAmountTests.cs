@@ -7,6 +7,15 @@ namespace HometownStoreAccess.Tests
     public class BahtAmountTests
     {
         [Fact]
+        public void ANumberTooLongForAnAmountStaysAsWritten()
+        {
+            // Typed text (a save name): no exception, and the number is kept whole.
+            Assert.Equal(Loc.Get("money_baht", 99999999999L), FixedText.Translate("99999999999 baht"));
+            Assert.Equal(Loc.Get("money_baht", "123456789012345678901234567890"), FixedText.Translate("123456789012345678901234567890 baht"));
+            Assert.Contains("123456789012345678901234567890", FixedText.Translate("Name 123456789012345678901234567890 ฿"));
+        }
+
+        [Fact]
         public void AmountWithThousandsSeparatorIsOneNumber()
         {
             Loc.SetLanguage("th");

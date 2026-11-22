@@ -39,6 +39,14 @@ namespace HometownStoreAccess.Contexts
             SpeechService.Say(Loc.Get("help_closed"), true);
         }
 
+        /// <summary>A new scene: the screen under the overlay is gone, so it closes without a word (the scene is said).</summary>
+        public static void Reset()
+        {
+            Open = Kind.None;
+            _underlying = null;
+            _inGame = false;
+        }
+
         /// <summary>F1: speaks the keys that work on the current screen.</summary>
         public static void SpeakContextHelp(ScreenContext current, bool inGame)
         {
@@ -235,10 +243,12 @@ namespace HometownStoreAccess.Contexts
                 return;
             }
             _resetArmedUntil = 0f;
+            bool hadGameLanguage = GameLanguage.Overridden;
             Plugin.Settings.ResetToDefaults();
             SpeechService.LogSpeech = Plugin.Settings.LogSpeech.Value;
             Log.DebugEnabled = Plugin.Settings.DebugLogging.Value;
             SpeechService.SetPreferred(Plugin.Settings.SpeechBackend.Value);
+            if (hadGameLanguage) GameLanguage.BackToGameLanguage();
             GameLanguage.SyncModLanguage();
             SpeechService.Say(Loc.Get("set_reset_done"), true);
         }
