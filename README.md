@@ -140,6 +140,10 @@ Options (the pause menu in the game) has the sections General (full screen, show
 language), Sound (overall, music and effects volume), Game (save, back to the main menu, quit; only
 in the game) and About (the version).
 
+When you save under a name that is already taken (an empty name means "Save Game"), the game warns
+that the save will be overwritten, and you hear the warning. Pressing Confirm again overwrites that
+save; Cancel keeps it.
+
 ### Message history
 
 | Key | Action |
@@ -292,7 +296,9 @@ The screen has these sections, and Page Up and Page Down move between them:
   of building. The game's own tabs follow, so a sighted helper sees the same list.
 - **Goods** and **Buildings**: everything this place sells today, with price and stock ("sold out" when
   none is left). Right adds one to the basket, Left removes one, and holding Shift changes ten at
-  a time. Ctrl+I describes an item and the profit you make on it.
+  a time. Ctrl+I describes an item: what customers pay and your profit, the shelves that hold it,
+  and which of your own shelves (placed or not yet placed) do, as the game's list shows them. For a
+  building it gives what the game's tooltip shows: size, value, slots for goods and what it holds.
 - **Basket**: what you are buying (change amounts here too), the total and what money is left,
   then Check out and Close.
 
@@ -347,7 +353,8 @@ entries it has, and the focus moves to the first one.
 
 - **Shops on the map**: all products, goods, each kind of goods, buildings, each kind of building
 - **Build mode**: shelves, storage, machines, cashiers, decorations
-- **All stock** (G, or the toolbar and map button): each kind of goods
+- **All stock** (the toolbar and map button; G only reads the storage aloud): each kind of goods
+  (the list starts with the total, as the game's header does)
 - **Shelves, storage and the delivery truck**: each kind of goods
 - **Event journal**: events in progress and finished events
 
@@ -414,7 +421,7 @@ headings, so you hear the section name alone, and Down goes to its first setting
 
 - **Speech and language:** game language (every language the game has, plus your translation
   files), mod language, speech output (Auto, NVDA, JAWS, OneCore, SAPI and others), announce list
-  positions, write speech to the log
+  positions, write speech to the log, a detailed log for bug reports
 - **Announcements:** customers coming and going, sales at the cashier, empty shelves, deliveries
   and machines, customer speech bubbles, every change of money, read dialog automatically,
   tutorial notes and key hints, Steam achievements
@@ -462,7 +469,7 @@ For any other language, you can translate both the mod and the game text with pl
   F1 for the keys. Please report it in an
   [issue](https://github.com/wightfall/HometownStoreAccess/issues) with `BepInEx\LogOutput.log`
   attached. The log also contains everything that was spoken, which shows exactly where it went
-  wrong.
+  wrong. **Detailed log for bug reports** in the settings adds more detail to it.
 - **The game opens with the wrong language:** set the game language in F5. Any
   `<code>.game.txt` file in the lang folder adds that language.
 - **Developer cheats:** the game turns on hidden developer cheats when F1 is pressed three times
@@ -475,9 +482,10 @@ For any other language, you can translate both the mod and the game text with pl
   (for screenshots). The mod says when it is hidden; press F3 again to show it.
 - **Saves:** saving from the pause menu (Save, then New save or an existing save) says "Saved as"
   with the name. Shift+Enter renames a save and Delete removes it, in the save and load lists.
-- **The game feels slow:** the mod itself needs well under a millisecond per frame. If you turned
-  off Skip the logo intro, the main menu appears only after the intro (about 15 seconds); any key
-  skips it.
+- **The game feels slow:** the mod itself needs well under a millisecond per frame, and it checks
+  the lang folder and looks for a controller on a background thread, so neither ever holds up a
+  frame. If you turned off Skip the logo intro, the main menu appears only after the intro (about
+  15 seconds); any key skips it.
 
 ## Building from source
 
@@ -536,6 +544,7 @@ done, set `TestHooks = false` again and delete `BepInEx\hsa_dumps` and any `BepI
 | `pad connect`, `pad disconnect` | Does what plugging a controller in or out does: says so, and makes the instructions name the controller's buttons, or the keyboard keys again. |
 | `achievements` | The game's Steam achievements: whether Steam is connected, whether each one is unlocked, and what the mod says when it unlocks. |
 | `achievement <name or number>` | Says that achievement's announcement, to hear how it is read. It unlocks nothing. |
+| `cues`, `cues play` | Every sound cue: its length, its loudest point and its volume setting. `cues play` also says each one's name and plays it. |
 | `click <path>` | Presses the button at that path in the scene (the paths are in a dump). |
 | `dump [name]` | Writes the screen's interface tree to `BepInEx\hsa_dumps\ui_<name>_<time>.txt`. |
 | `world` | Writes the shop grid, the buildings and the customers to `BepInEx\hsa_dumps\world_<time>.txt`. |
@@ -603,6 +612,8 @@ done, set `TestHooks = false` again and delete `BepInEx\hsa_dumps` and any `BepI
   `pad connect` and `pad disconnect` say what plugging a controller in and out says.
 - **Achievements:** `achievements` lists them; `achievement Money1000` says how "Money 1,000" is
   announced. No test command unlocks an achievement.
+- **Sound cues:** `cues play` plays every cue after its name. Each should be clearly audible, also on
+  laptop speakers.
 - **A translation:** `missing ja` writes what the Japanese game text lacks.
 
 The code is organized like this:

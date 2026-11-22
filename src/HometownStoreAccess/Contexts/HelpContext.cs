@@ -150,6 +150,9 @@ namespace HometownStoreAccess.Contexts
             items.Add(new ChoiceItem(() => Loc.Get("set_backend"), BackendChoices, s.SpeechBackend, "backend", onChanged: () => SpeechService.SetPreferred(s.SpeechBackend.Value)) { Group = speech });
             items.Add(Toggle(s.AnnouncePosition, "set_position", speech));
             items.Add(Toggle(s.LogSpeech, "set_log_speech", speech, () => SpeechService.LogSpeech = s.LogSpeech.Value));
+            // For bug reports. (The other [Debug] settings, test commands and the game's developer
+            // cheats, change the game and stay in the settings file.)
+            items.Add(Toggle(s.DebugLogging, "set_verbose", speech, () => Log.DebugEnabled = s.DebugLogging.Value));
 
             string ann = Loc.Get("set_group_announce");
             items.Add(Toggle(s.AnnounceCustomers, "set_customers", ann));
@@ -233,6 +236,7 @@ namespace HometownStoreAccess.Contexts
             _resetArmedUntil = 0f;
             Plugin.Settings.ResetToDefaults();
             SpeechService.LogSpeech = Plugin.Settings.LogSpeech.Value;
+            Log.DebugEnabled = Plugin.Settings.DebugLogging.Value;
             SpeechService.SetPreferred(Plugin.Settings.SpeechBackend.Value);
             GameLanguage.SyncModLanguage();
             SpeechService.Say(Loc.Get("set_reset_done"), true);

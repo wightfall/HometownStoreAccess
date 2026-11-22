@@ -16,6 +16,18 @@ namespace HometownStoreAccess.Diagnostics
     /// </summary>
     internal static class DebugCommands
     {
+        private static System.Collections.IEnumerator PlayAllCues()
+        {
+            foreach (Audio.Cue cue in Enum.GetValues(typeof(Audio.Cue)))
+            {
+                SpeechService.Say(Audio.AudioCues.Name(cue), true);
+                yield return new WaitForSecondsRealtime(1.2f);
+                Audio.AudioCues.Preview(cue);
+                Log.Info("[cues] played " + cue);
+                yield return new WaitForSecondsRealtime(0.8f);
+            }
+        }
+
         private static float _nextPoll;
         private static string CommandFile => Path.Combine(BepInEx.Paths.BepInExRootPath, "hsa_cmd.txt");
 
@@ -407,6 +419,13 @@ namespace HometownStoreAccess.Diagnostics
                     }
                     break;
                 }
+                case "cues":
+                {
+                    // cues: every sound cue's clip (length, peak, volume); "cues play" also plays them one by one
+                    foreach (string cueLine in Audio.AudioCues.Describe()) Log.Info("[cues] " + cueLine);
+                    if (arg.Trim().Equals("play", StringComparison.OrdinalIgnoreCase)) AccessibilityRoot.Instance.StartCoroutine(PlayAllCues());
+                    break;
+                }
                 case "achievement":
                 {
                     // achievement <name or number>: says the announcement of that achievement, without unlocking it on Steam
@@ -555,6 +574,7 @@ namespace HometownStoreAccess.Diagnostics
             "journals: every event and its tasks | journal <name>: start an event | journal check: check the events now | events / event <name>: story events | dialog [name]: conversations",
             "reward money|item|blueprint|customer|trust|budget|wish|trade|vehicle <arg>: a reward screen | open lottery|vehicle|characters",
             "achievements: the game's Steam achievements | achievement <name or number>: say its announcement (unlocks nothing)",
+            "cues: every sound cue's length, peak and volume | cues play: also plays them one by one",
             "table <table> [entry] | export <locale> | missing <locale>: game text",
         };
     }

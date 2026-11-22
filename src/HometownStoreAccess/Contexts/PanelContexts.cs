@@ -335,6 +335,12 @@ namespace HometownStoreAccess.Contexts
             Dictionary<Item, int> shelves = rm.AllResourceOnSelf();
             var all = storage.Keys.Union(shelves.Keys).Where(i => i != null).OrderBy(GameText.Name).ToList();
             if (all.Count == 0) items.Add(new TextItem(Loc.Get("nothing_in_stock"), "none"));
+            else
+            {
+                // The game's header: "All items: 42 (5 kinds)".
+                int sum = all.Sum(i => (storage.TryGetValue(i, out int a) ? a : 0) + (shelves.TryGetValue(i, out int b) ? b : 0));
+                items.Add(new TextItem(Loc.Get("stock_total", sum, all.Count), "stock_total"));
+            }
             _filter.Prepare(all.Select(i => i.itemCategory.ToString()));
             if (_filter.Active) items.Add(_filter.Item(string.Empty));
             foreach (Item it in all)
@@ -472,7 +478,7 @@ namespace HometownStoreAccess.Contexts
             bool shown = p.messageBubble != null && p.messageBubble.activeInHierarchy;
             if (shown && !_resultShown)
             {
-                var parts = new List<string> { Loc.Get("lottery_winning", UiUtil.Text(p.winningNumberText)) };
+                var parts = new List<string> { Loc.Get("lottery_winning", WinningNumber(p)) };
                 TMP_Text bubble = p.messageBubble.GetComponentInChildren<TMP_Text>();
                 if (bubble != null) parts.Add(UiUtil.Text(bubble));
                 foreach (Transform t in p.ticketListContent)
@@ -550,7 +556,7 @@ namespace HometownStoreAccess.Contexts
             if (p.checkPanel != null && p.checkPanel.activeInHierarchy)
             {
                 string check = UiUtil.Text(p.checkHeaderLabel);
-                items.Add(new TextItem(() => Loc.Get("lottery_winning", UiUtil.Text(p.winningNumberText)), "winning") { Group = check });
+                items.Add(new TextItem(() => Loc.Get("lottery_winning", WinningNumber(p)), "winning") { Group = check });
                 UiScan.AddControl(items, p.checkLotteryButton, check, () => UiUtil.Text(p.checkButtonLabel));
                 string history = UiUtil.Text(p.historyHeaderLabel);
                 int n = 0;
@@ -568,6 +574,13 @@ namespace HometownStoreAccess.Contexts
             }
             Transform close = p.transform.Find("Close Button");
             if (close != null) UiScan.AddControl(items, close.GetComponent<Button>(), string.Empty, () => Loc.Get("label_close"));
+        }
+
+        /// <summary>The winning number; "??" (the game's sign that today's draw has not happened) is said in words.</summary>
+        private static string WinningNumber(LotteryPanel p)
+        {
+            string n = UiUtil.Text(p.winningNumberText);
+            return n.Trim('?').Length == 0 ? Loc.Get("lottery_not_drawn") : n;
         }
 
         public override IEnumerable<string> HelpLines()

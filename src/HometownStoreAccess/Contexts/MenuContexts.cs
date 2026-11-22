@@ -249,6 +249,26 @@ namespace HometownStoreAccess.Contexts
             if (close != null) UiScan.AddControl(items, close.GetComponent<Button>());
         }
 
+        private bool _overwriteWarningShown;
+
+        /// <summary>
+        /// Confirming a save name that is already taken makes the game show a warning in the name box
+        /// ("this will overwrite this save"); confirming again overwrites. Say the warning when it appears.
+        /// </summary>
+        public override void Tick()
+        {
+            SaveSlotPanel p = Panel;
+            bool shown = p != null && p.pendingConfirm != null && p.pendingConfirm.activeInHierarchy;
+            if (shown && !_overwriteWarningShown)
+            {
+                TMP_Text t = p.pendingConfirm.GetComponentInChildren<TMP_Text>(true);
+                string text = t != null ? UiUtil.Text(t) : string.Empty;
+                if (text.Length > 0) SpeechService.Say(text, true, MsgCategory.Notices);
+                AccessibilityRoot.Instance.Contexts.Refresh(false);
+            }
+            _overwriteWarningShown = shown;
+        }
+
         public override bool HandleInput()
         {
             if (ModInput.Down(KeyCode.Delete))

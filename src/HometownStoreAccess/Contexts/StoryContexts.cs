@@ -224,13 +224,26 @@ namespace HometownStoreAccess.Contexts
         public override int Priority => 82;
 
         /// <summary>The log belongs to the dialog panel (no scene search every frame).</summary>
+        private static DialogPanel _panelOfLog;
+        private static DialogueLogManager _log;
+
         private static DialogueLogManager LogManager
         {
             get
             {
                 GameProgressionControl gp = GameProgressionControl.Instance;
-                DialogueLogManager l = gp != null && gp.dialogPanel != null ? gp.dialogPanel.GetComponent<DialogueLogManager>() : null;
-                return l != null ? l : SceneCache.Get<DialogueLogManager>();
+                DialogPanel panel = gp != null ? gp.dialogPanel : null;
+                if (panel != null)
+                {
+                    // Asked every frame: look the component up once per dialog panel.
+                    if (panel != _panelOfLog)
+                    {
+                        _panelOfLog = panel;
+                        _log = panel.GetComponent<DialogueLogManager>();
+                    }
+                    if (_log != null) return _log;
+                }
+                return SceneCache.Get<DialogueLogManager>();
             }
         }
 

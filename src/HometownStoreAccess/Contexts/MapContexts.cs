@@ -231,7 +231,7 @@ namespace HometownStoreAccess.Contexts
                     foreach (TradeShelfSet t in prof.currentShelfList.Where(t => t.shelf != null))
                     {
                         TradeShelfSet set = t;
-                        items.Add(new TextItem(() => Loc.Get("goods_line", GameText.Name(set.shelf), set.amount, Mathf.CeilToInt(set.pricePerUnit)), "goodb:" + set.shelf.name) { Group = info });
+                        items.Add(new TextItem(() => Loc.Get("goods_line", GameText.Name(set.shelf), set.amount, Mathf.CeilToInt(set.pricePerUnit)), "goodb:" + set.shelf.name, () => GameText.BuildingInfo(set.shelf)) { Group = info });
                     }
                 }
                 LocationTradeManager ltm = LocationTradeManager.Instance;
