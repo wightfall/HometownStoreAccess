@@ -8,6 +8,7 @@ namespace HometownStoreAccess.Core
         {
             ["mod_loaded"] = "Hometown Store Access dimuat. Tekan F1 untuk bantuan.",
             ["speech_backend_changed"] = "Suara sekarang memakai {0}.",
+            ["speech_backend_unavailable"] = "{0} tidak tersedia; suara memakai {1}.",
             ["loading_game"] = "Memuat.",
             ["loading_menu"] = "Kembali ke menu utama.",
             ["language_changed"] = "Bahasa: {0}.",

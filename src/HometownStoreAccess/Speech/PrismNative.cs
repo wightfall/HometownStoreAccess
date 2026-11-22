@@ -74,6 +74,13 @@ namespace HometownStoreAccess.Speech
         [DllImport(Dll, CallingConvention = CallingConvention.Cdecl)]
         public static extern int prism_backend_stop(IntPtr backend);
 
+        /// <summary>A backend made with prism_registry_create must be initialized before use (the "best" ones come ready).</summary>
+        [DllImport(Dll, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int prism_backend_initialize(IntPtr backend);
+
+        public const int PrismOk = 0;
+        public const int PrismErrorAlreadyInitialized = 15;
+
         [DllImport(Dll, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr prism_error_string(int error);
 

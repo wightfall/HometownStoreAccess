@@ -8,6 +8,7 @@ namespace HometownStoreAccess.Core
         {
             ["mod_loaded"] = "Hometown Store Access を読み込みました。F1 キーでヘルプ。",
             ["speech_backend_changed"] = "読み上げに {0} を使用します。",
+            ["speech_backend_unavailable"] = "{0} は使えません。読み上げに {1} を使用します。",
             ["loading_game"] = "読み込み中。",
             ["loading_menu"] = "メインメニューに戻ります。",
             ["language_changed"] = "言語: {0}。",

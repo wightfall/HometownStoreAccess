@@ -8,6 +8,7 @@ namespace HometownStoreAccess.Core
         {
             ["mod_loaded"] = "โหลด Hometown Store Access แล้ว กด F1 เพื่อดูวิธีใช้",
             ["speech_backend_changed"] = "ตอนนี้ใช้เสียงพูดผ่าน {0}",
+            ["speech_backend_unavailable"] = "ใช้ {0} ไม่ได้ ตอนนี้ใช้เสียงพูดผ่าน {1}",
             ["loading_game"] = "กำลังโหลด",
             ["loading_menu"] = "กำลังกลับไปเมนูหลัก",
             ["language_changed"] = "ภาษา: {0}",
