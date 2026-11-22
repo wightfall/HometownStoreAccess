@@ -233,7 +233,10 @@ I on the shop floor, and Ctrl+I in build mode, describe a building like the game
 description, size, value, and what a shelf holds.
 
 The character collection says each character's number, so the ones not met yet ("Character 3: not
-met yet") can be told apart.
+met yet") can be told apart. Game bug: in the demo the collection's entries have no pictures, so the
+game never marked anyone as met and the book stayed empty for everyone. The mod marks a character as
+met when a conversation shows them, as the game meant, and the save keeps it. A character the game
+has no name for is named the way the conversations call them.
 
 ### Machines
 
@@ -251,9 +254,10 @@ the earlier ones, and Escape closes it.
 A reward after a conversation is read as soon as it appears. If you press Enter before that, Enter
 reads it, and the next Enter closes it.
 
-The pictures the game shows without words are said before the line: a character's new face (the
-college student smiling or surprised, the otaku after his makeover and back), a picture that
-shakes (the game shakes it on a strong reaction) and a story picture. When someone else is
+The pictures the game shows without words are said before the line: who appears while someone
+else is speaking (the narrator, say), a character's new face (the college student smiling or
+surprised, the otaku after his makeover and back), a picture that shakes (the game shakes it on a
+strong reaction) and a story picture. When someone else is
 speaking, they come with the character's name. The demo has no story pictures, but later versions
 might. Turn these off with **Faces and story pictures in conversations** and **Shaking pictures in
 conversations** in the settings.
@@ -569,7 +573,7 @@ done, set `TestHooks = false` again and delete `BepInEx\hsa_dumps` and any `BepI
 | `key <KeyCode> [shift] [ctrl] [alt]` | Presses a mod key, with Unity key names such as `DownArrow`, `Return`, `PageDown`, `F1` or `B`. Only the mod sees it: keys the game reads itself (Escape, the speed keys 1 to 3, typing into a text field) need a real key press. |
 | `pad <buttons> [frames]` | Controller input, held for that many frames (2 if not given; holding about 0.6 s, as for the key list, needs about 240). Buttons: `a b x y start back lb rb ls rs up down left right lt rt`, sticks: `lsup lsdown lsleft lsright rsup rsdown rsleft rsright`. |
 | `pad connect`, `pad disconnect` | Does what plugging a controller in or out does: says so, and makes the instructions name the controller's buttons, or the keyboard keys again. |
-| `achievements` | The game's Steam achievements: whether Steam is connected, whether each one is unlocked, and what the mod says when it unlocks. |
+| `achievements` | The game's Steam achievements: whether Steam is connected, whether each one is unlocked, what the mod says when it unlocks, and whether the guard below is on. |
 | `achievement <name or number>` | Says that achievement's announcement, to hear how it is read. It unlocks nothing. |
 | `cues`, `cues play` | Every sound cue: its length, its loudest point and its volume setting. `cues play` also says each one's name and plays it. |
 | `click <path>` | Presses the button at that path in the scene (the paths are in a dump). |
@@ -640,7 +644,9 @@ done, set `TestHooks = false` again and delete `BepInEx\hsa_dumps` and any `BepI
   buttons (F1 or `pad back` tells), and a real key press brings back the keyboard keys.
   `pad connect` and `pad disconnect` say what plugging a controller in and out says.
 - **Achievements:** `achievements` lists them; `achievement Money1000` says how "Money 1,000" is
-  announced. No test command unlocks an achievement.
+  announced. No test command unlocks an achievement. A test can still make the game unlock one
+  itself (a conversation, money, a reward), so while the test commands are on, the game's own
+  unlocks are not sent to Steam: they are written to the log instead.
 - **Sound cues:** `cues play` plays every cue after its name. Each should be clearly audible, also on
   laptop speakers.
 - **A translation:** `missing ja` writes what the Japanese game text lacks.

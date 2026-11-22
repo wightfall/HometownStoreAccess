@@ -70,26 +70,84 @@ namespace HometownStoreAccess.Tests
             Assert.Empty(PortraitFaces.NoteKeys("Portrait_Kid", null, true, true, true));
         }
 
+        [Theory]
+        [InlineData("Portrait_Head Villager", "headvillager")]
+        [InlineData("CharacterPortrait_HeadVillager", "headvillager")]
+        [InlineData("Portrait_Collegian_Smile", "collegian")]
+        [InlineData("CharacterPortrait_Kid", "kid")]
+        public void TheCharacterOfAPictureOrABookEntry(string name, string key)
+        {
+            Assert.Equal(key, PortraitFaces.CharacterKey(name));
+        }
+
+        [Fact]
+        public void SameCharacterAcrossFacesAndTheBook()
+        {
+            Assert.True(PortraitFaces.SameCharacter("Portrait_Collegian_Smile", "Portrait_Collegian_Surprised"));
+            Assert.True(PortraitFaces.SameCharacter("CharacterPortrait_Kid", "Portrait_Kid"));
+            Assert.False(PortraitFaces.SameCharacter("Portrait_Kid", "Portrait_Somsee"));
+            Assert.Equal("Street Racer", PortraitFaces.SpacedWords("StreetRacer"));
+            Assert.Equal("Collegian", PortraitFaces.SpacedWords("Collegian"));
+            Assert.True(PortraitFaces.HasFace(new[] { "face_smile", "face_shake" }));
+            Assert.False(PortraitFaces.HasFace(new[] { "face_shake" }));
+        }
+
         [Fact]
         public void APortraitIsNamedByWhoSpeaksWithItMostOften()
         {
             var names = new PortraitNames();
-            Assert.Null(names.NameOf("Collegian"));
-            // The college student's lines, and one line of the player's over his undimmed picture.
-            names.Learn("Collegian", "College Student");
-            names.Learn("Collegian", "College Student");
-            names.Learn("Collegian", "You");
-            names.Learn("Collegian", "College Student");
-            Assert.Equal("College Student", names.NameOf("Collegian"));
+            Assert.Null(names.NameOf("collegian"));
+            // The college student's lines with his picture lit; one of the player's over it.
+            names.LearnLine("College Student", "collegian");
+            names.LearnLine("College Student", "collegian");
+            names.LearnLine("You", "collegian");
+            names.LearnLine("College Student", "collegian");
             Assert.Equal("College Student", names.NameOf("collegian"));
             names.Clear();
-            Assert.Null(names.NameOf("Collegian"));
+            Assert.Null(names.NameOf("collegian"));
+        }
+
+        [Fact]
+        public void AConversationsOwnNameForACharacterComesFirst()
+        {
+            // Everywhere he is "Uncle Kanit"; at the opening ceremony "Brother Kanit".
+            var all = new PortraitNames();
+            all.LearnLine("Uncle Kanit", "kanit");
+            all.LearnLine("Uncle Kanit", "kanit");
+            all.LearnLine("Brother Kanit", "kanit");
+            var here = new PortraitNames();
+            here.LearnLine("Brother Kanit", "kanit");
+            Assert.Equal("Uncle Kanit", all.NameOf("kanit"));
+            Assert.Equal("Brother Kanit", here.NameOf("kanit", all.IsGeneric));
+            Assert.True(here.HasHeard("kanit", "Brother Kanit"));
+            Assert.False(here.HasHeard("kanit", "Uncle Kanit"));
+        }
+
+        [Fact]
+        public void ThePlayerAndTheNarratorAreNeverACharactersName()
+        {
+            var names = new PortraitNames();
+            // The narrator mostly speaks with no picture lit; once over the gamer's picture.
+            names.LearnLine("Narration", null);
+            names.LearnLine("Narration", null);
+            names.LearnLine("Narration", null);
+            names.LearnLine("Narration", "gamer");
+            // The player mostly speaks while the others are dimmed.
+            names.LearnLine("You", null);
+            names.LearnLine("You", null);
+            names.LearnLine("You", "kid");
+            names.LearnLine("Naughty Kid", "kid");
+            Assert.True(names.IsGeneric("Narration"));
+            Assert.True(names.IsGeneric("You"));
+            Assert.False(names.IsGeneric("Naughty Kid"));
+            Assert.Null(names.NameOf("gamer"));
+            Assert.Equal("Naughty Kid", names.NameOf("kid"));
         }
 
         [Fact]
         public void EveryTextItCanSayExistsInEveryLanguage()
         {
-            string[] keys = { "face_smile", "face_surprised", "face_calm", "face_better_glasses", "face_usual", "face_changed", "story_picture", "face_of", "set_pictures", "face_shake", "set_shaking" };
+            string[] keys = { "face_smile", "face_surprised", "face_calm", "face_better_glasses", "face_usual", "face_changed", "story_picture", "face_of", "set_pictures", "face_shake", "set_shaking", "face_appears", "character_number" };
             foreach (string lang in Loc.SupportedLanguages)
             {
                 Loc.SetLanguage(lang);

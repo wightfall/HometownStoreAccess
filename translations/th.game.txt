@@ -11,3 +11,14 @@ Product_Description/[Manufacture] Ice Maker = อยากได้น้ำแ�
 Shelf_Description/[Manufacture] Ice Maker = อยากได้น้ำแข็งเย็นแค่ไหน เครื่องนี้จัดให้!
 Dialog_Name/Event_Grandma_Reveal_Locations_15 = ยายสมศรี
 ConfirmAndNotify/Warning: All items in Delivery Storage = คำเตือน: สินค้าทั้งหมดในรถจัดส่งสินค้า จะถูกขายทันทีในราคา {v1} บาท \nหมายเหตุ: รถจัดส่งสินค้าอยู่หน้าร้าน
+# A vowel sign or tone mark typed twice, and the Thug's name (found in 1.4.5).
+BuildingPanel/storage = ที่เก็บของ
+Customer_Description/Student = เด็กนักเรียนตั้งใจเรียน
+Dialog_Description/Event_FarmerLevel2_11 = นี่ดูสิ มันอยากเข้าร้านใจจะขาดแล้ว เอ็งอนุโลมให้มันหน่อยไม่ได้รึ?
+Dialog_Description/Event_Main_Franchise_Upgrade_3 = นี่ยายจะให้หลานไปขายตรงเรอะ?!
+Dialog_Description/Event_Main_Upgrade_To_Level_4_Finished_2 = ไม่นาน ๆ เข้าเรื่องเถอะ ร้านเอ็งลุงช่วยปรับปรุงใหม่ให้ภายในพรุ่งนี้เลยแล้วกัน
+Dialog_Description/Event_TaoYeablok_SellGirl_Requirement_Done_10 = อะเฮ้อ~ ผมขอบคุณพี่ ๆ ทั้งคู่มาก ๆ เลยนะครับ อะเฮ้อ~ เท่านี้ก็...
+Dialog_Name/Event_Manufacture_Introduce_10 = นายทุน
+Dialog_Name/Event_TaoYeablok_FirstMeet_Otaku_0 = โอตาคุ
+Journal_Name/J_FreshMarket_0 = ไปหายายที่ตลาดสด
+Customer_Name/Thug = อันธพาล

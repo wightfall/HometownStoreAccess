@@ -264,11 +264,30 @@ namespace HometownStoreAccess.Contexts
                 {
                     string n = UiUtil.Text(portrait.nameText);
                     // Characters not met yet all look the same ("???"): say which one it is.
-                    return n == "???" ? Loc.Get("character_numbered", number, Loc.Get("character_unknown")) : TextCleaner.Join(", ", n, UiUtil.Text(portrait.descriptionText));
+                    if (n == "???") return Loc.Get("character_numbered", number, Loc.Get("character_unknown"));
+                    // A character the game has no name for: the name the conversations give them.
+                    if (n.Length == 0) n = BookName(number - 1) ?? Loc.Get("character_number", number);
+                    return TextCleaner.Join(", ", n, UiUtil.Text(portrait.descriptionText));
                 }, "char" + i++));
             }
             Transform close = p.transform.Find("Close");
             if (close != null) UiScan.AddControl(items, close.GetComponent<Button>(), string.Empty, () => Loc.Get("label_close"));
+        }
+
+        /// <summary>The name the conversations give the book's entry at that place (the game has none for some).</summary>
+        private static string BookName(int index)
+        {
+            try
+            {
+                List<CharacterPortrait> all = CharacterCollectionManager.Instance?.GetCollectibleCharacters();
+                if (all == null || index < 0 || index >= all.Count || all[index] == null) return null;
+                return DialogContext.NameForCharacter(PortraitFaces.CharacterKey(all[index].name), all[index].name);
+            }
+            catch (System.Exception e)
+            {
+                Log.Debug("Character book name: " + e.Message);
+                return null;
+            }
         }
 
         public override IEnumerable<string> HelpLines()

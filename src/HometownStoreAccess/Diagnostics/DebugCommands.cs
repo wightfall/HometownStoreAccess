@@ -434,7 +434,7 @@ namespace HometownStoreAccess.Diagnostics
                     CharacterCollectionManager picCollection = CharacterCollectionManager.Instance;
                     if (picCollection != null)
                     {
-                        Log.Info("[pictures] collection: " + picCollection.allCharacterPortraits.Count + " entries: " + string.Join(", ", picCollection.allCharacterPortraits.Where(x => x != null).Select(x => x.name + "=" + (x.portrait != null ? x.portrait.name : "-")).ToArray()));
+                        Log.Info("[pictures] collection: " + picCollection.allCharacterPortraits.Count + " entries, " + picCollection.metCharacters.Count + " met: " + string.Join(", ", picCollection.allCharacterPortraits.Where(x => x != null).Select(x => x.name + "=" + (x.portrait != null ? x.portrait.name : "-") + (x.isSecret ? " secret" : string.Empty) + " (" + x.detailsKey.GetName(x.name, LanguageControl.CurrentLanguage) + " / " + x.detailsKey.GetDescription(x.name, LanguageControl.CurrentLanguage) + ")").ToArray()));
                     }
                     else Log.Info("[pictures] collection: none");
                     foreach (string picName in used.Keys)
@@ -527,6 +527,11 @@ namespace HometownStoreAccess.Diagnostics
                     SteamIntegration steam = SteamIntegration.instance;
                     bool connected = steam != null && steam.connectedToSteam;
                     Log.Info("[achievements] Steam " + (connected ? "connected" : "not connected"));
+                    // The guard that keeps tests from unlocking real achievements: is it on the game's unlock?
+                    var unlock = HarmonyLib.AccessTools.Method(typeof(SteamIntegration), nameof(SteamIntegration.UnlockAchievement));
+                    var patches = unlock != null ? HarmonyLib.Harmony.GetPatchInfo(unlock) : null;
+                    bool guarded = patches != null && patches.Prefixes.Any(x => x.PatchMethod.DeclaringType == typeof(Patches.TestAchievementGuard));
+                    Log.Info("[achievements] test guard on the game's unlock: " + (guarded ? "yes" : "NO") + "; unlocks blocked now: " + (guarded && Plugin.Settings.TestHooks.Value ? "yes" : "no"));
                     foreach (E_Achievement a in Enum.GetValues(typeof(E_Achievement)))
                     {
                         string state = connected ? (steam.IsAchievementUnlocked(a) ? "unlocked" : "locked") : "?";
