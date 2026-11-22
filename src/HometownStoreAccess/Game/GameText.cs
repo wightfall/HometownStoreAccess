@@ -154,6 +154,20 @@ namespace HometownStoreAccess.Game
             return TextCleaner.Join(". ", parts.ToArray());
         }
 
+        /// <summary>The name of the item or building with this asset name ("Candy"), for texts that print it.</summary>
+        public static string NameOfAsset(string assetName)
+        {
+            ResourceManager rm = AccessibilityRoot.Instance != null && AccessibilityRoot.Instance.InGame ? ResourceManager.Instance : null;
+            if (rm != null)
+            {
+                Item item = rm.allItems?.FirstOrDefault(i => i != null && i.name == assetName);
+                if (item != null) return Name(item);
+                Building b = rm.allBuilding?.FirstOrDefault(x => x != null && x.name == assetName);
+                if (b != null) return Name(b);
+            }
+            return TextCleaner.HumanizeName(assetName);
+        }
+
         public static string RecipeSummary(CraftingRecipe r)
         {
             if (r == null) return Loc.Get("recipe_none");

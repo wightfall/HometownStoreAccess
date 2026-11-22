@@ -55,15 +55,17 @@ namespace HometownStoreAccess.Audio
             {
                 Clips[Cue.Move] = Tone("move", 0.028, Note(880), 0.25, Wave.Sine);
                 Clips[Cue.Wrap] = Sequence("wrap", new[] { Note(1175), Note(784) }, 0.045, 0.3);
-                Clips[Cue.Edge] = Tone("edge", 0.07, 140, 0.6, Wave.Triangle);
+                // Low cues need overtones above 300 Hz, or small speakers hardly play them: these four
+                // (Edge, Error, PlaceBlocked, CustomerAngry) are as loud as the others (about -25 dB A).
+                Clips[Cue.Edge] = Tone("edge", 0.07, 220, 0.55, Wave.Square);
                 Clips[Cue.Activate] = Sequence("activate", new[] { Note(660), Note(990) }, 0.035, 0.3);
-                Clips[Cue.Error] = Tone("error", 0.18, 196, 0.35, Wave.Square);
+                Clips[Cue.Error] = Tone("error", 0.18, 262, 0.5, Wave.Square);
                 Clips[Cue.PlaceOk] = Sequence("placeok", new[] { Note(523), Note(659), Note(784) }, 0.06, 0.35);
-                Clips[Cue.PlaceBlocked] = Sequence("placeblocked", new[] { Note(330), Note(220) }, 0.08, 0.4);
+                Clips[Cue.PlaceBlocked] = Sequence("placeblocked", new[] { Note(494), Note(330) }, 0.08, 0.45);
                 Clips[Cue.CursorTick] = Tone("tick", 0.018, 1200, 0.3, Wave.Sine);
                 Clips[Cue.BuildingHere] = Tone("building", 0.06, 520, 0.45, Wave.Triangle);
                 Clips[Cue.CustomerArrive] = Sequence("arrive_customer", new[] { Note(1319), Note(988) }, 0.12, 0.3);
-                Clips[Cue.CustomerAngry] = Tone("angry", 0.22, 150, 0.35, Wave.Square, vibrato: 12);
+                Clips[Cue.CustomerAngry] = Tone("angry", 0.22, 196, 0.5, Wave.Square, vibrato: 12);
                 Clips[Cue.Step] = Tone("step", 0.03, 700, 0.25, Wave.Triangle);
                 Clips[Cue.Arrive] = Sequence("arrive", new[] { Note(784), Note(1047), Note(1319) }, 0.07, 0.3);
                 Clips[Cue.Beacon] = Tone("beacon", 0.12, 1568, 0.35, Wave.Sine);
@@ -104,6 +106,25 @@ namespace HometownStoreAccess.Audio
             src.pitch = Mathf.Clamp(pitch, 0.25f, 3f);
             src.volume = Mathf.Clamp01(volume * Plugin.Settings.AudioCueVolume.Value * Plugin.Settings.CueVolume(cue).Value);
             src.Play();
+        }
+
+        /// <summary>Length (ms) and peak level of each generated cue, for the "cues" test command.</summary>
+        public static IEnumerable<string> Describe()
+        {
+            foreach (Cue cue in Enum.GetValues(typeof(Cue)))
+            {
+                if (!Clips.TryGetValue(cue, out AudioClip clip) || clip == null)
+                {
+                    yield return cue + ": MISSING";
+                    continue;
+                }
+                var data = new float[clip.samples * clip.channels];
+                clip.GetData(data, 0);
+                float peak = 0f;
+                foreach (float v in data) peak = Math.Max(peak, Math.Abs(v));
+                float volume = Plugin.Settings != null ? Plugin.Settings.AudioCueVolume.Value * Plugin.Settings.CueVolume(cue).Value : 1f;
+                yield return string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}: {1:0} ms, peak {2:0.00}, volume {3:0.00}", cue, clip.length * 1000f, peak, volume);
+            }
         }
 
         /// <summary>Localized name and purpose of a cue, for the key list and settings.</summary>

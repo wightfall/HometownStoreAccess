@@ -421,7 +421,7 @@ headings, so you hear the section name alone, and Down goes to its first setting
 
 - **Speech and language:** game language (every language the game has, plus your translation
   files), mod language, speech output (Auto, NVDA, JAWS, OneCore, SAPI and others), announce list
-  positions, write speech to the log
+  positions, write speech to the log, a detailed log for bug reports
 - **Announcements:** customers coming and going, sales at the cashier, empty shelves, deliveries
   and machines, customer speech bubbles, every change of money, read dialog automatically,
   tutorial notes and key hints, Steam achievements
@@ -469,7 +469,7 @@ For any other language, you can translate both the mod and the game text with pl
   F1 for the keys. Please report it in an
   [issue](https://github.com/wightfall/HometownStoreAccess/issues) with `BepInEx\LogOutput.log`
   attached. The log also contains everything that was spoken, which shows exactly where it went
-  wrong.
+  wrong. **Detailed log for bug reports** in the settings adds more detail to it.
 - **The game opens with the wrong language:** set the game language in F5. Any
   `<code>.game.txt` file in the lang folder adds that language.
 - **Developer cheats:** the game turns on hidden developer cheats when F1 is pressed three times
@@ -482,9 +482,10 @@ For any other language, you can translate both the mod and the game text with pl
   (for screenshots). The mod says when it is hidden; press F3 again to show it.
 - **Saves:** saving from the pause menu (Save, then New save or an existing save) says "Saved as"
   with the name. Shift+Enter renames a save and Delete removes it, in the save and load lists.
-- **The game feels slow:** the mod itself needs well under a millisecond per frame. If you turned
-  off Skip the logo intro, the main menu appears only after the intro (about 15 seconds); any key
-  skips it.
+- **The game feels slow:** the mod itself needs well under a millisecond per frame, and it checks
+  the lang folder and looks for a controller on a background thread, so neither ever holds up a
+  frame. If you turned off Skip the logo intro, the main menu appears only after the intro (about
+  15 seconds); any key skips it.
 
 ## Building from source
 
@@ -543,6 +544,7 @@ done, set `TestHooks = false` again and delete `BepInEx\hsa_dumps` and any `BepI
 | `pad connect`, `pad disconnect` | Does what plugging a controller in or out does: says so, and makes the instructions name the controller's buttons, or the keyboard keys again. |
 | `achievements` | The game's Steam achievements: whether Steam is connected, whether each one is unlocked, and what the mod says when it unlocks. |
 | `achievement <name or number>` | Says that achievement's announcement, to hear how it is read. It unlocks nothing. |
+| `cues`, `cues play` | Every sound cue: its length, its loudest point and its volume setting. `cues play` also says each one's name and plays it. |
 | `click <path>` | Presses the button at that path in the scene (the paths are in a dump). |
 | `dump [name]` | Writes the screen's interface tree to `BepInEx\hsa_dumps\ui_<name>_<time>.txt`. |
 | `world` | Writes the shop grid, the buildings and the customers to `BepInEx\hsa_dumps\world_<time>.txt`. |
@@ -610,6 +612,8 @@ done, set `TestHooks = false` again and delete `BepInEx\hsa_dumps` and any `BepI
   `pad connect` and `pad disconnect` say what plugging a controller in and out says.
 - **Achievements:** `achievements` lists them; `achievement Money1000` says how "Money 1,000" is
   announced. No test command unlocks an achievement.
+- **Sound cues:** `cues play` plays every cue after its name. Each should be clearly audible, also on
+  laptop speakers.
 - **A translation:** `missing ja` writes what the Japanese game text lacks.
 
 The code is organized like this:

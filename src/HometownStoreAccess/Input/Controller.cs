@@ -71,9 +71,10 @@ namespace HometownStoreAccess.Input
         }
 
         private static readonly ControllerMapping Mapping = new ControllerMapping();
-        private static bool _useLegacyDll;
+        private static volatile bool _useLegacyDll;
         private static bool _disabled;
         private static int _padIndex = -1;
+        private static uint _scanSlot;
         private static float _nextScan;
         private static float _rumbleUntil;
         private static bool _announcedConnect;
@@ -115,22 +116,36 @@ namespace HometownStoreAccess.Input
             {
                 if (_padIndex < 0)
                 {
-                    if (Time.unscaledTime < _nextScan) return;
-                    _nextScan = Time.unscaledTime + 2f;
-                    for (uint i = 0; i < 4; i++)
+                    // XInput is slow to answer for a slot with no controller, so looking for one runs on a
+                    // worker thread: one slot every half second (all four every 2 seconds, as before).
+                    int failure = _probeFailure;
+                    if (failure != 0)
                     {
-                        if (TryGet(i, out _))
-                        {
-                            _padIndex = (int)i;
-                            if (!_announcedConnect)
-                            {
-                                _announcedConnect = true;
-                                ConnectionChanged(true);
-                            }
-                            break;
-                        }
+                        // Handled below, as if the call had failed here.
+                        _probeFailure = 0;
+                        if (failure == 1) throw new DllNotFoundException();
+                        throw new EntryPointNotFoundException();
                     }
-                    if (_padIndex < 0) return;
+                    int found = _probeFound;
+                    if (found < 0)
+                    {
+                        if (!_probeRunning && Time.unscaledTime >= _nextScan)
+                        {
+                            _nextScan = Time.unscaledTime + 0.5f;
+                            _probeRunning = true;
+                            uint slot = _scanSlot;
+                            _scanSlot = (_scanSlot + 1) % 4;
+                            System.Threading.ThreadPool.QueueUserWorkItem(Probe, slot);
+                        }
+                        return;
+                    }
+                    _probeFound = -1;
+                    _padIndex = found;
+                    if (!_announcedConnect)
+                    {
+                        _announcedConnect = true;
+                        ConnectionChanged(true);
+                    }
                 }
 
                 if (!TryGet((uint)_padIndex, out XInputState s))
@@ -168,6 +183,36 @@ namespace HometownStoreAccess.Input
             {
                 _disabled = true;
                 Log.Warn("XInput entry points missing; controller support disabled.");
+            }
+        }
+
+        private static volatile int _probeFound = -1;
+        private static volatile bool _probeRunning;
+        // 1: the XInput library is missing, 2: its entry point is (seen by the worker, handled in Update).
+        private static volatile int _probeFailure;
+
+        /// <summary>Worker thread: is there a controller in this slot?</summary>
+        private static void Probe(object slot)
+        {
+            try
+            {
+                if (TryGet((uint)slot, out _)) _probeFound = (int)(uint)slot;
+            }
+            catch (DllNotFoundException)
+            {
+                _probeFailure = 1;
+            }
+            catch (EntryPointNotFoundException)
+            {
+                _probeFailure = 2;
+            }
+            catch (Exception)
+            {
+                // Nothing found this time.
+            }
+            finally
+            {
+                _probeRunning = false;
             }
         }
 

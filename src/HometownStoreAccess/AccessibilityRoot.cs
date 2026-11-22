@@ -59,6 +59,7 @@ namespace HometownStoreAccess
             SceneManager.sceneLoaded += OnSceneLoaded;
             AudioCues.Initialize(gameObject);
             DebugCommands.StateProvider = () => Contexts.DebugState();
+            FixedText.AssetName = Game.GameText.NameOfAsset;
             SpeechService.HistoryEnabled = () => GameplayActive;
             // When the language is known already (mod setting, or the game's saved choice), the welcome
             // need not wait for the game's localization to start.

@@ -87,7 +87,8 @@ namespace HometownStoreAccess
         {
             foreach (ConfigDefinition def in _config.Keys)
             {
-                if (def.Section == "Debug") continue;
+                // The developer settings stay; the detailed log is on the settings screen, so it resets too.
+                if (def.Section == "Debug" && def.Key != "Verbose") continue;
                 ConfigEntryBase entry = _config[def];
                 entry.BoxedValue = entry.DefaultValue;
             }

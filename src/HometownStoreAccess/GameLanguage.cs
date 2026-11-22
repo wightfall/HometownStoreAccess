@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using HometownStoreAccess.Core;
 using HometownStoreAccess.Speech;
 using HometownStoreAccess.UI;
@@ -42,6 +43,12 @@ namespace HometownStoreAccess
             return Unplaced.TryGetValue(tableName + "/" + key, out text);
         }
         private static float _nextPoll;
+        // After start-up the folder is read on a worker thread, so the file system never holds up a frame:
+        // the worker reads the file times into a new dictionary and hands it over only when they changed.
+        private static volatile bool _scanRunning;
+        private static Dictionary<string, DateTime> _scanResult;
+        private static readonly object ScanLock = new object();
+        private static volatile string _scanError;
         private static bool _templatesWritten;
         private static bool _gameTextDirty = true;
 
@@ -99,12 +106,32 @@ namespace HometownStoreAccess
             // (for Thai and English, which need none of it there, only after that screen has been read).
             bool deferred = GameLanguage.StartupWorkDeferred;
             bool waiting = _builtInLoaded && (!_templatesWritten || _gameTextDirty) && !deferred;
-            if (Time.unscaledTime < _nextPoll && !(waiting && LocalizationReady())) return;
-            _nextPoll = Time.unscaledTime + 2f;
+            // Start-up (and re-applying game text) reads the folder at once; afterwards a worker does.
+            bool startup = !_builtInLoaded || !_templatesWritten || _gameTextDirty;
+            bool found = !startup && TakeScanResult();
+            if (!found && Time.unscaledTime < _nextPoll && !(waiting && LocalizationReady())) return;
+            _nextPoll = Time.unscaledTime + (startup ? 2f : 1f);
             try
             {
-                Directory.CreateDirectory(Folder);
-                bool changed = ScanForChanges();
+                bool changed;
+                if (startup)
+                {
+                    // A worker's older result would only repeat what this scan finds.
+                    lock (ScanLock) _scanResult = null;
+                    Directory.CreateDirectory(Folder);
+                    changed = ScanForChanges();
+                }
+                else
+                {
+                    changed = found;
+                    string error = _scanError;
+                    if (error != null)
+                    {
+                        _scanError = null;
+                        Log.Warn("Language files: " + error);
+                    }
+                    StartBackgroundScan();
+                }
                 var sw = System.Diagnostics.Stopwatch.StartNew();
                 if (!_builtInLoaded)
                 {
@@ -144,28 +171,82 @@ namespace HometownStoreAccess
             catch { return false; }
         }
 
-        private static bool ScanForChanges()
+        /// <summary>The write time of every translation file in the folder (safe on any thread).</summary>
+        private static Dictionary<string, DateTime> ReadStamps()
         {
-            bool changed = false;
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var now = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
             foreach (string file in Directory.GetFiles(Folder, "*.txt"))
             {
-                string name = Path.GetFileName(file);
-                if (!IsTranslationFileName(name)) continue;
-                seen.Add(file);
-                DateTime t = File.GetLastWriteTimeUtc(file);
-                if (!Stamps.TryGetValue(file, out DateTime old) || old != t)
-                {
-                    Stamps[file] = t;
-                    changed = true;
-                }
+                if (IsTranslationFileName(Path.GetFileName(file))) now[file] = File.GetLastWriteTimeUtc(file);
             }
-            foreach (string gone in Stamps.Keys.Where(k => !seen.Contains(k)).ToList())
+            return now;
+        }
+
+        private static bool SameStamps(Dictionary<string, DateTime> a, Dictionary<string, DateTime> b)
+        {
+            if (a.Count != b.Count) return false;
+            foreach (var kv in a)
             {
-                Stamps.Remove(gone);
-                changed = true;
+                if (!b.TryGetValue(kv.Key, out DateTime t) || t != kv.Value) return false;
             }
-            return changed;
+            return true;
+        }
+
+        private static void UseStamps(Dictionary<string, DateTime> now)
+        {
+            Stamps.Clear();
+            foreach (var kv in now) Stamps[kv.Key] = kv.Value;
+        }
+
+        /// <summary>Reads the folder now (start-up); true when a file was added, changed or removed.</summary>
+        private static bool ScanForChanges()
+        {
+            Dictionary<string, DateTime> now = ReadStamps();
+            if (SameStamps(now, Stamps)) return false;
+            UseStamps(now);
+            return true;
+        }
+
+        private static void StartBackgroundScan()
+        {
+            if (_scanRunning) return;
+            _scanRunning = true;
+            // A copy: the worker never touches the dictionary the main thread uses.
+            var known = new Dictionary<string, DateTime>(Stamps, StringComparer.OrdinalIgnoreCase);
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    Directory.CreateDirectory(Folder);
+                    Dictionary<string, DateTime> now = ReadStamps();
+                    if (!SameStamps(now, known))
+                    {
+                        lock (ScanLock) _scanResult = now;
+                    }
+                }
+                catch (Exception e)
+                {
+                    _scanError = e.Message;
+                }
+                finally
+                {
+                    _scanRunning = false;
+                }
+            });
+        }
+
+        /// <summary>True (once) when the worker found changed files; their times are then the known ones.</summary>
+        private static bool TakeScanResult()
+        {
+            Dictionary<string, DateTime> now;
+            lock (ScanLock)
+            {
+                now = _scanResult;
+                _scanResult = null;
+            }
+            if (now == null) return false;
+            UseStamps(now);
+            return true;
         }
 
         private static void Reload()
