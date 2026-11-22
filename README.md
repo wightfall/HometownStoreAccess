@@ -140,6 +140,10 @@ Options (the pause menu in the game) has the sections General (full screen, show
 language), Sound (overall, music and effects volume), Game (save, back to the main menu, quit; only
 in the game) and About (the version).
 
+When you save under a name that is already taken (an empty name means "Save Game"), the game warns
+that the save will be overwritten, and you hear the warning. Pressing Confirm again overwrites that
+save; Cancel keeps it.
+
 ### Message history
 
 | Key | Action |
@@ -292,7 +296,9 @@ The screen has these sections, and Page Up and Page Down move between them:
   of building. The game's own tabs follow, so a sighted helper sees the same list.
 - **Goods** and **Buildings**: everything this place sells today, with price and stock ("sold out" when
   none is left). Right adds one to the basket, Left removes one, and holding Shift changes ten at
-  a time. Ctrl+I describes an item and the profit you make on it.
+  a time. Ctrl+I describes an item: what customers pay and your profit, the shelves that hold it,
+  and which of your own shelves (placed or not yet placed) do, as the game's list shows them. For a
+  building it gives what the game's tooltip shows: size, value, slots for goods and what it holds.
 - **Basket**: what you are buying (change amounts here too), the total and what money is left,
   then Check out and Close.
 
@@ -347,7 +353,8 @@ entries it has, and the focus moves to the first one.
 
 - **Shops on the map**: all products, goods, each kind of goods, buildings, each kind of building
 - **Build mode**: shelves, storage, machines, cashiers, decorations
-- **All stock** (G, or the toolbar and map button): each kind of goods
+- **All stock** (the toolbar and map button; G only reads the storage aloud): each kind of goods
+  (the list starts with the total, as the game's header does)
 - **Shelves, storage and the delivery truck**: each kind of goods
 - **Event journal**: events in progress and finished events
 

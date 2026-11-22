@@ -221,6 +221,21 @@ namespace HometownStoreAccess.Game
         }
     }
 
+    /// <summary>A customer who walked out of the door: the game removes them when they reach the exit.</summary>
+    [HarmonyPatch(typeof(CustomerObject), nameof(CustomerObject.OnDestroy))]
+    internal static class CustomerLeftPatch
+    {
+        private static void Prefix(CustomerObject __instance)
+        {
+            // Not the customers removed when a save loads or the game goes back to the menu.
+            if (__instance == null || !__instance.gameObject.scene.isLoaded) return;
+            if (__instance.currentCustomerState != CustomerState.WalkOut || __instance.customerProfile?.customerID == null) return;
+            AccessibilityRoot root = AccessibilityRoot.Instance;
+            if (root == null || !root.InGame) return;
+            EventAnnouncer.Customer(Loc.Get("customer_left", GameText.Name(__instance.customerProfile.customerID)));
+        }
+    }
+
     [HarmonyPatch(typeof(CashierObject), nameof(CashierObject.CheckOut))]
     internal static class CheckoutPatch
     {

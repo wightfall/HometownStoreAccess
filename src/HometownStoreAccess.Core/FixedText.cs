@@ -118,6 +118,10 @@ namespace HometownStoreAccess.Core
             new Pattern { Regex = new Regex(@"^Version: ?(.+)$"), Key = "fixed_version" },
         };
 
+        // The day summary names an upkeep bill "<building name>Upkeep" (SummaryPanel.AddUpkeepBill).
+        private const string UpkeepSuffix = "Upkeep";
+        private const string UpkeepKey = "fixed_upkeep_bill";
+
         /// <summary>Every mod string key used here (for tests).</summary>
         public static IEnumerable<string> Keys
         {
@@ -125,6 +129,7 @@ namespace HometownStoreAccess.Core
             {
                 foreach (string k in Exact.Values) yield return k;
                 foreach (Pattern p in Patterns) yield return p.Key;
+                yield return UpkeepKey;
             }
         }
 
@@ -133,6 +138,10 @@ namespace HometownStoreAccess.Core
         {
             if (string.IsNullOrEmpty(text)) return text;
             if (Exact.TryGetValue(text, out string key)) return Loc.Get(key);
+            if (text.Length > UpkeepSuffix.Length && text.EndsWith(UpkeepSuffix, StringComparison.Ordinal))
+            {
+                return Loc.Get(UpkeepKey, text.Substring(0, text.Length - UpkeepSuffix.Length).TrimEnd());
+            }
             // Amounts the game writes in English inside other text ("Upgrade: 500 baht").
             if (text.IndexOf(" baht", StringComparison.OrdinalIgnoreCase) > 0 && !Baht.IsMatch(text))
             {

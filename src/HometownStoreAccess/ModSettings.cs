@@ -50,7 +50,7 @@ namespace HometownStoreAccess
             GameLocale = config.Bind("Speech", "GameLocale", "",
                 "Game language chosen through the mod (any of the game's languages, e.g. ja, id, zh-HK). Empty = use the game's own setting.");
 
-            AnnounceCustomers = config.Bind("Announcements", "Customers", true, "Announce customers arriving, finding what they want, getting angry and leaving.");
+            AnnounceCustomers = config.Bind("Announcements", "Customers", true, "Announce customers coming in, getting upset and leaving the shop.");
             AnnounceSales = config.Bind("Announcements", "Sales", true, "Announce money received when a customer pays at the cashier.");
             AnnounceStock = config.Bind("Announcements", "Stock", true, "Announce when a shelf runs empty while the shop is open.");
             AnnounceCustomerMessages = config.Bind("Announcements", "CustomerMessages", true, "Read customer speech bubbles from the message box.");

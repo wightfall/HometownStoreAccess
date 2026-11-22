@@ -335,6 +335,12 @@ namespace HometownStoreAccess.Contexts
             Dictionary<Item, int> shelves = rm.AllResourceOnSelf();
             var all = storage.Keys.Union(shelves.Keys).Where(i => i != null).OrderBy(GameText.Name).ToList();
             if (all.Count == 0) items.Add(new TextItem(Loc.Get("nothing_in_stock"), "none"));
+            else
+            {
+                // The game's header: "All items: 42 (5 kinds)".
+                int sum = all.Sum(i => (storage.TryGetValue(i, out int a) ? a : 0) + (shelves.TryGetValue(i, out int b) ? b : 0));
+                items.Add(new TextItem(Loc.Get("stock_total", sum, all.Count), "stock_total"));
+            }
             _filter.Prepare(all.Select(i => i.itemCategory.ToString()));
             if (_filter.Active) items.Add(_filter.Item(string.Empty));
             foreach (Item it in all)

@@ -377,21 +377,7 @@ namespace HometownStoreAccess.Contexts
             return bp != null ? bp.amount : 0;
         }
 
-        private static string BlueprintDetails(Building b)
-        {
-            var parts = new List<string> { GameText.Name(b), GameText.Description(b), Loc.Get("building_size", b.sizeX), Loc.Get("building_value", Mathf.RoundToInt(b.marketValue)) };
-            parts.Add(StoreFloor.RequiredKind(b) == CellKind.BackRoom ? Loc.Get("needs_back_room") : Loc.Get("needs_shop_floor"));
-            if (b is Shelf shelf)
-            {
-                parts.Add(Loc.Get("shelf_slots", shelf.storageSlotLimit));
-                parts.Add(Loc.Get("can_hold", string.Join(", ", shelf.storeAbleItems.Select(GameText.Name).ToArray())));
-            }
-            if (b is Storage st) parts.Add(Loc.Get("storage_adds", st.storageSlotAdd));
-            if (b.upkeepCost > 0) parts.Add(Loc.Get("building_upkeep", b.upkeepCost));
-            if (!(b is Cashier)) parts.Add(Loc.Get("sell_value", Mathf.RoundToInt(b.marketValue * 0.2f)));
-            parts.Add(Loc.Get("hint_blueprint"));
-            return TextCleaner.Join(". ", parts.ToArray());
-        }
+        private static string BlueprintDetails(Building b) => TextCleaner.Join(". ", GameText.BuildingInfo(b), Loc.Get("hint_blueprint"));
 
         public override bool HandleInput()
         {

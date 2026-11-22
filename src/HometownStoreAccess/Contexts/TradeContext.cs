@@ -206,11 +206,9 @@ namespace HometownStoreAccess.Contexts
             if (item != null)
             {
                 int profit = Mathf.RoundToInt(item.marketValue - price);
-                return TextCleaner.Join(". ", GameText.ItemDetails(item), Loc.Get("goods_profit", Mathf.RoundToInt(item.marketValue), profit), Loc.Get("hint_trade"));
+                return TextCleaner.Join(". ", GameText.ItemDetails(item, withValue: false), GameText.OwnShelves(item), Loc.Get("goods_profit", Mathf.RoundToInt(item.marketValue), profit), Loc.Get("hint_trade"));
             }
-            return TextCleaner.Join(". ", GameText.Name(shelf), GameText.Description(shelf),
-                shelf is Shelf sh ? Loc.Get("can_hold", string.Join(", ", sh.storeAbleItems.Select(GameText.Name).ToArray())) : null,
-                Loc.Get("hint_trade"));
+            return TextCleaner.Join(". ", GameText.BuildingInfo(shelf), Loc.Get("hint_trade"));
         }
 
         private static void Change(TradePanel p, Item item, Building shelf, int delta)

@@ -134,7 +134,7 @@ namespace HometownStoreAccess.Game
                 case ShelfObject shelf:
                     parts.Add(Slots(shelf.ShelfInventory));
                     parts.Add(Loc.Get("contents", Contents(shelf.ShelfInventory)));
-                    parts.Add(Loc.Get("can_hold", string.Join(", ", shelf.ShelfID.storeAbleItems.Select(Name).ToArray())));
+                    parts.Add(Loc.Get("can_hold", string.Join(", ", shelf.ShelfID.storeAbleItems.Where(i => i != null).Select(Name).ToArray())));
                     break;
                 case StorageObject _:
                     parts.Add(Loc.Get("storage_long", ResourceManager.Instance.storage.ItemList.Count, ResourceManager.Instance.storage.slotLimit));
@@ -162,12 +162,55 @@ namespace HometownStoreAccess.Game
             return Loc.Get("recipe_summary", Name(r), inputs, outputs, r.costMoneyPerTime, r.outputLimitPerDay);
         }
 
-        public static string ItemDetails(Item item)
+        /// <summary>
+        /// What the game's building tooltip shows (name, description, size, value, slots and the goods a shelf
+        /// holds), plus where it goes, its upkeep and what selling one gives back.
+        /// </summary>
+        public static string BuildingInfo(Building b)
+        {
+            if (b == null) return string.Empty;
+            var parts = new List<string> { Name(b), Description(b), Loc.Get("building_size", b.sizeX), Loc.Get("building_value", Mathf.RoundToInt(b.marketValue)) };
+            parts.Add(StoreFloor.RequiredKind(b) == CellKind.BackRoom ? Loc.Get("needs_back_room") : Loc.Get("needs_shop_floor"));
+            if (b is Shelf shelf)
+            {
+                parts.Add(Loc.Get("shelf_slots", shelf.storageSlotLimit));
+                parts.Add(Loc.Get("can_hold", string.Join(", ", shelf.storeAbleItems.Where(i => i != null).Select(Name).ToArray())));
+            }
+            if (b is Storage st) parts.Add(Loc.Get("storage_adds", st.storageSlotAdd));
+            if (b.upkeepCost > 0) parts.Add(Loc.Get("building_upkeep", b.upkeepCost));
+            if (!(b is Cashier)) parts.Add(Loc.Get("sell_value", Mathf.RoundToInt(b.marketValue * 0.2f)));
+            return TextCleaner.Join(". ", parts.ToArray());
+        }
+
+        /// <summary>
+        /// The shelves you have, placed or as blueprints, that can hold the item: a shop's goods row shows
+        /// them (ContentSellingSet), so you know before buying whether you can put it out.
+        /// </summary>
+        public static string OwnShelves(Item item)
+        {
+            BuildingSystem bs = BuildingSystem.Instance;
+            if (item == null || bs == null) return null;
+            var own = new List<string>();
+            foreach (BuildingBlueprint bp in bs.currentBlueprint)
+            {
+                if (bp != null && bp.Id is Shelf s && s.storeAbleItems.Contains(item)) own.Add(Name(s));
+            }
+            foreach (BuildingObject b in bs.allBuildings)
+            {
+                if (b != null && b.ID is Shelf s && s.storeAbleItems.Contains(item)) own.Add(Name(s));
+            }
+            string[] names = own.Distinct().ToArray();
+            return names.Length > 0 ? Loc.Get("item_own_shelves", string.Join(", ", names)) : Loc.Get("item_own_no_shelf");
+        }
+
+        /// <summary>The game's item tooltip: name, description, value, stack size and the shelves that hold it.</summary>
+        /// <param name="withValue">False where the caller says the value itself (a shop gives it with the profit).</param>
+        public static string ItemDetails(Item item, bool withValue = true)
         {
             if (item == null) return string.Empty;
             var shelves = ResourceManager.Instance != null ? ResourceManager.Instance.AllStorableShelves(item).Select(s => Name(s)).Distinct().ToArray() : new string[0];
             return TextCleaner.Join(". ", Name(item), Description(item),
-                Loc.Get("item_value", Mathf.RoundToInt(item.marketValue)),
+                withValue ? Loc.Get("item_value", Mathf.RoundToInt(item.marketValue)) : null,
                 Loc.Get("item_stack_max", item.maxAmount),
                 shelves.Length > 0 ? Loc.Get("item_shelves", string.Join(", ", shelves)) : Loc.Get("item_no_shelf"));
         }
