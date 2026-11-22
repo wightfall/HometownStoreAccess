@@ -23,6 +23,11 @@ namespace HometownStoreAccess.Contexts
         private int _lastResponseCount;
         private string _announcedLine;
 
+        // The pictures shown with the last line (the portraits by place, the story picture): what changes is said.
+        private readonly Dictionary<PortraitPosition, string> _faces = new Dictionary<PortraitPosition, string>();
+        private string _storyPicture;
+        private static readonly PortraitPosition[] Places = { PortraitPosition.Left, PortraitPosition.Center, PortraitPosition.Right };
+
         public override string Id => "dialog";
         public override int Priority => 80;
         public override bool GuardsEnterOnExit => true;
@@ -56,6 +61,8 @@ namespace HometownStoreAccess.Contexts
             _pendingAdvance = false;
             _lastResponseCount = 0;
             _announcedLine = null;
+            _faces.Clear();
+            _storyPicture = null;
             if (!_resumeConversation) SpeechService.Recall.StartConversation();
             _resumeConversation = false;
         }
@@ -77,9 +84,111 @@ namespace HometownStoreAccess.Contexts
             if (p == null || p._shownDialog == null) return null;
             _lastDialog = p._shownDialog;
             _lastLine = p._shownLineIndex;
-            _announcedLine = CurrentLineText();
+            // Only with a line on screen: as a new conversation starts, the panel still holds the last one's
+            // data (its text already cleared), and its pictures are not this conversation's.
+            string text = CurrentLineText();
+            _announcedLine = string.IsNullOrEmpty(TextCleaner.Clean(text)) ? text : TextCleaner.Join(". ", PictureNote(p), text);
             SpeechService.Recall.AddLine(_announcedLine);
             return _announcedLine;
+        }
+
+        // Who each portrait shows, in the game's language (forgotten when it changes); see PortraitNames.
+        private static readonly PortraitNames Names = new PortraitNames();
+        private static string _namesLanguage;
+
+        /// <summary>
+        /// What the shown line's pictures show that the last line's did not: a character's new face, or a story
+        /// picture (setting "Faces and story pictures in conversations"). Null when nothing is new.
+        /// </summary>
+        private string PictureNote(DialogPanel p)
+        {
+            if (p == null || p._shownDialog == null || p._shownDialog.dialogLines == null) return null;
+            int index = p._shownLineIndex;
+            if (index < 0 || index >= p._shownDialog.dialogLines.Count) return null;
+            DialogLine line = p._shownDialog.dialogLines[index];
+            if (line == null) return null;
+            string speaker = UiUtil.Text(p.CharacterLabel);
+            string language = GameLanguage.Selected != null ? GameLanguage.Selected.Identifier.Code : null;
+            if (language != _namesLanguage)
+            {
+                Names.Clear();
+                _namesLanguage = language;
+            }
+            // The one picture not dimmed shows who is speaking (the game dims the listeners).
+            PortraitData lit = null;
+            int litCount = 0;
+            foreach (PortraitPosition place in Places)
+            {
+                PortraitData d = line.GetPortraitData(place);
+                if (d == null || d.portrait == null || d.transitionType == PortraitTransitionType.Dim || d.transitionType == PortraitTransitionType.FadeOut) continue;
+                lit = d;
+                litCount++;
+            }
+            if (litCount == 1 && speaker.Length > 0)
+            {
+                PortraitFaces.Split(lit.portrait.name, out string litCharacter, out _);
+                Names.Learn(litCharacter, speaker);
+            }
+            var notes = new List<string>();
+            foreach (PortraitPosition place in Places)
+            {
+                PortraitData data = line.GetPortraitData(place);
+                // A picture fading out is leaving: no face to say, and nothing there afterwards.
+                string now = data != null && data.portrait != null && data.transitionType != PortraitTransitionType.FadeOut ? data.portrait.name : null;
+                _faces.TryGetValue(place, out string before);
+                _faces[place] = now;
+                string key = PortraitFaces.ChangeKey(before, now);
+                if (key == null) continue;
+                // Whose face, when someone else is speaking (the player, say, while the picture is dimmed).
+                PortraitFaces.Split(now, out string character, out _);
+                string name = CollectionName(data.portrait) ?? Names.NameOf(character) ?? CustomerName(character);
+                notes.Add(!string.IsNullOrEmpty(name) && !string.Equals(name, speaker, System.StringComparison.OrdinalIgnoreCase) ? Loc.Get("face_of", name, Loc.Get(key)) : Loc.Get(key));
+            }
+            string picture = line.cg_img != null ? line.cg_img.name : null;
+            string pictureKey = PortraitFaces.StoryPictureKey(_storyPicture, picture);
+            _storyPicture = picture;
+            if (pictureKey != null) notes.Insert(0, Loc.Get(pictureKey));
+            // Followed even while the setting is off, so turning it on says only what changes from then on.
+            if (notes.Count == 0 || !Plugin.Settings.AnnouncePictures.Value) return null;
+            return TextCleaner.Join(". ", notes.ToArray());
+        }
+
+        /// <summary>The character a portrait shows, by the game's portrait collection (its entries have no pictures in the demo).</summary>
+        private static string CollectionName(Sprite portrait)
+        {
+            if (portrait == null) return null;
+            try
+            {
+                CharacterCollectionManager cm = CharacterCollectionManager.Instance;
+                if (cm == null || cm.allCharacterPortraits == null) return null;
+                foreach (CharacterPortrait cp in cm.allCharacterPortraits)
+                {
+                    if (cp != null && cp.portrait == portrait && cp.detailsKey != null) return TextCleaner.Clean(cp.detailsKey.GetName(cp.name, LanguageControl.CurrentLanguage));
+                }
+            }
+            catch (System.Exception e)
+            {
+                Log.Debug("Portrait name: " + e.Message);
+            }
+            return null;
+        }
+
+        /// <summary>A portrait's character by the game's customer names ("Collegian"), when it is one of them.</summary>
+        private static string CustomerName(string character)
+        {
+            if (string.IsNullOrEmpty(character)) return null;
+            try
+            {
+                string n = LocalizationManager.GetName(character);
+                if (string.IsNullOrEmpty(n) || n.StartsWith("Key '", System.StringComparison.Ordinal) || n.StartsWith("Table '", System.StringComparison.Ordinal)) return null;
+                n = TextCleaner.Clean(n);
+                return n.Length > 0 ? n : null;
+            }
+            catch (System.Exception e)
+            {
+                Log.Debug("Customer name for " + character + ": " + e.Message);
+                return null;
+            }
         }
 
         private static string CurrentLineText()
@@ -100,6 +209,8 @@ namespace HometownStoreAccess.Contexts
                 _lastDialog = p._shownDialog;
                 _lastLine = p._shownLineIndex;
                 string line = p._shownDialog != null ? CurrentLineText() : null;
+                // What the line's pictures show anew (a face, a story picture) comes first.
+                if (!string.IsNullOrEmpty(line)) line = TextCleaner.Join(". ", PictureNote(p), line);
                 if (!string.IsNullOrEmpty(line)) SpeechService.Recall.AddLine(line);
                 // Every new line, also one that reads like the last ("..."): the line number tells them apart.
                 if (!string.IsNullOrEmpty(line) && Plugin.Settings.ReadDialogAutomatically.Value)
@@ -297,6 +408,9 @@ namespace HometownStoreAccess.Contexts
         private string _lastContent;
 
         public override string Id => "congratulation";
+
+        // The button (Continue) is said after what the reward gave, once that has settled (see Tick), not before it.
+        public override bool AnnounceFocusOnEnter => false;
         public override MsgCategory IntroCategory => MsgCategory.Events;
         public override int Priority => 85;
         public override bool GuardsEnterOnExit => true;
@@ -343,6 +457,8 @@ namespace HometownStoreAccess.Contexts
             if (now - _stableSince < 0.4f && now - _pendingSince < 3f) return;
             _read = p;
             SpeechService.Say(content, false, MsgCategory.Events);
+            // Then the button, so what the reward gave comes first, as on screen.
+            AccessibilityRoot.Instance.Contexts.AnnounceFocus(includeGroup: false, interrupt: false);
         }
 
         internal static string Content(CongratulationPanel p)
@@ -420,6 +536,7 @@ namespace HometownStoreAccess.Contexts
             {
                 _read = cur;
                 SpeechService.Say(Content(cur), true, MsgCategory.Events);
+                AccessibilityRoot.Instance.Contexts.AnnounceFocus(includeGroup: false, interrupt: false);
                 return;
             }
             bool animating = cur.animationSequence != null && cur.animationSequence.IsPlaying();

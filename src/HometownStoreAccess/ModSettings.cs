@@ -15,6 +15,7 @@ namespace HometownStoreAccess
         public readonly ConfigEntry<bool> AnnounceCustomerMessages;
         public readonly ConfigEntry<bool> AnnounceCashChanges;
         public readonly ConfigEntry<bool> ReadDialogAutomatically;
+        public readonly ConfigEntry<bool> AnnouncePictures;
         public readonly ConfigEntry<bool> AnnounceAchievements;
         public readonly ConfigEntry<bool> AnnounceCustomersLeaving;
 
@@ -68,6 +69,7 @@ namespace HometownStoreAccess
             AnnounceCustomerMessages = config.Bind("Announcements", "CustomerMessages", true, "Read customer speech bubbles from the message box.");
             AnnounceCashChanges = config.Bind("Announcements", "CashChanges", false, "Announce every change of cash (can be chatty).");
             ReadDialogAutomatically = config.Bind("Announcements", "ReadDialog", true, "Read story dialog lines automatically as they appear.");
+            AnnouncePictures = config.Bind("Announcements", "Pictures", true, "In conversations, say a character's new face (smiling, surprised) and when a story picture appears, before the line.");
             AnnounceCustomersLeaving = config.Bind("Announcements", "CustomersLeaving", true, "Announce customers leaving the shop.");
             // 1.4.3 split leaving off the Customers setting: whoever had turned customers off keeps it quiet.
             if (!hadCustomersLeaving) AnnounceCustomersLeaving.Value = AnnounceCustomers.Value;

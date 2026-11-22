@@ -463,6 +463,14 @@ namespace HometownStoreAccess.Core
 
             // Dialog
             ["dialog_line"] = "{0}: {1}",
+            ["face_smile"] = "smiling",
+            ["face_surprised"] = "surprised",
+            ["face_calm"] = "calm",
+            ["face_better_glasses"] = "looks better now, with thin glasses",
+            ["face_usual"] = "back to the usual look",
+            ["face_changed"] = "looks different",
+            ["story_picture"] = "Story picture",
+            ["face_of"] = "{0}, {1}",
             ["dialog_waiting"] = "Dialog",
             ["dialog_continue"] = "Continue",
             ["dialog_choose"] = "Choose a reply, {0} options.",
@@ -636,6 +644,7 @@ namespace HometownStoreAccess.Core
             ["set_messages"] = "Customer speech bubbles",
             ["set_cash"] = "Every change of money",
             ["set_dialog"] = "Read dialog automatically",
+            ["set_pictures"] = "Faces and story pictures in conversations",
             ["set_tutorial"] = "Tutorial notes and key hints",
             ["set_achievements"] = "Steam achievements",
             ["set_group_audio"] = "Sound cues",

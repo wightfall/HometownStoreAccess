@@ -251,6 +251,12 @@ the earlier ones, and Escape closes it.
 A reward after a conversation is read as soon as it appears. If you press Enter before that, Enter
 reads it, and the next Enter closes it.
 
+The pictures the game shows without words are said before the line: a character's new face (the
+college student smiling or surprised, the otaku after his makeover and back) and a story picture.
+When someone else is speaking, the face comes with the character's name. The demo has no story
+pictures, but later versions might. Turn this off with **Faces and story pictures in
+conversations** in the settings.
+
 | Key | Action |
 | --- | --- |
 | Backslash | The current line again |
@@ -436,7 +442,8 @@ headings, so you hear the section name alone, and Down goes to its first setting
   who come in or leave together are said in one message), sales at the cashier, empty shelves,
   deliveries and machines, customer speech bubbles, every change of money (a sale, a purchase, a
   lottery ticket or a building you sell is said once, with the money you have now), read dialog
-  automatically, tutorial notes and key hints, Steam achievements
+  automatically, faces and story pictures in conversations, tutorial notes and key hints, Steam
+  achievements
 - **Sound cues:** sound cues on or off, menu sounds, the overall sound cue volume
 - **Volume of each sound cue:** a section of its own, so Page Down skips it
 - **Controls:** wrap around at the ends of lists, skip the logo intro and shorten the loading fade,
@@ -565,6 +572,7 @@ done, set `TestHooks = false` again and delete `BepInEx\hsa_dumps` and any `BepI
 | `achievement <name or number>` | Says that achievement's announcement, to hear how it is read. It unlocks nothing. |
 | `cues`, `cues play` | Every sound cue: its length, its loudest point and its volume setting. `cues play` also says each one's name and plays it. |
 | `click <path>` | Presses the button at that path in the scene (the paths are in a dump). |
+| `pictures [conversation]` | Lists the conversations' story pictures, every portrait that changes from one line to the next, how often the pictures fade, dim or shake, and the portraits' entries in the game's collection. With a conversation name (or part of it): each of its lines with its speaker and its pictures. |
 | `pick <dropdown> <item>` | Opens the shown dropdown with that object name (as in a dump, for example `Language`) and clicks its item (counted from 0), as the mouse does. |
 | `dump [name]` | Writes the screen's interface tree to `BepInEx\hsa_dumps\ui_<name>_<time>.txt`. |
 | `world` | Writes the shop grid, the buildings and the customers to `BepInEx\hsa_dumps\world_<time>.txt`. |

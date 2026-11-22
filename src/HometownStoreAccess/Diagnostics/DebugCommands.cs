@@ -366,6 +366,84 @@ namespace HometownStoreAccess.Diagnostics
                     else GameProgressionControl.Instance.RunDialogEvent(found);
                     break;
                 }
+                case "pictures":
+                {
+                    // pictures: the conversations' story pictures, and every portrait that changes from one line to
+                    // the next at the same place (what a player sees change while reading)
+                    int lineCount = 0, pictureLines = 0, changes = 0;
+                    var used = new SortedDictionary<string, int>(StringComparer.Ordinal);
+                    var picEffects = new SortedDictionary<string, int>(StringComparer.Ordinal);
+                    var places = new[] { PortraitPosition.Left, PortraitPosition.Center, PortraitPosition.Right };
+                    // Also the conversations no scene object holds yet: the story events bring theirs along.
+                    Resources.LoadAll<RunEventType>(string.Empty);
+                    Resources.LoadAll<DialogEvent>(string.Empty);
+                    foreach (DialogEvent d in Resources.FindObjectsOfTypeAll<DialogEvent>())
+                    {
+                        if (d == null || d.dialogLines == null) continue;
+                        if (arg.Length > 0)
+                        {
+                            // pictures <conversation>: every line of it, with its speaker and its pictures' effects.
+                            if (d.name.IndexOf(arg, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                            for (int li = 0; li < d.dialogLines.Count; li++)
+                            {
+                                DialogLine dli = d.dialogLines[li];
+                                if (dli == null) continue;
+                                var shown = new List<string>();
+                                foreach (PortraitPosition pp in places)
+                                {
+                                    PortraitData pdi = dli.GetPortraitData(pp);
+                                    if (pdi != null && pdi.portrait != null) shown.Add(pp + " " + pdi.portrait.name + " " + pdi.transitionType);
+                                }
+                                Log.Info("[pictures] " + d.name + " " + li + " " + dli.dialogLine.GetName(d.name, LanguageControl.CurrentLanguage) + ": " + string.Join(", ", shown.ToArray()));
+                            }
+                            continue;
+                        }
+                        var before = new Dictionary<PortraitPosition, string>();
+                        for (int i = 0; i < d.dialogLines.Count; i++)
+                        {
+                            DialogLine dl = d.dialogLines[i];
+                            if (dl == null) continue;
+                            lineCount++;
+                            if (dl.cg_img != null)
+                            {
+                                pictureLines++;
+                                Log.Info("[pictures] " + d.name + " line " + i + ": story picture " + dl.cg_img.name + (string.IsNullOrEmpty(dl.cg_color) ? string.Empty : " (" + dl.cg_color + ")"));
+                            }
+                            foreach (PortraitPosition pos in places)
+                            {
+                                PortraitData pd = dl.GetPortraitData(pos);
+                                string now = pd != null && pd.portrait != null ? pd.portrait.name : null;
+                                if (now != null) used[now] = used.TryGetValue(now, out int c) ? c + 1 : 1;
+                                if (pd != null && pd.portrait != null && pd.transitionType != PortraitTransitionType.None)
+                                {
+                                    string picEffect = pd.transitionType.ToString();
+                                    picEffects[picEffect] = picEffects.TryGetValue(picEffect, out int picCount) ? picCount + 1 : 1;
+                                    if (pd.transitionType == PortraitTransitionType.Shake) Log.Info("[pictures] " + d.name + " line " + i + ": " + pos + " " + pd.portrait.name + " shakes");
+                                }
+                                if (before.TryGetValue(pos, out string was) && was != null && now != null && was != now)
+                                {
+                                    changes++;
+                                    Log.Info("[pictures] " + d.name + " line " + i + ": " + pos + " " + was + " -> " + now);
+                                }
+                                before[pos] = now;
+                            }
+                        }
+                    }
+                    Log.Info("[pictures] " + lineCount + " lines, " + pictureLines + " with a story picture, " + changes + " portrait changes; portraits used: " + string.Join(", ", used.Select(kv => kv.Key + " x" + kv.Value).ToArray()));
+                    Log.Info("[pictures] effects: " + string.Join(", ", picEffects.Select(kv => kv.Key + " x" + kv.Value).ToArray()));
+                    CharacterCollectionManager picCollection = CharacterCollectionManager.Instance;
+                    if (picCollection != null)
+                    {
+                        Log.Info("[pictures] collection: " + picCollection.allCharacterPortraits.Count + " entries: " + string.Join(", ", picCollection.allCharacterPortraits.Where(x => x != null).Select(x => x.name + "=" + (x.portrait != null ? x.portrait.name : "-")).ToArray()));
+                    }
+                    else Log.Info("[pictures] collection: none");
+                    foreach (string picName in used.Keys)
+                    {
+                        CharacterPortrait picEntry = picCollection != null ? picCollection.allCharacterPortraits.FirstOrDefault(x => x != null && x.portrait != null && x.portrait.name == picName) : null;
+                        Log.Info("[pictures] " + picName + ": " + (picEntry == null ? "not in the portrait collection" : "named " + picEntry.detailsKey.GetName(picEntry.name, LanguageControl.CurrentLanguage)));
+                    }
+                    break;
+                }
                 case "events":
                     // events: every story event the game's own dev tool can run
                     foreach (RunEventType e in Resources.LoadAll<RunEventType>("")) Log.Info("[events] " + e.name);
