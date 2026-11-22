@@ -57,6 +57,20 @@ namespace HometownStoreAccess.Core
             return FaceKey(variant);
         }
 
+        /// <summary>
+        /// The text keys to say for one picture place on a line, in order: its new face (when
+        /// <paramref name="faces"/> is on) and that it shakes (when <paramref name="shakes"/> is on). The names are
+        /// the pictures before and now (null: none there; a picture fading out counts as none).
+        /// </summary>
+        public static List<string> NoteKeys(string before, string now, bool shaking, bool faces, bool shakes)
+        {
+            var keys = new List<string>();
+            string face = faces ? ChangeKey(before, now) : null;
+            if (face != null) keys.Add(face);
+            if (shakes && shaking && !string.IsNullOrEmpty(now)) keys.Add("face_shake");
+            return keys;
+        }
+
         /// <summary>A story picture appears, or another one replaces it: the text key, or null.</summary>
         public static string StoryPictureKey(string before, string now) =>
             !string.IsNullOrEmpty(now) && now != before ? "story_picture" : null;

@@ -252,9 +252,10 @@ A reward after a conversation is read as soon as it appears. If you press Enter 
 reads it, and the next Enter closes it.
 
 The pictures the game shows without words are said before the line: a character's new face (the
-college student smiling or surprised, the otaku after his makeover and back) and a story picture.
-When someone else is speaking, the face comes with the character's name. The demo has no story
-pictures, but later versions might. Turn this off with **Faces and story pictures in
+college student smiling or surprised, the otaku after his makeover and back), a picture that
+shakes (the game shakes it on a strong reaction) and a story picture. When someone else is
+speaking, they come with the character's name. The demo has no story pictures, but later versions
+might. Turn these off with **Faces and story pictures in conversations** and **Shaking pictures in
 conversations** in the settings.
 
 | Key | Action |
@@ -442,8 +443,8 @@ headings, so you hear the section name alone, and Down goes to its first setting
   who come in or leave together are said in one message), sales at the cashier, empty shelves,
   deliveries and machines, customer speech bubbles, every change of money (a sale, a purchase, a
   lottery ticket or a building you sell is said once, with the money you have now), read dialog
-  automatically, faces and story pictures in conversations, tutorial notes and key hints, Steam
-  achievements
+  automatically, faces and story pictures in conversations, shaking pictures in conversations,
+  tutorial notes and key hints, Steam achievements
 - **Sound cues:** sound cues on or off, menu sounds, the overall sound cue volume
 - **Volume of each sound cue:** a section of its own, so Page Down skips it
 - **Controls:** wrap around at the ends of lists, skip the logo intro and shorten the loading fade,

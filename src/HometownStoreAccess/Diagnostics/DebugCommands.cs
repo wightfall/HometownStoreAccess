@@ -691,6 +691,7 @@ namespace HometownStoreAccess.Diagnostics
             "achievements: the game's Steam achievements | achievement <name or number>: say its announcement (unlocks nothing)",
             "cues: every sound cue's length, peak and volume | cues play: also plays them one by one",
             "table <table> [entry] | export <locale> | missing <locale>: game text",
+            "pictures [conversation]: conversation pictures, faces and effects | pick <dropdown> <item>: click a dropdown item",
         };
     }
 }

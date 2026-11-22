@@ -58,6 +58,19 @@ namespace HometownStoreAccess.Tests
         }
 
         [Fact]
+        public void AShakingPictureIsSaidAfterItsFaceEachByItsOwnSetting()
+        {
+            // The otaku's makeover line: his new look, and the picture shakes.
+            Assert.Equal(new[] { "face_better_glasses", "face_shake" }, PortraitFaces.NoteKeys("Portrait_Otaku", "Portrait_Otaku_Better_ ThinGlasse", true, true, true));
+            Assert.Equal(new[] { "face_shake" }, PortraitFaces.NoteKeys("Portrait_Otaku", "Portrait_Otaku_Better_ ThinGlasse", true, false, true));
+            Assert.Equal(new[] { "face_better_glasses" }, PortraitFaces.NoteKeys("Portrait_Otaku", "Portrait_Otaku_Better_ ThinGlasse", true, true, false));
+            // A plain picture that shakes; one that does not; none there.
+            Assert.Equal(new[] { "face_shake" }, PortraitFaces.NoteKeys("Portrait_Kid", "Portrait_Kid", true, true, true));
+            Assert.Empty(PortraitFaces.NoteKeys("Portrait_Kid", "Portrait_Kid", false, true, true));
+            Assert.Empty(PortraitFaces.NoteKeys("Portrait_Kid", null, true, true, true));
+        }
+
+        [Fact]
         public void APortraitIsNamedByWhoSpeaksWithItMostOften()
         {
             var names = new PortraitNames();
@@ -76,7 +89,7 @@ namespace HometownStoreAccess.Tests
         [Fact]
         public void EveryTextItCanSayExistsInEveryLanguage()
         {
-            string[] keys = { "face_smile", "face_surprised", "face_calm", "face_better_glasses", "face_usual", "face_changed", "story_picture", "face_of", "set_pictures" };
+            string[] keys = { "face_smile", "face_surprised", "face_calm", "face_better_glasses", "face_usual", "face_changed", "story_picture", "face_of", "set_pictures", "face_shake", "set_shaking" };
             foreach (string lang in Loc.SupportedLanguages)
             {
                 Loc.SetLanguage(lang);

@@ -129,28 +129,32 @@ namespace HometownStoreAccess.Contexts
                 PortraitFaces.Split(lit.portrait.name, out string litCharacter, out _);
                 Names.Learn(litCharacter, speaker);
             }
+            bool faces = Plugin.Settings.AnnouncePictures.Value;
+            bool shakes = Plugin.Settings.AnnounceShaking.Value;
             var notes = new List<string>();
             foreach (PortraitPosition place in Places)
             {
                 PortraitData data = line.GetPortraitData(place);
                 // A picture fading out is leaving: no face to say, and nothing there afterwards.
                 string now = data != null && data.portrait != null && data.transitionType != PortraitTransitionType.FadeOut ? data.portrait.name : null;
+                // Followed even while the settings are off, so turning them on says only what changes from then on.
                 _faces.TryGetValue(place, out string before);
                 _faces[place] = now;
-                string key = PortraitFaces.ChangeKey(before, now);
-                if (key == null) continue;
+                List<string> keys = PortraitFaces.NoteKeys(before, now, data != null && data.transitionType == PortraitTransitionType.Shake, faces, shakes);
+                if (keys.Count == 0) continue;
+                var texts = new List<string>();
+                foreach (string k in keys) texts.Add(Loc.Get(k));
+                string what = TextCleaner.Join(", ", texts.ToArray());
                 // Whose face, when someone else is speaking (the player, say, while the picture is dimmed).
                 PortraitFaces.Split(now, out string character, out _);
                 string name = CollectionName(data.portrait) ?? Names.NameOf(character) ?? CustomerName(character);
-                notes.Add(!string.IsNullOrEmpty(name) && !string.Equals(name, speaker, System.StringComparison.OrdinalIgnoreCase) ? Loc.Get("face_of", name, Loc.Get(key)) : Loc.Get(key));
+                notes.Add(!string.IsNullOrEmpty(name) && !string.Equals(name, speaker, System.StringComparison.OrdinalIgnoreCase) ? Loc.Get("face_of", name, what) : what);
             }
             string picture = line.cg_img != null ? line.cg_img.name : null;
             string pictureKey = PortraitFaces.StoryPictureKey(_storyPicture, picture);
             _storyPicture = picture;
-            if (pictureKey != null) notes.Insert(0, Loc.Get(pictureKey));
-            // Followed even while the setting is off, so turning it on says only what changes from then on.
-            if (notes.Count == 0 || !Plugin.Settings.AnnouncePictures.Value) return null;
-            return TextCleaner.Join(". ", notes.ToArray());
+            if (pictureKey != null && faces) notes.Insert(0, Loc.Get(pictureKey));
+            return notes.Count == 0 ? null : TextCleaner.Join(". ", notes.ToArray());
         }
 
         /// <summary>The character a portrait shows, by the game's portrait collection (its entries have no pictures in the demo).</summary>

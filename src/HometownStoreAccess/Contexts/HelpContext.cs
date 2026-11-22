@@ -171,6 +171,7 @@ namespace HometownStoreAccess.Contexts
             items.Add(Toggle(s.AnnounceCashChanges, "set_cash", ann));
             items.Add(Toggle(s.ReadDialogAutomatically, "set_dialog", ann));
             items.Add(Toggle(s.AnnouncePictures, "set_pictures", ann));
+            items.Add(Toggle(s.AnnounceShaking, "set_shaking", ann));
             items.Add(Toggle(s.AnnounceTutorial, "set_tutorial", ann));
             items.Add(Toggle(s.AnnounceAchievements, "set_achievements", ann));
 
