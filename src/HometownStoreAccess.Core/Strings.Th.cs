@@ -540,6 +540,7 @@ namespace HometownStoreAccess.Core
             ["inst_game_running"] = "Hometown Store เปิดอยู่ ปิดเกมก่อนแล้วลองใหม่",
             ["inst_no_payload"] = "ตัวติดตั้งไม่มีไฟล์ม็อด ดาวน์โหลดตัวติดตั้งใหม่จากหน้ารีลีส",
             ["inst_failed"] = "เกิดข้อผิดพลาด ม็อดอาจติดตั้งไม่สมบูรณ์ ลองใหม่อีกครั้ง หรือติดตั้งเองจากไฟล์ zip",
+            ["inst_uninstall_locked"] = "ลบไฟล์บางไฟล์ไม่ได้ เพราะโปรแกรมอื่นเปิดไฟล์นั้นอยู่ ปิดโปรแกรมนั้นแล้วลบม็อดอีกครั้ง",
             ["inst_done_install_bepinex"] = "เสร็จแล้ว ติดตั้ง BepInEx และม็อดเรียบร้อย เปิด Hometown Store จาก Steam ได้เลย การเปิดครั้งแรกจะช้ากว่าปกติเล็กน้อย",
             ["inst_done_install"] = "เสร็จแล้ว ติดตั้งม็อดเรียบร้อย เปิด Hometown Store จาก Steam ได้เลย",
             ["inst_done_uninstall"] = "ลบม็อดแล้ว",

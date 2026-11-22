@@ -186,6 +186,8 @@ namespace HometownStoreAccess.Installer
             bool otherPlugins = OtherPlugins(gameDir).Any();
             bool removingBepInEx = removeBepInEx && !otherPlugins;
             bool keptTranslations = false;
+            // A file another program has open (a virus scanner, an editor) stays; the rest still goes.
+            bool locked = false;
             if (Directory.Exists(pluginDir))
             {
                 foreach (string file in Directory.GetFiles(pluginDir, "*", SearchOption.AllDirectories))
@@ -196,8 +198,8 @@ namespace HometownStoreAccess.Installer
                         keptTranslations = true;
                         continue;
                     }
-                    File.Delete(file);
-                    result.FilesRemoved++;
+                    if (TryDelete(file)) result.FilesRemoved++;
+                    else locked = true;
                 }
                 RemoveEmptyFolders(pluginDir);
             }
@@ -208,25 +210,30 @@ namespace HometownStoreAccess.Installer
             }
             else if (removingBepInEx)
             {
+                bool bepinexLocked = false;
                 foreach (string f in BepInExRootFiles)
                 {
                     string p = Path.Combine(gameDir, f);
-                    if (File.Exists(p))
-                    {
-                        File.Delete(p);
-                        result.FilesRemoved++;
-                    }
+                    if (!File.Exists(p)) continue;
+                    if (TryDelete(p)) result.FilesRemoved++;
+                    else bepinexLocked = true;
                 }
                 string bep = Path.Combine(gameDir, "BepInEx");
                 if (Directory.Exists(bep))
                 {
-                    result.FilesRemoved += Directory.GetFiles(bep, "*", SearchOption.AllDirectories).Length;
-                    Directory.Delete(bep, recursive: true);
+                    foreach (string f in Directory.GetFiles(bep, "*", SearchOption.AllDirectories))
+                    {
+                        if (TryDelete(f)) result.FilesRemoved++;
+                        else bepinexLocked = true;
+                    }
+                    RemoveEmptyFolders(bep);
                 }
-                result.Messages.Add("bepinex_removed");
+                if (bepinexLocked) locked = true;
+                else result.Messages.Add("bepinex_removed");
             }
+            if (locked) result.Messages.Add("files_locked");
             bool modGone = !File.Exists(Path.Combine(pluginDir, "HometownStoreAccess.dll"));
-            result.Success = modGone && (keptTranslations || !Directory.Exists(pluginDir));
+            result.Success = !locked && modGone && (keptTranslations || !Directory.Exists(pluginDir));
             result.Messages.Add(result.Success ? "uninstalled" : "uninstall_incomplete");
             return result;
         }
@@ -248,6 +255,20 @@ namespace HometownStoreAccess.Installer
             string name = Path.GetFileName(relInPlugin);
             if (name.StartsWith("template.", StringComparison.OrdinalIgnoreCase)) return false;
             return name.EndsWith(".mod.txt", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".game.txt", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>Deletes a file; false when another program has it open.</summary>
+        private static bool TryDelete(string file)
+        {
+            try
+            {
+                File.Delete(file);
+                return true;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
         }
 
         private static void RemoveEmptyFolders(string dir)

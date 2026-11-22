@@ -583,6 +583,7 @@ namespace HometownStoreAccess.Core
             ["inst_game_running"] = "Hometown Store is running. Close the game, then try again.",
             ["inst_no_payload"] = "The installer is missing its mod files. Download the installer again from the release page.",
             ["inst_failed"] = "Something went wrong; the mod may not be installed correctly. Try again, or install manually from the zip file.",
+            ["inst_uninstall_locked"] = "Some files could not be removed because another program has them open. Close that program and remove the mod again.",
             ["inst_done_install_bepinex"] = "Done. BepInEx and the mod are installed. Start Hometown Store from Steam; the first start takes a little longer.",
             ["inst_done_install"] = "Done. The mod is installed. Start Hometown Store from Steam.",
             ["inst_done_uninstall"] = "The mod was removed.",

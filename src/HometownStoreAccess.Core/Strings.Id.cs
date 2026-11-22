@@ -540,6 +540,7 @@ namespace HometownStoreAccess.Core
             ["inst_game_running"] = "Hometown Store sedang berjalan. Tutup game, lalu coba lagi.",
             ["inst_no_payload"] = "Pemasang tidak berisi file mod. Unduh lagi pemasang dari halaman rilis.",
             ["inst_failed"] = "Terjadi masalah; mod mungkin tidak terpasang dengan benar. Coba lagi, atau pasang manual dari file zip.",
+            ["inst_uninstall_locked"] = "Beberapa file tidak bisa dihapus karena sedang dibuka program lain. Tutup program itu, lalu hapus mod lagi.",
             ["inst_done_install_bepinex"] = "Selesai. BepInEx dan mod terpasang. Jalankan Hometown Store dari Steam; awal pertama sedikit lebih lama.",
             ["inst_done_install"] = "Selesai. Mod terpasang. Jalankan Hometown Store dari Steam.",
             ["inst_done_uninstall"] = "Mod sudah dihapus.",

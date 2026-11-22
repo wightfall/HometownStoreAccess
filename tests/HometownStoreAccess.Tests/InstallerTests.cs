@@ -261,6 +261,31 @@ namespace HometownStoreAccess.Tests
         }
 
         [Fact]
+        public void UninstallRemovesWhatItCanWhenAFileIsLocked()
+        {
+            using (var temp = new TempDir())
+            {
+                string game = FakeGame.Create(temp.Path);
+                ModInstaller.Install(game, ReleaseZip("1.0.0"));
+                string plugin = Path.Combine(game, "BepInEx", "plugins", "HometownStoreAccess");
+                string locked = Path.Combine(plugin, "prism.dll");
+                InstallResult r;
+                // Another program has one file open.
+                using (new FileStream(locked, FileMode.Open, FileAccess.Read, FileShare.None))
+                {
+                    r = ModInstaller.Uninstall(game, removeBepInEx: true);
+                }
+                Assert.False(r.Success);
+                Assert.Contains("files_locked", r.Messages);
+                Assert.DoesNotContain("bepinex_removed", r.Messages);
+                // Everything else went.
+                Assert.False(File.Exists(Path.Combine(plugin, "HometownStoreAccess.dll")));
+                Assert.False(File.Exists(Path.Combine(game, "winhttp.dll")));
+                Assert.True(File.Exists(locked));
+            }
+        }
+
+        [Fact]
         public void UninstallCanRemoveBepInEx()
         {
             using (var temp = new TempDir())

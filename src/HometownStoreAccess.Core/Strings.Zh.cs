@@ -540,6 +540,7 @@ namespace HometownStoreAccess.Core
             ["inst_game_running"] = "Hometown Store 正在執行。請關閉遊戲再試。",
             ["inst_no_payload"] = "安裝程式內沒有模組檔案。請從發佈頁面重新下載安裝程式。",
             ["inst_failed"] = "出了問題，模組可能沒有正確安裝。請再試一次，或用 zip 檔手動安裝。",
+            ["inst_uninstall_locked"] = "有些檔案正被其他程式開啟，所以無法刪除。請關閉該程式，再移除一次模組。",
             ["inst_done_install_bepinex"] = "完成。已安裝 BepInEx 和模組。請從 Steam 啟動 Hometown Store，第一次啟動會比較慢。",
             ["inst_done_install"] = "完成。已安裝模組。請從 Steam 啟動 Hometown Store。",
             ["inst_done_uninstall"] = "已移除模組。",

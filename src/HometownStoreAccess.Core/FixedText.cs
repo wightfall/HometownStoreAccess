@@ -111,7 +111,9 @@ namespace HometownStoreAccess.Core
         private static readonly Regex Baht = new Regex(@"^(-?\d{1,3}(?:,\d{3})+|-?\d+) baht$", RegexOptions.IgnoreCase);
         private static readonly Regex InnerBaht = new Regex(@"(?<![\w.,])(-?\d{1,3}(?:,\d{3})+|-?\d+) baht\b", RegexOptions.IgnoreCase);
 
-        private static int Amount(string digits) => int.Parse(digits.Replace(",", string.Empty), CultureInfo.InvariantCulture);
+        // A number too long for an amount (typed into a save name, say) stays as it is written.
+        private static object Amount(string digits) =>
+            long.TryParse(digits.Replace(",", string.Empty), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out long n) ? (object)n : digits;
 
         // "+18฿", "-11฿", "236 ฿": the baht sign, which some voices skip or spell out.
         private static readonly Regex BahtSign = new Regex(@"([+-]?)(\d{1,3}(?:,\d{3})+|\d+) ?\u0E3F");

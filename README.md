@@ -54,7 +54,9 @@ shows a window with what's new, one line per row in a read-only text box, and as
 
 **Uninstall:** press **Uninstall**. Your settings and your own translation files are kept for a later
 reinstall. Tick **When uninstalling, also remove BepInEx** to remove BepInEx and everything in it as
-well. The installer only offers this when no other mods need BepInEx.
+well. The installer only offers this when no other mods need BepInEx. If another program has one of
+the files open (a virus scanner, or an editor with a log open), everything else is still removed and
+the installer says so: close that program and press Uninstall again.
 
 Command line, for scripts:
 
@@ -439,7 +441,8 @@ headings, so you hear the section name alone, and Down goes to its first setting
 - **Volume of each sound cue:** a section of its own, so Page Down skips it
 - **Controls:** wrap around at the ends of lists, skip the logo intro and shorten the loading fade,
   camera follows the shop floor cursor, controller support, controller rumble
-- **Reset all settings to defaults:** press Enter twice
+- **Reset all settings to defaults:** press Enter twice. A game language chosen in the mod goes back
+  to the game's own choice as well.
 
 The settings are stored in `BepInEx\config\com.wightfall.hometownstoreaccess.cfg` in the game
 folder, which you can also edit with a text editor while the game is closed.
@@ -449,7 +452,9 @@ folder, which you can also edit with a text editor while the game is closed.
 The mod speaks the game's language. The game itself offers English and Thai in its options. The mod
 makes all the game's languages available: English, Thai, Japanese, Indonesian and Traditional
 Chinese. Choose them in the game language setting (F5, or the Options screen). The mod's own messages
-are translated into the same five languages.
+are translated into the same five languages. With the mouse, the game's own language list (English and
+Thai only) works too: what you pick there replaces a language chosen in the mod. A language chosen in
+the mod also becomes the game's own choice when it is English or Thai.
 
 The game's Japanese, Indonesian and Chinese text is mostly untranslated in the demo. The mod ships
 complete translations of the game text for these languages (story, items, places, customers and
@@ -560,6 +565,7 @@ done, set `TestHooks = false` again and delete `BepInEx\hsa_dumps` and any `BepI
 | `achievement <name or number>` | Says that achievement's announcement, to hear how it is read. It unlocks nothing. |
 | `cues`, `cues play` | Every sound cue: its length, its loudest point and its volume setting. `cues play` also says each one's name and plays it. |
 | `click <path>` | Presses the button at that path in the scene (the paths are in a dump). |
+| `pick <dropdown> <item>` | Opens the shown dropdown with that object name (as in a dump, for example `Language`) and clicks its item (counted from 0), as the mouse does. |
 | `dump [name]` | Writes the screen's interface tree to `BepInEx\hsa_dumps\ui_<name>_<time>.txt`. |
 | `world` | Writes the shop grid, the buildings and the customers to `BepInEx\hsa_dumps\world_<time>.txt`. |
 | `perf [seconds]` | Measures for 5 seconds (or as many as given) how long each part of the mod takes per frame, and logs `[perf]` lines. |

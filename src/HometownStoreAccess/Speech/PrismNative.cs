@@ -6,7 +6,7 @@ namespace HometownStoreAccess.Speech
 {
     /// <summary>
     /// P/Invoke surface for Prism (https://github.com/ethindp/prism), the screen reader and TTS
-    /// abstraction library. Signatures follow prism.h from release 0.18.3.
+    /// abstraction library. Signatures follow prism.h from release 0.18.4 (for everything used here the same as in 0.18.3).
     /// All calls are made from Unity's main thread: Prism backend instances are not thread-safe.
     /// </summary>
     internal static class PrismNative

@@ -298,6 +298,14 @@ namespace HometownStoreAccess
 
             Locale en = LocalizationSettings.AvailableLocales.Locales.FirstOrDefault(l => l.Identifier.Code.StartsWith("en"));
             var entries = new List<KeyValuePair<string, string>>();
+            // A translation file based on English may be in the English tables already (the language can
+            // change before this runs): what it replaced is taken from what the mod kept, and what it added
+            // is left out.
+            var replaced = new Dictionary<(StringTable, string), (string original, bool added)>();
+            foreach (var a in Applied)
+            {
+                if (a.table != null && !replaced.ContainsKey((a.table, a.key))) replaced.Add((a.table, a.key), (a.original, a.added));
+            }
             foreach (LocalizationTable t in Enum.GetValues(typeof(LocalizationTable)))
             {
                 string tableName = t.GetTableName();
@@ -305,7 +313,14 @@ namespace HometownStoreAccess
                 if (table == null) continue;
                 foreach (StringTableEntry e in table.Values.OrderBy(v => v.Key, StringComparer.Ordinal))
                 {
-                    if (e != null && !string.IsNullOrEmpty(e.Key)) entries.Add(new KeyValuePair<string, string>(tableName + "/" + e.Key, e.Value ?? string.Empty));
+                    if (e == null || string.IsNullOrEmpty(e.Key)) continue;
+                    string value = e.Value ?? string.Empty;
+                    if (replaced.TryGetValue((table, e.Key), out var r))
+                    {
+                        if (r.added) continue;
+                        value = r.original ?? string.Empty;
+                    }
+                    entries.Add(new KeyValuePair<string, string>(tableName + "/" + e.Key, value));
                 }
             }
             if (entries.Count > 0) WriteIfChanged(Path.Combine(Folder, "template.game.txt"), LangFile.BuildTemplate(TemplateHeader("game"), entries));
@@ -607,7 +622,19 @@ namespace HometownStoreAccess
                     + " (ready " + Time.realtimeSinceStartup.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s after the start, frame " + Time.frameCount + ")");
             }
             ApplyOverride();
-            if (!Ready && OverrideSettled())
+            // A language the override has just switched to is in place once the game's localization has
+            // loaded it (it loads again after every switch); before that, its labels still show the previous
+            // language, and the first screen would be read in that one.
+            bool loaded;
+            try
+            {
+                loaded = LocalizationSettings.InitializationOperation.IsDone;
+            }
+            catch
+            {
+                loaded = false;
+            }
+            if (!Ready && loaded && Time.unscaledTime >= _switchPendingUntil && OverrideSettled())
             {
                 Ready = true;
                 SyncModLanguage();
@@ -659,6 +686,11 @@ namespace HometownStoreAccess
         // Set when the mod itself changes the locale (startup override): such changes are not announced.
         private static bool _quietChange;
 
+        // After the override switched the locale: the game's localization reports the new one at once, but
+        // announces the change (and its labels start loading the new text) only later in the frame. The
+        // language is in place once that has happened (at the latest after 2 seconds).
+        private static float _switchPendingUntil = -1f;
+
         private static bool OverrideSettled()
         {
             string wanted = Plugin.Settings.GameLocale.Value;
@@ -672,8 +704,19 @@ namespace HometownStoreAccess
         {
             IList<Locale> locales = Locales;
             if (locales != null && locales.Any(l => string.Equals(l.Identifier.Code, wanted, StringComparison.OrdinalIgnoreCase))) return wanted;
-            return LanguageFiles.HasGameText(wanted.ToLowerInvariant()) ? LanguageFiles.BaseLocaleOf(wanted.ToLowerInvariant()) : "en";
+            if (!LanguageFiles.HasGameText(wanted.ToLowerInvariant())) return "en";
+            string baseCode = LanguageFiles.BaseLocaleOf(wanted.ToLowerInvariant());
+            // A base the game does not have (a typo in @base): English, as for a file without one. Otherwise
+            // the language would never be in place, and the mod would wait for it at every start.
+            if (locales != null && !locales.Any(l => l.Identifier.Code.StartsWith(baseCode, StringComparison.OrdinalIgnoreCase)))
+            {
+                if (BadBases.Add(wanted + "/" + baseCode)) Log.Warn("Translation " + wanted + ": the game has no language \"" + baseCode + "\" (@base); English is used.");
+                return "en";
+            }
+            return baseCode;
         }
+
+        private static readonly HashSet<string> BadBases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>Re-applies the player's mod-chosen language once the game's own startup selection is done.</summary>
         private static void ApplyOverride()
@@ -683,11 +726,14 @@ namespace HometownStoreAccess
             LanguageControl lc = LanguageControl.Instance;
             if (lc != null && lc.active) return;
             string target = TargetLocaleCode(wanted);
+            // The game's own setting follows, so its Options dropdown shows this language and it saves it.
+            SyncLanguageControl(target);
             Locale current = Selected;
             if (current != null && current.Identifier.Code.StartsWith(target, StringComparison.OrdinalIgnoreCase)) return;
             Locale l = Locales?.FirstOrDefault(x => x.Identifier.Code.StartsWith(target, StringComparison.OrdinalIgnoreCase));
             if (l == null) return;
             _quietChange = true;
+            _switchPendingUntil = Time.unscaledTime + 2f;
             LocalizationSettings.SelectedLocale = l;
         }
 
@@ -703,15 +749,7 @@ namespace HometownStoreAccess
             Plugin.Settings.GameLocale.Value = code;
             string target = TargetLocaleCode(code);
             Locale l = Locales?.FirstOrDefault(x => x.Identifier.Code.StartsWith(target, StringComparison.OrdinalIgnoreCase));
-            try
-            {
-                if (target.StartsWith("th")) LanguageControl.CurrentLanguage = Language.Thai;
-                else if (target.StartsWith("en")) LanguageControl.CurrentLanguage = Language.English;
-            }
-            catch (Exception e)
-            {
-                Log.Debug("Could not sync LanguageControl: " + e.Message);
-            }
+            SyncLanguageControl(target);
             // The game finishes the change a frame or more later; its event must not say it again.
             _selectedAnnouncedUntil = Time.unscaledTime + 3f;
             try
@@ -750,14 +788,90 @@ namespace HometownStoreAccess
             return null;
         }
 
+        /// <summary>
+        /// The screen's localized labels are still loading their text for the current language: right after a
+        /// language switch they keep the previous language's text until then (asking them to redraw does
+        /// nothing before that).
+        /// </summary>
+        public static bool LabelsLoading()
+        {
+            try
+            {
+                foreach (LocalizeStringEvent lse in UnityEngine.Object.FindObjectsByType<LocalizeStringEvent>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                {
+                    if (lse == null || !lse.isActiveAndEnabled || lse.StringReference == null) continue;
+                    var handle = lse.StringReference.CurrentLoadingOperationHandle;
+                    if (handle.IsValid() && !handle.IsDone) return true;
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Debug("Checking the labels failed: " + e.Message);
+            }
+            return false;
+        }
+
         /// <summary>Called when the player uses the game's own dropdown: their choice wins over the mod's.</summary>
         public static void ClearOverride()
         {
             if (!string.IsNullOrEmpty(Plugin.Settings.GameLocale.Value)) Plugin.Settings.GameLocale.Value = string.Empty;
         }
 
+        /// <summary>A language is chosen through the mod (it wins over the game's own setting).</summary>
+        public static bool Overridden => !string.IsNullOrEmpty(Plugin.Settings.GameLocale.Value);
+
+        /// <summary>The game shows <paramref name="language"/> (one of the two its own dropdown offers).</summary>
+        public static bool Shows(Language language)
+        {
+            Locale cur = Selected;
+            return cur != null && cur.Identifier.Code.StartsWith(language == Language.Thai ? "th" : "en", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// The game's own language setting (what its Options dropdown shows, and the choice it saves) follows
+        /// a language chosen through the mod when the game has it there: English or Thai.
+        /// </summary>
+        private static void SyncLanguageControl(string target)
+        {
+            try
+            {
+                Language? l = target.StartsWith("th", StringComparison.OrdinalIgnoreCase) ? Language.Thai
+                    : target.StartsWith("en", StringComparison.OrdinalIgnoreCase) ? Language.English : (Language?)null;
+                if (l.HasValue && LanguageControl.CurrentLanguage != l.Value) LanguageControl.CurrentLanguage = l.Value;
+            }
+            catch (Exception e)
+            {
+                Log.Debug("Could not sync LanguageControl: " + e.Message);
+            }
+        }
+
+        /// <summary>
+        /// After "Reset all settings": no language is chosen through the mod any more, so the game shows its
+        /// own language setting again, without a translation file's text left in its tables.
+        /// </summary>
+        public static void BackToGameLanguage()
+        {
+            LanguageFiles.MarkGameTextDirty();
+            try
+            {
+                Language own = LanguageControl.CurrentLanguage;
+                if (Shows(own)) return;
+                Locale l = Locales?.FirstOrDefault(x => x.Identifier.Code.StartsWith(own == Language.Thai ? "th" : "en", StringComparison.OrdinalIgnoreCase));
+                if (l == null) return;
+                // "Settings reset" says it; the language event stays quiet.
+                _quietChange = true;
+                LocalizationSettings.SelectedLocale = l;
+            }
+            catch (Exception e)
+            {
+                Log.Debug("Could not show the game's own language again: " + e.Message);
+            }
+        }
+
         private static void OnLocaleChanged(Locale locale)
         {
+            Log.Debug("Game language changed to " + locale?.Identifier.Code + " (frame " + Time.frameCount + ", " + Time.realtimeSinceStartup.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " s)");
+            _switchPendingUntil = -1f;
             _fallbackPending = true;
             Game.GameText.ForgetTexts();
             SyncModLanguage();

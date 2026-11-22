@@ -30,7 +30,9 @@ namespace HometownStoreAccess.Installer
             bool quiet = args.Any(a => a.Equals("/quiet", StringComparison.OrdinalIgnoreCase));
             bool launch = args.Any(a => a.Equals("/launch", StringComparison.OrdinalIgnoreCase));
             bool gameLanguage = args.Any(a => a.Equals("/gamelang", StringComparison.OrdinalIgnoreCase));
-            string folder = args.FirstOrDefault(a => !a.StartsWith("/", StringComparison.Ordinal))?.Trim().Trim('"') ?? DetectGameFolder();
+            string folder = args.FirstOrDefault(a => !a.StartsWith("/", StringComparison.Ordinal))?.Trim().Trim('"');
+            // An empty folder (an update started with the folder box empty) means: find the game.
+            if (string.IsNullOrWhiteSpace(folder)) folder = DetectGameFolder();
 
             if (install || uninstall)
             {

@@ -168,9 +168,19 @@ namespace HometownStoreAccess.Patches
                     __result = translated;
                     return;
                 }
-                if (GameTextFallbackPatch.IsEnglishSelected()) return;
-                string english = GameTextFallbackPatch.EnglishText(tableName, key);
-                if (english != null) __result = english;
+                if (!GameTextFallbackPatch.IsEnglishSelected())
+                {
+                    string english = GameTextFallbackPatch.EnglishText(tableName, key);
+                    if (english != null)
+                    {
+                        __result = english;
+                        return;
+                    }
+                }
+                // A table this language lacks altogether: answer as for a missing entry. The game's GetName and
+                // GetDescription then try their next table (they only skip "Key '...'"), and the text cleanup
+                // reads the key instead of "Table '...' not loaded".
+                if (__result != null && __result.StartsWith("Table '", StringComparison.Ordinal)) __result = "Key '" + key + "' not found in table '" + tableEnum + "'";
             }
             catch (Exception e)
             {

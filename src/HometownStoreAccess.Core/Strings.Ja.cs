@@ -540,6 +540,7 @@ namespace HometownStoreAccess.Core
             ["inst_game_running"] = "Hometown Store が起動中です。ゲームを終了してからもう一度試してください。",
             ["inst_no_payload"] = "インストーラーに MOD のファイルが含まれていません。リリースページからもう一度ダウンロードしてください。",
             ["inst_failed"] = "問題が起きました。MOD が正しくインストールされていない可能性があります。もう一度試すか、zip ファイルから手動でインストールしてください。",
+            ["inst_uninstall_locked"] = "ほかのプログラムが開いているため、一部のファイルを削除できませんでした。そのプログラムを閉じてから、もう一度 MOD を削除してください。",
             ["inst_done_install_bepinex"] = "完了しました。BepInEx と MOD をインストールしました。Steam から Hometown Store を起動してください。初回の起動は少し時間がかかります。",
             ["inst_done_install"] = "完了しました。MOD をインストールしました。Steam から Hometown Store を起動してください。",
             ["inst_done_uninstall"] = "MOD を削除しました。",

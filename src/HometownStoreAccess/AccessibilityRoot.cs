@@ -92,6 +92,7 @@ namespace HometownStoreAccess
             SceneLoadedAt = Time.unscaledTime;
             SceneCache.Clear();
             Contexts.Clear();
+            global::HometownStoreAccess.Contexts.Overlay.Reset();
             EventAnnouncer.Reset();
             FloorCursor.Reset();
             FloorContext.ToolbarOpen = false;
@@ -165,7 +166,8 @@ namespace HometownStoreAccess
                 // the first screen also waits for the game's own text (its labels are English until the
                 // game's localization has started), at most until 15 seconds after the start.
                 if (!_welcomed) return;
-                if (!_firstScreenLogged && !(GameLanguage.Ready && (!LanguageFiles.GameTextPending || GameLanguage.SelectedIsComplete)) && Time.realtimeSinceStartup < 15f) return;
+                // (Also until the screen's labels have their text in the language, after a switch at the start.)
+                if (!_firstScreenLogged && (!(GameLanguage.Ready && (!LanguageFiles.GameTextPending || GameLanguage.SelectedIsComplete)) || GameLanguage.LabelsLoading()) && Time.realtimeSinceStartup < 15f) return;
                 if (!_firstScreenLogged && !_labelsRedrawn && GameLanguage.StartupWorkDeferred)
                 {
                     // The English fallback and the templates wait a moment, but the game's own tables and
@@ -177,7 +179,7 @@ namespace HometownStoreAccess
                 if (!_firstScreenLogged && Contexts.Current != null)
                 {
                     _firstScreenLogged = true;
-                    Log.Info("First screen (" + Contexts.Current.Id + ") " + Time.realtimeSinceStartup.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s after the game started");
+                    Log.Info("First screen (" + Contexts.Current.Id + ") " + Time.realtimeSinceStartup.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s after the game started, frame " + Time.frameCount + ", game language " + GameLanguage.Selected?.Identifier.Code);
                 }
             }
             catch (Exception e)

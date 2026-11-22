@@ -421,7 +421,7 @@ namespace HometownStoreAccess.Installer
                 if (!r.Success) return Loc.Get("inst_failed");
                 return r.InstalledBepInEx ? Loc.Get("inst_done_install_bepinex") : Loc.Get("inst_done_install");
             }
-            if (!r.Success) return Loc.Get("inst_failed");
+            if (!r.Success) return Loc.Get(r.Messages.Contains("files_locked") ? "inst_uninstall_locked" : "inst_failed");
             string msg = Loc.Get("inst_done_uninstall");
             if (r.Messages.Contains("bepinex_kept_other_plugins")) msg += " " + Loc.Get("inst_bepinex_kept");
             else if (r.Messages.Contains("bepinex_removed")) msg += " " + Loc.Get("inst_bepinex_removed");
