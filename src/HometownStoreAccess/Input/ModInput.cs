@@ -10,10 +10,22 @@ namespace HometownStoreAccess.Input
     internal static class ModInput
     {
         private static readonly HashSet<KeyCode> _injectedDown = new HashSet<KeyCode>();
-        private static readonly HashSet<KeyCode> _pendingInjected = new HashSet<KeyCode>();
-        private static bool _injShift, _injCtrl, _injAlt;
-        private static bool _pendShift, _pendCtrl, _pendAlt;
-        private static bool _pendNoFallback, _injNoFallback;
+        private static bool _injShift, _injCtrl, _injAlt, _injNoFallback;
+
+        /// <summary>A key waiting to be injected, with its own modifiers.</summary>
+        private struct PendingKey
+        {
+            public KeyCode Key;
+            public bool Shift, Ctrl, Alt, NoFallback;
+
+            public bool SameModifiers(PendingKey o) => Shift == o.Shift && Ctrl == o.Ctrl && Alt == o.Alt && NoFallback == o.NoFallback;
+        }
+
+        // In the order injected. A frame takes the keys at the front that have the first one's modifiers; a
+        // key with other modifiers (or one already taken) waits for the next frame. So two controller actions
+        // in one frame stay two presses with their own modifiers: a held X's Ctrl+Enter and A's Enter are not
+        // one Ctrl+Enter, and X's Shift+Enter does not turn a D-pad Right into Shift+Right.
+        private static readonly List<PendingKey> _pending = new List<PendingKey>();
 
         /// <summary>True while an input field has keyboard focus: mod hotkeys must stay quiet.</summary>
         public static bool TextEntryActive { get; set; }
@@ -22,11 +34,7 @@ namespace HometownStoreAccess.Input
         /// held a little too long, X must not do what A does).</param>
         public static void Inject(KeyCode key, bool shift = false, bool ctrl = false, bool alt = false, bool noFallback = false)
         {
-            _pendNoFallback |= noFallback;
-            _pendingInjected.Add(key);
-            _pendShift |= shift;
-            _pendCtrl |= ctrl;
-            _pendAlt |= alt;
+            _pending.Add(new PendingKey { Key = key, Shift = shift, Ctrl = ctrl, Alt = alt, NoFallback = noFallback });
         }
 
         // Keyboard key codes (below the mouse and joystick codes), for telling keyboard use from controller use.
@@ -65,12 +73,17 @@ namespace HometownStoreAccess.Input
             // Back to keyboard instructions as soon as the keyboard is used.
             if (Core.Loc.PadMode && KeyboardKeyDown()) Core.Loc.PadMode = false;
             _injectedDown.Clear();
-            foreach (KeyCode k in _pendingInjected) _injectedDown.Add(k);
-            _pendingInjected.Clear();
-            _injShift = _pendShift; _injCtrl = _pendCtrl; _injAlt = _pendAlt;
-            _pendShift = _pendCtrl = _pendAlt = false;
-            _injNoFallback = _pendNoFallback;
-            _pendNoFallback = false;
+            _injShift = _injCtrl = _injAlt = _injNoFallback = false;
+            if (_pending.Count == 0) return;
+            PendingKey first = _pending[0];
+            int taken = 0;
+            while (taken < _pending.Count && _pending[taken].SameModifiers(first) && _injectedDown.Add(_pending[taken].Key)) taken++;
+            _pending.RemoveRange(0, taken);
+            _injShift = first.Shift;
+            _injCtrl = first.Ctrl;
+            _injAlt = first.Alt;
+            // A real Enter in the same frame (the keyboard) keeps its fallback.
+            _injNoFallback = first.NoFallback && !UnityEngine.Input.GetKeyDown(KeyCode.Return) && !UnityEngine.Input.GetKeyDown(KeyCode.KeypadEnter);
         }
 
         public static bool Down(KeyCode key)

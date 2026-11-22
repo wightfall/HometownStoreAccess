@@ -101,7 +101,8 @@ namespace HometownStoreAccess.Contexts
                 _lastLine = p._shownLineIndex;
                 string line = p._shownDialog != null ? CurrentLineText() : null;
                 if (!string.IsNullOrEmpty(line)) SpeechService.Recall.AddLine(line);
-                if (!string.IsNullOrEmpty(line) && line != _announcedLine && Plugin.Settings.ReadDialogAutomatically.Value)
+                // Every new line, also one that reads like the last ("..."): the line number tells them apart.
+                if (!string.IsNullOrEmpty(line) && Plugin.Settings.ReadDialogAutomatically.Value)
                 {
                     _announcedLine = line;
                     SpeechService.Say(line, true, MsgCategory.Dialog);
@@ -406,11 +407,21 @@ namespace HometownStoreAccess.Contexts
             return false;
         }
 
-        /// <summary>Finishes the pop-in animation if needed and closes this reward (the next one, if any, follows).</summary>
-        private static void Continue()
+        /// <summary>
+        /// Finishes the pop-in animation if needed and closes this reward (the next one, if any, follows).
+        /// Enter before the reward was said (pressed quickly through a conversation) says it instead and
+        /// leaves it open: the next Enter closes it, so no reward goes by unheard.
+        /// </summary>
+        private void Continue()
         {
             CongratulationPanel cur = Panel;
             if (cur == null) return;
+            if (cur != _read)
+            {
+                _read = cur;
+                SpeechService.Say(Content(cur), true, MsgCategory.Events);
+                return;
+            }
             bool animating = cur.animationSequence != null && cur.animationSequence.IsPlaying();
             cur.AgreeToCongratulation();
             if (animating && cur != null && cur == Panel) cur.AgreeToCongratulation();

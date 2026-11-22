@@ -123,7 +123,8 @@ to repeat. On the shop floor and in walk mode, letters work without Ctrl.
 At the end of a list, Down goes round to the first item with the wrap sound, and Page Down in the
 last section goes to the first section. To stop at the ends instead (with the edge sound), turn off
 **Wrap around at the ends of lists** in the mod settings. This also applies to Left and Right on a
-choice such as the game language; Enter always goes on to the next value.
+choice such as the game language or a category, to Ctrl+Up and Ctrl+Down on categories, and to Up
+and Down in the shop floor scanner; Enter always goes on to the next value.
 
 ### Main menu and options
 
@@ -244,6 +245,9 @@ Lines are read automatically. Enter continues. Choose a reply with Up and Down, 
 each reply also says what it leads to when the game shows that. The Speed up and Dialog log
 buttons are at the end of the list (Enter presses them). The log opens on the newest line; Up reads
 the earlier ones, and Escape closes it.
+
+A reward after a conversation is read as soon as it appears. If you press Enter before that, Enter
+reads it, and the next Enter closes it.
 
 | Key | Action |
 | --- | --- |
@@ -533,8 +537,10 @@ echo state> BepInEx\hsa_cmd.txt
 
 The results, and everything the mod says (lines with `[Speech]`), are written to
 `BepInEx\LogOutput.log`. The game only runs while its window has the focus, so a command waits
-until you switch back to the game. Write the next command only after the file is gone: two key
-presses that arrive in the same moment count as one. Lines that start with `#` are skipped.
+until you switch back to the game. Write the next command only after the file is gone (writing it
+again before then replaces the commands not yet read). Several lines in one file run together: key
+presses with the same Shift, Ctrl and Alt arrive in the same frame, and another combination or the
+same key again in the next frame. Lines that start with `#` are skipped.
 
 Names are the game's English asset names, and part of a name is enough, in any case (`Incense`
 finds "Incense Sticks"). `buildings`, `trades`, `places` and `journals` list them. When you are

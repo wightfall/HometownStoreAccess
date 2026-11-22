@@ -161,7 +161,9 @@ namespace HometownStoreAccess.Game
                 return;
             }
             if (Contexts.StorageSummaryContext.CloseOpen()) return;
-            UIPanelManager ui = UIPanelManager.Instance;
+            // Only in the game scene: outside it the game's getter searches the whole scene, twice.
+            AccessibilityRoot root = AccessibilityRoot.Instance;
+            UIPanelManager ui = root != null && root.InGame ? UIPanelManager.Instance : null;
             if (ui == null)
             {
                 MainMenuControl mm = UI.SceneCache.Get<MainMenuControl>();

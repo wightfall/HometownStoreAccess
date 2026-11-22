@@ -125,6 +125,35 @@ namespace HometownStoreAccess.Core
             _newer.Reset();
         }
 
+        /// <summary>
+        /// Takes the first state of a controller that just connected as already held: nothing it holds
+        /// fires now or when let go (it was not pressed now); later presses act as usual.
+        /// </summary>
+        public void Seed(PadState state, double now)
+        {
+            Reset();
+            bool up = (state.Buttons & PadButtons.DPadUp) != 0 || state.StickUp;
+            bool down = (state.Buttons & PadButtons.DPadDown) != 0 || state.StickDown;
+            bool left = (state.Buttons & PadButtons.DPadLeft) != 0 || state.StickLeft;
+            bool right = (state.Buttons & PadButtons.DPadRight) != 0 || state.StickRight;
+            if (up) _up.HoldUntilReleased();
+            if (down) _down.HoldUntilReleased();
+            if (left) _left.HoldUntilReleased();
+            if (right) _right.HoldUntilReleased();
+            if (state.RightStickLeft) _older.HoldUntilReleased();
+            if (state.RightStickRight) _newer.HoldUntilReleased();
+            _backLongFired = (state.Buttons & PadButtons.Back) != 0;
+            _startLongFired = (state.Buttons & PadButtons.Start) != 0;
+            _ltLongFired = state.LeftTriggerDown;
+            _rtLongFired = state.RightTriggerDown;
+            _xLongFired = (state.Buttons & PadButtons.X) != 0;
+            _yLongFired = (state.Buttons & PadButtons.Y) != 0;
+            _lbLongFired = (state.Buttons & PadButtons.LeftShoulder) != 0;
+            _rbLongFired = (state.Buttons & PadButtons.RightShoulder) != 0;
+            _rsLongFired = (state.Buttons & PadButtons.RightThumb) != 0;
+            _previous = state;
+        }
+
         public List<PadAction> Update(PadState state, double now)
         {
             var actions = new List<PadAction>();

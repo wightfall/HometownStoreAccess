@@ -41,5 +41,12 @@ namespace HometownStoreAccess.Core
         }
 
         public void Reset() => _wasDown = false;
+
+        /// <summary>Takes the input as already held: nothing fires (no repeats either) until it is let go.</summary>
+        public void HoldUntilReleased()
+        {
+            _wasDown = true;
+            _nextRepeat = double.PositiveInfinity;
+        }
     }
 }

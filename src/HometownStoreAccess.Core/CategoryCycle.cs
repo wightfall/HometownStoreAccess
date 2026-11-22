@@ -43,13 +43,19 @@ namespace HometownStoreAccess.Core
         }
 
         /// <summary>Moves to the previous (-1) or next (+1) option, wrapping around; returns the new option.</summary>
-        public string Step(int direction)
+        public string Step(int direction) => Step(direction, true, out _);
+
+        /// <summary>
+        /// Moves to the previous (-1) or next (+1) option and returns it. At an end it goes round when
+        /// <paramref name="wrap"/> is true; otherwise it stays there and <paramref name="atEdge"/> is set
+        /// (the setting "Wrap around" off).
+        /// </summary>
+        public string Step(int direction, bool wrap, out bool atEdge)
         {
+            atEdge = false;
             if (direction == 0) return Current;
-            int n = _options.Count;
-            int i = Math.Max(0, _options.IndexOf(Current));
-            i = ((i + Math.Sign(direction)) % n + n) % n;
-            Current = _options[i];
+            int i = ChoiceStep.Step(Math.Max(0, _options.IndexOf(Current)), _options.Count, direction, wrap, out atEdge);
+            if (i >= 0) Current = _options[i];
             return Current;
         }
 

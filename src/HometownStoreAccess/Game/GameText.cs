@@ -246,6 +246,19 @@ namespace HometownStoreAccess.Game
 
         public static string CustomerName(CustomerObject c) => c?.customerProfile?.customerID != null ? Name(c.customerProfile.customerID) : "?";
 
+        /// <summary>
+        /// The game's TimeControl.ReachedEndOfTime() without its side effect: the first time that returns true
+        /// in a day it autosaves, and it fails when the customers are already gone (leaving the game).
+        /// Same test: after closing time, no customer left, or long after closing time.
+        /// </summary>
+        public static bool ShopClosed(TimeControl tc)
+        {
+            if (tc == null || tc.TickTimeGame <= tc.maxTickTimeDaylight) return false;
+            if (tc.TickTimeGame > tc.maxTickTimeDaylight + 600) return true;
+            CustomerSpawnSystem cs = AccessibilityRoot.Instance != null && AccessibilityRoot.Instance.InGame ? CustomerSpawnSystem.Instance : null;
+            return cs == null || cs.customerOnScreen == null || cs.customerOnScreen.Count <= 0;
+        }
+
         public static string Phase()
         {
             GameControl gc = GameControl.Instance;
@@ -256,7 +269,7 @@ namespace HometownStoreAccess.Game
                 case GamePhase.Noon:
                     // After closing time the phase is "closing soon" until the last customer has gone,
                     // then "shop closed" (not both at once).
-                    if (TimeControl.Instance != null && TimeControl.Instance.ReachedEndOfTime()) return Loc.Get("phase_shop_closed");
+                    if (ShopClosed(TimeControl.Instance)) return Loc.Get("phase_shop_closed");
                     return TimeControl.Instance != null && TimeControl.Instance.ReachedRushTime()
                         ? Loc.Get("phase_closing")
                         : Safe(() => LocalizationManager.GetString(LocalizationTable.MainInterface, "Phase Daylight"), "Daylight");

@@ -69,8 +69,7 @@ namespace HometownStoreAccess.Game
 
         public static void Update()
         {
-            FlushGroup(Arrivals, _arrivalsSince, "customer_arrived", "customers_arrived_same", "customers_arrived_mixed");
-            FlushGroup(Departures, _departuresSince, "customer_left", "customers_left_same", "customers_left_mixed");
+            FlushGroups(false);
             if (Time.unscaledTime < _nextPoll) return;
             _nextPoll = Time.unscaledTime + 0.3f;
             GameControl gc = GameControl.Instance;
@@ -123,11 +122,19 @@ namespace HometownStoreAccess.Game
             if (tc != null && open)
             {
                 bool rush = tc.ReachedRushTime();
-                if (rush && !_rush) SpeechService.Say(Loc.Get("closing_time"), false, MsgCategory.Events);
+                bool ended = GameText.ShopClosed(tc);
+                // Closed already when closing time is first seen (a save loaded after closing, or nobody in
+                // the shop at closing time): only "shop closed" is said.
+                if (rush && !_rush && !ended)
+                {
+                    FlushGroups(true);
+                    SpeechService.Say(Loc.Get("closing_time"), false, MsgCategory.Events);
+                }
                 _rush = rush;
-                bool ended = tc.ReachedEndOfTime();
                 if (ended && !_ended)
                 {
+                    // The last customers' "left the shop" comes before "everyone has gone".
+                    FlushGroups(true);
                     AudioCues.Play(Cue.Arrive);
                     SpeechService.Say(Loc.Get("shop_closed_now"), false, MsgCategory.Events);
                 }
@@ -185,12 +192,20 @@ namespace HometownStoreAccess.Game
             Departures.Add(name);
         }
 
-        private static void FlushGroup(List<string> names, float since, string one, string same, string mixed)
+        /// <param name="now">True: say what is waiting at once (before closing time or a new phase is said).</param>
+        public static void FlushGroups(bool now)
         {
-            if (names.Count == 0 || Time.unscaledTime - since < GroupWindow) return;
-            string text = GroupedNames.Describe(names, one, same, mixed);
+            FlushGroup(Arrivals, _arrivalsSince, now, Plugin.Settings.AnnounceCustomers.Value, "customer_arrived", "customers_arrived_same", "customers_arrived_mixed");
+            FlushGroup(Departures, _departuresSince, now, Plugin.Settings.AnnounceCustomersLeaving.Value, "customer_left", "customers_left_same", "customers_left_mixed");
+        }
+
+        private static void FlushGroup(List<string> names, float since, bool now, bool enabled, string one, string same, string mixed)
+        {
+            if (names.Count == 0 || (!now && Time.unscaledTime - since < GroupWindow)) return;
+            // The setting may have been turned off while these were waiting.
+            string text = enabled ? GroupedNames.Describe(names, one, same, mixed) : null;
             names.Clear();
-            SpeechService.Say(text, false, MsgCategory.Customers);
+            if (text != null) SpeechService.Say(text, false, MsgCategory.Customers);
         }
 
         public static void Customer(string message, Cue? cue = null, float pan = 0f)
@@ -217,6 +232,7 @@ namespace HometownStoreAccess.Game
         private static void Postfix(GameControl __instance, GamePhase __state, GamePhase newGamePhase)
         {
             if (__instance.CurrentGamePhase == __state) return;
+            EventAnnouncer.FlushGroups(true);
             switch (newGamePhase)
             {
                 case GamePhase.Morning:

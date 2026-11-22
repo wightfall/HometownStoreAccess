@@ -214,7 +214,7 @@ namespace HometownStoreAccess.Contexts
             switch (gc.CurrentGamePhase)
             {
                 case GamePhase.Morning: return Loc.Get("label_open_shop");
-                case GamePhase.Noon: return TimeControl.Instance.ReachedEndOfTime() ? Loc.Get("label_go_to_map") : Loc.Get("label_shop_open_wait");
+                case GamePhase.Noon: return GameText.ShopClosed(TimeControl.Instance) ? Loc.Get("label_go_to_map") : Loc.Get("label_shop_open_wait");
                 case GamePhase.Evening: return Loc.Get("label_open_map");
                 default: return Loc.Get("label_next_phase");
             }
@@ -379,13 +379,28 @@ namespace HometownStoreAccess.Contexts
 
         private static string BlueprintDetails(Building b) => TextCleaner.Join(". ", GameText.BuildingInfo(b), Loc.Get("hint_blueprint"));
 
-        /// <summary>True when a name in the build list starts with B (then B is a letter jump there).</summary>
+        /// <summary>
+        /// True when a name in the build list starts with B (then B is a letter jump there). Every blueprint
+        /// counts, not only those the chosen category shows, so B does not change meaning with the category.
+        /// </summary>
         private static bool ListHasNameStartingWithB()
         {
+            var names = new List<string>();
+            BuildingSystem bs = BuildingSystem.Instance;
+            if (bs != null)
+            {
+                foreach (BuildingBlueprint bp in bs.currentBlueprint)
+                {
+                    if (bp != null && bp.Id != null) names.Add(GameText.Name(bp.Id));
+                }
+            }
             foreach (NavItem i in AccessibilityRoot.Instance.Contexts.Items)
             {
-                string l;
-                try { l = TextCleaner.Clean(i.Label()); } catch { continue; }
+                try { names.Add(i.Label()); } catch { }
+            }
+            foreach (string raw in names)
+            {
+                string l = TextCleaner.Clean(raw);
                 int start = 0;
                 while (start < l.Length && !char.IsLetterOrDigit(l[start])) start++;
                 if (start < l.Length && (l[start] == 'b' || l[start] == 'B')) return true;
@@ -523,7 +538,7 @@ namespace HometownStoreAccess.Contexts
             if (GameControl.Instance != null && GameControl.Instance.CurrentGamePhase == GamePhase.Noon && tc != null)
             {
                 // Once the shop has closed the phase says so; before that, the customers left or the time.
-                if (!tc.ReachedEndOfTime())
+                if (!GameText.ShopClosed(tc))
                 {
                     if (tc.ReachedRushTime()) parts.Add(Loc.Get("time_closing_customers", CustomerSpawnSystem.Instance.customerOnScreen.Count));
                     else

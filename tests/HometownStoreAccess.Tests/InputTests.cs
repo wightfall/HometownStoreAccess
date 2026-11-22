@@ -54,6 +54,30 @@ namespace HometownStoreAccess.Tests
         }
 
         [Fact]
+        public void AButtonAlreadyHeldWhenTheControllerConnectsIsNotAPress()
+        {
+            var m = new ControllerMapping();
+            m.Seed(Buttons(PadButtons.A | PadButtons.X), 0);
+            Assert.Empty(m.Update(Buttons(PadButtons.A | PadButtons.X), 0.1));
+            // Let go: nothing (they were not pressed now).
+            Assert.Empty(m.Update(Buttons(PadButtons.None), 0.2));
+            // A new press acts as usual.
+            Assert.Contains(PadAction.Activate, m.Update(Buttons(PadButtons.A), 0.3));
+        }
+
+        [Fact]
+        public void ADirectionAlreadyHeldWhenTheControllerConnectsDoesNotMoveOrRepeat()
+        {
+            var m = new ControllerMapping();
+            m.Seed(Buttons(PadButtons.DPadDown), 0);
+            // Held well past the repeat delay: still nothing.
+            for (double t = 0.1; t < 2; t += 0.1) Assert.Empty(m.Update(Buttons(PadButtons.DPadDown), t));
+            Assert.Empty(m.Update(Buttons(PadButtons.None), 2.1));
+            // Pressed again: it moves.
+            Assert.Contains(PadAction.Down, m.Update(Buttons(PadButtons.DPadDown), 2.2));
+        }
+
+        [Fact]
         public void AButtonHeldWhenTheControllerDroppedOutDoesNotFireOnReconnect()
         {
             var m = new ControllerMapping();
