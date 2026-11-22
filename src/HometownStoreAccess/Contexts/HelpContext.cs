@@ -156,6 +156,7 @@ namespace HometownStoreAccess.Contexts
 
             string ann = Loc.Get("set_group_announce");
             items.Add(Toggle(s.AnnounceCustomers, "set_customers", ann));
+            items.Add(Toggle(s.AnnounceCustomersLeaving, "set_customers_leaving", ann));
             items.Add(Toggle(s.AnnounceSales, "set_sales", ann));
             items.Add(Toggle(s.AnnounceStock, "set_stock", ann));
             items.Add(Toggle(s.AnnounceCustomerMessages, "set_messages", ann));

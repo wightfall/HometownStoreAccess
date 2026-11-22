@@ -16,6 +16,7 @@ namespace HometownStoreAccess
         public readonly ConfigEntry<bool> AnnounceCashChanges;
         public readonly ConfigEntry<bool> ReadDialogAutomatically;
         public readonly ConfigEntry<bool> AnnounceAchievements;
+        public readonly ConfigEntry<bool> AnnounceCustomersLeaving;
 
         public readonly ConfigEntry<bool> AnnouncePosition;
         public readonly ConfigEntry<string> GameLocale;
@@ -40,6 +41,17 @@ namespace HometownStoreAccess
         public ModSettings(ConfigFile config)
         {
             _config = config;
+            // Read before any Bind writes the file: was the 1.4.3 setting "CustomersLeaving" there already?
+            bool hadCustomersLeaving = true;
+            try
+            {
+                hadCustomersLeaving = !System.IO.File.Exists(config.ConfigFilePath)
+                    || System.IO.File.ReadAllText(config.ConfigFilePath).IndexOf("CustomersLeaving", System.StringComparison.Ordinal) >= 0;
+            }
+            catch (System.Exception)
+            {
+                // Unreadable: keep the default.
+            }
             SpeechBackend = config.Bind("Speech", "Backend", "Auto",
                 "Speech output used through Prism. 'Auto' picks your running screen reader (NVDA, JAWS, ZDSR, ...) or falls back to Windows speech. You can force one by name, e.g. NVDA, JAWS, OneCore, SAPI.");
             LogSpeech = config.Bind("Speech", "LogSpeech", true, "Also write everything that is spoken to the BepInEx log (useful for bug reports).");
@@ -50,12 +62,15 @@ namespace HometownStoreAccess
             GameLocale = config.Bind("Speech", "GameLocale", "",
                 "Game language chosen through the mod (any of the game's languages, e.g. ja, id, zh-HK). Empty = use the game's own setting.");
 
-            AnnounceCustomers = config.Bind("Announcements", "Customers", true, "Announce customers coming in, getting upset and leaving the shop.");
+            AnnounceCustomers = config.Bind("Announcements", "Customers", true, "Announce customers coming in and getting upset.");
             AnnounceSales = config.Bind("Announcements", "Sales", true, "Announce money received when a customer pays at the cashier.");
             AnnounceStock = config.Bind("Announcements", "Stock", true, "Announce when a shelf runs empty while the shop is open.");
             AnnounceCustomerMessages = config.Bind("Announcements", "CustomerMessages", true, "Read customer speech bubbles from the message box.");
             AnnounceCashChanges = config.Bind("Announcements", "CashChanges", false, "Announce every change of cash (can be chatty).");
             ReadDialogAutomatically = config.Bind("Announcements", "ReadDialog", true, "Read story dialog lines automatically as they appear.");
+            AnnounceCustomersLeaving = config.Bind("Announcements", "CustomersLeaving", true, "Announce customers leaving the shop.");
+            // 1.4.3 split leaving off the Customers setting: whoever had turned customers off keeps it quiet.
+            if (!hadCustomersLeaving) AnnounceCustomersLeaving.Value = AnnounceCustomers.Value;
             AnnounceAchievements = config.Bind("Announcements", "Achievements", true, "Say Steam achievements when the game unlocks them (Steam shows them only in its overlay).");
 
             AudioCues = config.Bind("Audio", "Cues", true, "Play positional audio cues for the shop floor cursor, placement, customers and menus.");

@@ -377,6 +377,13 @@ namespace HometownStoreAccess.Contexts
                 if (now != null) extra.Add(Loc.Get("reward_level", now.trustLevel));
             }
             List<string> texts = RewardText.Prepare(UiUtil.CollectTexts(p.gameObject, false, 40, skip));
+            // The item and building lines read "Candy x3": "Candy: 3" (the "x" is read as a letter).
+            string itemLine = p.itemText != null && p.itemText.gameObject.activeInHierarchy ? UiUtil.Text(p.itemText) : null;
+            string buildLine = p.buildText != null && p.buildText.gameObject.activeInHierarchy ? UiUtil.Text(p.buildText) : null;
+            for (int i = 0; i < texts.Count; i++)
+            {
+                if (texts[i] == itemLine || texts[i] == buildLine) texts[i] = RewardText.Quantity(texts[i]);
+            }
             texts.AddRange(extra);
             return TextCleaner.Join(". ", texts.ToArray());
         }

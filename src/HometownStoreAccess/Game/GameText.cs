@@ -254,6 +254,9 @@ namespace HometownStoreAccess.Game
             {
                 case GamePhase.Morning: return Safe(() => LocalizationManager.GetString(LocalizationTable.MainInterface, "Phase Morning"), "Morning");
                 case GamePhase.Noon:
+                    // After closing time the phase is "closing soon" until the last customer has gone,
+                    // then "shop closed" (not both at once).
+                    if (TimeControl.Instance != null && TimeControl.Instance.ReachedEndOfTime()) return Loc.Get("phase_shop_closed");
                     return TimeControl.Instance != null && TimeControl.Instance.ReachedRushTime()
                         ? Loc.Get("phase_closing")
                         : Safe(() => LocalizationManager.GetString(LocalizationTable.MainInterface, "Phase Daylight"), "Daylight");

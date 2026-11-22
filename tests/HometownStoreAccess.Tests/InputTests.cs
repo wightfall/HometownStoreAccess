@@ -39,14 +39,47 @@ namespace HometownStoreAccess.Tests
         public void MapsEveryButton()
         {
             var m = new ControllerMapping();
-            List<PadAction> a = m.Update(Buttons(PadButtons.B | PadButtons.X | PadButtons.Y | PadButtons.LeftShoulder | PadButtons.RightShoulder | PadButtons.LeftThumb | PadButtons.RightThumb), 0);
+            var all = PadButtons.B | PadButtons.X | PadButtons.Y | PadButtons.LeftShoulder | PadButtons.RightShoulder | PadButtons.LeftThumb | PadButtons.RightThumb;
+            List<PadAction> a = m.Update(Buttons(all), 0);
+            // B and the left stick click act at once.
             Assert.Contains(PadAction.Back, a);
-            Assert.Contains(PadAction.ActivateAlt, a);
-            Assert.Contains(PadAction.Details, a);
-            Assert.Contains(PadAction.PreviousSection, a);
-            Assert.Contains(PadAction.NextSection, a);
             Assert.Contains(PadAction.Customers, a);
-            Assert.Contains(PadAction.TogglePause, a);
+            // The others act when let go (a short press).
+            List<PadAction> released = m.Update(Buttons(PadButtons.None), 0.1);
+            Assert.Contains(PadAction.ActivateAlt, released);
+            Assert.Contains(PadAction.Details, released);
+            Assert.Contains(PadAction.PreviousSection, released);
+            Assert.Contains(PadAction.NextSection, released);
+            Assert.Contains(PadAction.TogglePause, released);
+        }
+
+        [Fact]
+        public void AButtonHeldWhenTheControllerDroppedOutDoesNotFireOnReconnect()
+        {
+            var m = new ControllerMapping();
+            m.Update(Buttons(PadButtons.X), 0);
+            // The controller drops out with X held; it comes back with X up.
+            m.Reset();
+            Assert.Empty(m.Update(Buttons(PadButtons.None), 1));
+        }
+
+        [Theory]
+        [InlineData(PadButtons.X, PadAction.ActivateAlt, PadAction.ActivateThird)]
+        [InlineData(PadButtons.Y, PadAction.Details, PadAction.ReadScreen)]
+        [InlineData(PadButtons.LeftShoulder, PadAction.PreviousSection, PadAction.FirstItem)]
+        [InlineData(PadButtons.RightShoulder, PadAction.NextSection, PadAction.LastItem)]
+        [InlineData(PadButtons.RightThumb, PadAction.TogglePause, PadAction.HistoryCategory)]
+        public void ButtonsWithASecondActionTapOrHold(PadButtons button, PadAction tap, PadAction hold)
+        {
+            var m = new ControllerMapping();
+            // Tap: on release.
+            Assert.Empty(m.Update(Buttons(button), 0));
+            Assert.Equal(new[] { tap }, m.Update(Buttons(PadButtons.None), 0.2));
+            // Hold: once the time has passed, and nothing on release.
+            m.Update(Buttons(button), 1);
+            Assert.Equal(new[] { hold }, m.Update(Buttons(button), 1 + ControllerMapping.LongPress + 0.01));
+            Assert.Empty(m.Update(Buttons(button), 2.5));
+            Assert.Empty(m.Update(Buttons(PadButtons.None), 2.6));
         }
 
         [Theory]

@@ -121,9 +121,13 @@ namespace HometownStoreAccess.Game
             UIPanelManager.Instance.ShowConfirmPanel(LocalizationManager.GetString(LocalizationTable.ConfirmAndNotify, "UI/Popup/ContentBuilding", name, price.ToString()), delegate
             {
                 if (SummaryPanel.Instance != null) SummaryPanel.Instance.AddBill(isSell: true, building, 1, price);
+                EventAnnouncer.QuietCash(a => a == price);
                 ResourceManager.Instance.ModifyCash(price);
+                EventAnnouncer.ClearCashQuiet();
                 BuildingSystem.Instance.RemoveBlueprint(building, 1);
-                SpeechService.Say(Loc.Get("sold_blueprint", name, price), true);
+                SpeechService.Say(Plugin.Settings.AnnounceCashChanges.Value
+                    ? Loc.Get("sold_blueprint_cash", name, price, ResourceManager.Instance.cash)
+                    : Loc.Get("sold_blueprint", name, price), true);
             });
         }
 

@@ -13,12 +13,16 @@ namespace HometownStoreAccess.Input
         private static readonly HashSet<KeyCode> _pendingInjected = new HashSet<KeyCode>();
         private static bool _injShift, _injCtrl, _injAlt;
         private static bool _pendShift, _pendCtrl, _pendAlt;
+        private static bool _pendNoFallback, _injNoFallback;
 
         /// <summary>True while an input field has keyboard focus: mod hotkeys must stay quiet.</summary>
         public static bool TextEntryActive { get; set; }
 
-        public static void Inject(KeyCode key, bool shift = false, bool ctrl = false, bool alt = false)
+        /// <param name="noFallback">An item without that alternative action does nothing (a controller hold:
+        /// held a little too long, X must not do what A does).</param>
+        public static void Inject(KeyCode key, bool shift = false, bool ctrl = false, bool alt = false, bool noFallback = false)
         {
+            _pendNoFallback |= noFallback;
             _pendingInjected.Add(key);
             _pendShift |= shift;
             _pendCtrl |= ctrl;
@@ -65,6 +69,8 @@ namespace HometownStoreAccess.Input
             _pendingInjected.Clear();
             _injShift = _pendShift; _injCtrl = _pendCtrl; _injAlt = _pendAlt;
             _pendShift = _pendCtrl = _pendAlt = false;
+            _injNoFallback = _pendNoFallback;
+            _pendNoFallback = false;
         }
 
         public static bool Down(KeyCode key)
@@ -76,6 +82,9 @@ namespace HometownStoreAccess.Input
         {
             return UnityEngine.Input.GetKey(key);
         }
+
+        /// <summary>The injected key of this frame must not fall back to an item's main action.</summary>
+        public static bool NoFallback => _injNoFallback;
 
         public static bool Shift => _injShift || UnityEngine.Input.GetKey(KeyCode.LeftShift) || UnityEngine.Input.GetKey(KeyCode.RightShift);
         public static bool Ctrl => _injCtrl || UnityEngine.Input.GetKey(KeyCode.LeftControl) || UnityEngine.Input.GetKey(KeyCode.RightControl);

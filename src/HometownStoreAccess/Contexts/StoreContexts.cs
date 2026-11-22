@@ -379,9 +379,27 @@ namespace HometownStoreAccess.Contexts
 
         private static string BlueprintDetails(Building b) => TextCleaner.Join(". ", GameText.BuildingInfo(b), Loc.Get("hint_blueprint"));
 
+        /// <summary>True when a name in the build list starts with B (then B is a letter jump there).</summary>
+        private static bool ListHasNameStartingWithB()
+        {
+            foreach (NavItem i in AccessibilityRoot.Instance.Contexts.Items)
+            {
+                string l;
+                try { l = TextCleaner.Clean(i.Label()); } catch { continue; }
+                int start = 0;
+                while (start < l.Length && !char.IsLetterOrDigit(l[start])) start++;
+                if (start < l.Length && (l[start] == 'b' || l[start] == 'B')) return true;
+            }
+            return false;
+        }
+
         public override bool HandleInput()
         {
             bool placing = Placement.Active;
+            // B closes build mode, as on the shop floor. The key itself is checked (a Thai keyboard layout
+            // types no "b"); when a name in the list starts with B, B stays a letter jump (Ctrl+B closes).
+            if (!placing && ModInput.Down(KeyCode.B) && !ModInput.Ctrl && !ModInput.Alt && !ListHasNameStartingWithB()
+                && Input.GameKeys.CloseBuildMode()) return true;
             if (!placing && !_floorMode && _filter.HandleKeys()) return true;
             if (!placing && ModInput.Down(KeyCode.Tab))
             {
@@ -504,12 +522,15 @@ namespace HometownStoreAccess.Contexts
             parts.Add(GameText.Phase());
             if (GameControl.Instance != null && GameControl.Instance.CurrentGamePhase == GamePhase.Noon && tc != null)
             {
-                if (tc.ReachedEndOfTime()) parts.Add(Loc.Get("time_shop_closed"));
-                else if (tc.ReachedRushTime()) parts.Add(Loc.Get("time_closing_customers", CustomerSpawnSystem.Instance.customerOnScreen.Count));
-                else
+                // Once the shop has closed the phase says so; before that, the customers left or the time.
+                if (!tc.ReachedEndOfTime())
                 {
-                    int pct = tc.maxTickTimeDaylight > 0 ? Mathf.Clamp(Mathf.RoundToInt(100f * tc.TickTimeGame / tc.maxTickTimeDaylight), 0, 100) : 0;
-                    parts.Add(Loc.Get("time_percent", pct));
+                    if (tc.ReachedRushTime()) parts.Add(Loc.Get("time_closing_customers", CustomerSpawnSystem.Instance.customerOnScreen.Count));
+                    else
+                    {
+                        int pct = tc.maxTickTimeDaylight > 0 ? Mathf.Clamp(Mathf.RoundToInt(100f * tc.TickTimeGame / tc.maxTickTimeDaylight), 0, 100) : 0;
+                        parts.Add(Loc.Get("time_percent", pct));
+                    }
                 }
                 parts.Add(SpeedText());
             }

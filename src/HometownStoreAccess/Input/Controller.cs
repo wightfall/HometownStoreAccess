@@ -141,6 +141,7 @@ namespace HometownStoreAccess.Input
                     }
                     _probeFound = -1;
                     _padIndex = found;
+                    Mapping.Reset();
                     if (!_announcedConnect)
                     {
                         _announcedConnect = true;
@@ -152,6 +153,8 @@ namespace HometownStoreAccess.Input
                 {
                     _padIndex = -1;
                     _announcedConnect = false;
+                    // Buttons held when it dropped out must not count as released when it comes back.
+                    Mapping.Reset();
                     ConnectionChanged(false);
                     return;
                 }
@@ -238,7 +241,11 @@ namespace HometownStoreAccess.Input
                 case PadAction.Help: ModInput.Inject(KeyCode.F1); break;
                 case PadAction.Repeat: ModInput.Inject(KeyCode.R, ctrl: true); break;
                 case PadAction.Status: ModInput.Inject(KeyCode.T, ctrl: true); break;
-                case PadAction.Customers: ModInput.Inject(KeyCode.K, ctrl: true); break;
+                case PadAction.Customers:
+                    // On the map (no customers in the evening) the left stick click starts and ends walk mode.
+                    if (AccessibilityRoot.Instance?.Contexts.Current?.Id == "map") ModInput.Inject(KeyCode.W, ctrl: true);
+                    else ModInput.Inject(KeyCode.K, ctrl: true);
+                    break;
                 case PadAction.TogglePause: ModInput.Inject(KeyCode.P, ctrl: true); break;
                 case PadAction.CategoryPrevious: ModInput.Inject(KeyCode.UpArrow, ctrl: true); break;
                 case PadAction.CategoryNext: ModInput.Inject(KeyCode.DownArrow, ctrl: true); break;
@@ -248,6 +255,11 @@ namespace HometownStoreAccess.Input
                 case PadAction.ModSettings: ModInput.Inject(KeyCode.F5); break;
                 case PadAction.RecallStory: ModInput.Inject(KeyCode.Backslash); break;
                 case PadAction.Goal: ModInput.Inject(KeyCode.J, ctrl: true); break;
+                case PadAction.ActivateThird: ModInput.Inject(KeyCode.Return, ctrl: true, noFallback: true); break;
+                case PadAction.ReadScreen: ModInput.Inject(KeyCode.R, shift: true, ctrl: true); break;
+                case PadAction.FirstItem: ModInput.Inject(KeyCode.Home); break;
+                case PadAction.LastItem: ModInput.Inject(KeyCode.End); break;
+                case PadAction.HistoryCategory: ModInput.Inject(KeyCode.RightBracket); break;
                 case PadAction.Back: GameActions.Back(); break;
                 case PadAction.Pause:
                     if (Contexts.Overlay.IsOpen) Contexts.Overlay.Close();
