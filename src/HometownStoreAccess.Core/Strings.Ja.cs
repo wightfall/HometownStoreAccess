@@ -238,7 +238,6 @@ namespace HometownStoreAccess.Core
             ["group_skins"] = "見た目",
             ["group_places"] = "場所",
             ["group_map"] = "地図",
-            ["group_trade_tabs"] = "種類",
             ["group_trade_filters"] = "絞り込み",
             ["group_goods"] = "商品",
             ["group_buildings"] = "設備",

@@ -238,7 +238,6 @@ namespace HometownStoreAccess.Core
             ["group_skins"] = "Tampilan",
             ["group_places"] = "Tempat",
             ["group_map"] = "Peta",
-            ["group_trade_tabs"] = "Jenis",
             ["group_trade_filters"] = "Filter",
             ["group_goods"] = "Barang",
             ["group_buildings"] = "Bangunan",

@@ -251,7 +251,6 @@ namespace HometownStoreAccess.Core
             ["group_skins"] = "Looks",
             ["group_places"] = "Places",
             ["group_map"] = "Map",
-            ["group_trade_tabs"] = "Categories",
             ["group_trade_filters"] = "Filters",
             ["group_goods"] = "Goods",
             ["group_buildings"] = "Buildings",
