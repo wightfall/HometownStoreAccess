@@ -42,18 +42,7 @@ namespace HometownStoreAccess.Input
             }
             if (ModInput.Down(KeyCode.B))
             {
-                // B again closes build mode, as the Close button of the build panel does (not while a
-                // building is being placed: Escape cancels that first).
-                BuildingPanel panel = ui.buildingPanelGameObject != null ? ui.buildingPanelGameObject.GetComponent<BuildingPanel>() : null;
-                if (panel != null && panel.gameObject.activeInHierarchy && !Placement.Active)
-                {
-                    Transform close = panel.transform.Find("Close Panel");
-                    if (close != null)
-                    {
-                        GameActions.ClickIfAvailable(close.GetComponent<UnityEngine.UI.Button>());
-                        return true;
-                    }
-                }
+                if (CloseBuildMode()) return true;
                 Transform build = FindHudButton("BuildButton");
                 if (build != null) GameActions.ClickIfAvailable(build.GetComponent<UnityEngine.UI.Button>());
                 else SpeechService.Say(Loc.Get("not_available_now"), true);
@@ -75,6 +64,21 @@ namespace HometownStoreAccess.Input
                 return true;
             }
             return false;
+        }
+
+        /// <summary>
+        /// B again closes build mode, as the Close button of the build panel does (not while a building is
+        /// being placed: Escape cancels that first). False when build mode is not open.
+        /// </summary>
+        internal static bool CloseBuildMode()
+        {
+            UIPanelManager ui = UIPanelManager.Instance;
+            BuildingPanel panel = ui != null && ui.buildingPanelGameObject != null ? ui.buildingPanelGameObject.GetComponent<BuildingPanel>() : null;
+            if (panel == null || !panel.gameObject.activeInHierarchy || Placement.Active) return false;
+            Transform close = panel.transform.Find("Close Panel");
+            if (close == null) return false;
+            GameActions.ClickIfAvailable(close.GetComponent<UnityEngine.UI.Button>());
+            return true;
         }
 
         internal static Transform FindHudButton(string name)

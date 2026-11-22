@@ -55,7 +55,7 @@ namespace HometownStoreAccess.UI
         /// <summary>"Category, Drinks, 4 items, 3 of 6". Left and right (or Enter) change it.</summary>
         public NavItem Item(string group)
         {
-            return new ActionItem(() => Loc.Get("label_category"), () => Step(1, fromItem: true), "category")
+            return new ActionItem(() => Loc.Get("label_category"), () => Step(1, fromItem: true, wrap: true), "category")
             {
                 Group = group,
                 RoleFunc = () => Loc.Get("role_combobox"),
@@ -63,7 +63,7 @@ namespace HometownStoreAccess.UI
                 DetailFunc = () => Loc.Get("hint_category"),
                 OnAdjust = (dir, large) =>
                 {
-                    Step(dir, fromItem: true);
+                    Step(dir, fromItem: true, wrap: NavSettings.Wrap);
                     return true;
                 },
             };
@@ -81,18 +81,27 @@ namespace HometownStoreAccess.UI
                 SpeechService.Say(Loc.Get("category_none"), true);
                 return true;
             }
-            Step(dir, fromItem: false);
+            Step(dir, fromItem: false, wrap: NavSettings.Wrap);
             return true;
         }
 
-        private void Step(int dir, bool fromItem)
+        /// <param name="wrap">Go round at the ends: Left, Right, Ctrl+Up and Ctrl+Down follow the setting
+        /// "Wrap around"; Enter always goes on to the next category, as on any choice.</param>
+        private void Step(int dir, bool fromItem, bool wrap)
         {
             if (!Active)
             {
                 AudioCues.Play(Cue.Edge);
                 return;
             }
-            string cur = Cycle.Step(dir);
+            string cur = Cycle.Step(dir, wrap, out bool atEdge);
+            if (atEdge)
+            {
+                // "Wrap around" is off: the category stays at the end, as a choice does.
+                AudioCues.Play(Cue.Edge);
+                SpeechService.Say(Loc.Get("category_count", Label(cur), CountOf(cur)), true);
+                return;
+            }
             bool wrapped = dir > 0 ? Cycle.Position == 1 : Cycle.Position == Cycle.Count;
             AudioCues.Play(wrapped ? Cue.Wrap : Cue.Move);
             OnChanged?.Invoke(cur);

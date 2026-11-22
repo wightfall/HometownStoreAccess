@@ -89,5 +89,23 @@ namespace HometownStoreAccess.Tests
             Assert.Equal(CategoryCycle.All, c.Step(-1));
             Assert.True(c.Matches("anything"));
         }
+
+        [Fact]
+        public void StopsAtTheEndsWithoutWrapAround()
+        {
+            var c = new CategoryCycle();
+            c.SetOptions(new[] { "Drink", "Work" });
+            Assert.Equal(CategoryCycle.All, c.Step(-1, false, out bool atEdge));
+            Assert.True(atEdge);
+            Assert.Equal("Drink", c.Step(1, false, out atEdge));
+            Assert.False(atEdge);
+            Assert.Equal("Work", c.Step(1, false, out atEdge));
+            Assert.False(atEdge);
+            Assert.Equal("Work", c.Step(1, false, out atEdge));
+            Assert.True(atEdge);
+            // With wrap around it goes round.
+            Assert.Equal(CategoryCycle.All, c.Step(1, true, out atEdge));
+            Assert.False(atEdge);
+        }
     }
 }

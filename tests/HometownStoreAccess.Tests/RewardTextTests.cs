@@ -48,6 +48,9 @@ namespace HometownStoreAccess.Tests
             Loc.SetLanguage("en");
             List<string> spoken = RewardText.Prepare(new[] { "Congratulations!!", "999", "3", "You Get", "Candy x3", "x999", "", "12" });
             Assert.Equal(new[] { "Congratulations!!", "You got", "Candy x3", "12" }, spoken);
+            // The reward screen's item line is said as a stack.
+            Assert.Equal("Candy: 3", RewardText.Quantity("Candy x3"));
+            Assert.Equal("Level 3", RewardText.Quantity("Level 3"));
         }
 
         [Fact]

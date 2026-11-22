@@ -35,10 +35,10 @@ namespace HometownStoreAccess.Tests
             Loc.SetLanguage("en");
             try
             {
-                string keyboard = Loc.Get("help_walk");
+                string keyboard = Loc.Get("walk_off");
                 Loc.PadMode = true;
-                Assert.Equal(keyboard, Loc.Get("help_walk"));
-                Assert.Equal("help_walk", Loc.EffectiveKey("help_walk"));
+                Assert.Equal(keyboard, Loc.Get("walk_off"));
+                Assert.Equal("walk_off", Loc.EffectiveKey("walk_off"));
                 Assert.Equal("tg_build.pad", Loc.EffectiveKey("tg_build"));
             }
             finally

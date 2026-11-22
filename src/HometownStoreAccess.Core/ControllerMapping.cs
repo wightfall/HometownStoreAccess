@@ -51,6 +51,11 @@ namespace HometownStoreAccess.Core
         ModSettings,
         RecallStory,
         Goal,
+        ActivateThird,
+        ReadScreen,
+        FirstItem,
+        LastItem,
+        HistoryCategory,
     }
 
     /// <summary>Snapshot of a controller in logical form (after the stick dead zone).</summary>
@@ -93,18 +98,61 @@ namespace HometownStoreAccess.Core
 
         private double _backDownAt = -1, _startDownAt = -1, _ltDownAt = -1, _rtDownAt = -1;
         private bool _backLongFired, _startLongFired, _ltLongFired, _rtLongFired;
+        private double _xDownAt = -1, _yDownAt = -1, _lbDownAt = -1, _rbDownAt = -1, _rsDownAt = -1;
+        private bool _xLongFired, _yLongFired, _lbLongFired, _rbLongFired, _rsLongFired;
 
+        // A and B act at once (the most used); the buttons with a second action on hold act on release.
         private static readonly (PadButtons button, PadAction action)[] Presses =
         {
             (PadButtons.A, PadAction.Activate),
-            (PadButtons.X, PadAction.ActivateAlt),
-            (PadButtons.Y, PadAction.Details),
             (PadButtons.B, PadAction.Back),
-            (PadButtons.RightShoulder, PadAction.NextSection),
-            (PadButtons.LeftShoulder, PadAction.PreviousSection),
             (PadButtons.LeftThumb, PadAction.Customers),
-            (PadButtons.RightThumb, PadAction.TogglePause),
         };
+
+        /// <summary>Every button up and nothing held, as for a newly connected controller.</summary>
+        public void Reset()
+        {
+            _previous = default(PadState);
+            _backDownAt = _startDownAt = _ltDownAt = _rtDownAt = -1;
+            _xDownAt = _yDownAt = _lbDownAt = _rbDownAt = _rsDownAt = -1;
+            _backLongFired = _startLongFired = _ltLongFired = _rtLongFired = false;
+            _xLongFired = _yLongFired = _lbLongFired = _rbLongFired = _rsLongFired = false;
+            _up.Reset();
+            _down.Reset();
+            _left.Reset();
+            _right.Reset();
+            _older.Reset();
+            _newer.Reset();
+        }
+
+        /// <summary>
+        /// Takes the first state of a controller that just connected as already held: nothing it holds
+        /// fires now or when let go (it was not pressed now); later presses act as usual.
+        /// </summary>
+        public void Seed(PadState state, double now)
+        {
+            Reset();
+            bool up = (state.Buttons & PadButtons.DPadUp) != 0 || state.StickUp;
+            bool down = (state.Buttons & PadButtons.DPadDown) != 0 || state.StickDown;
+            bool left = (state.Buttons & PadButtons.DPadLeft) != 0 || state.StickLeft;
+            bool right = (state.Buttons & PadButtons.DPadRight) != 0 || state.StickRight;
+            if (up) _up.HoldUntilReleased();
+            if (down) _down.HoldUntilReleased();
+            if (left) _left.HoldUntilReleased();
+            if (right) _right.HoldUntilReleased();
+            if (state.RightStickLeft) _older.HoldUntilReleased();
+            if (state.RightStickRight) _newer.HoldUntilReleased();
+            _backLongFired = (state.Buttons & PadButtons.Back) != 0;
+            _startLongFired = (state.Buttons & PadButtons.Start) != 0;
+            _ltLongFired = state.LeftTriggerDown;
+            _rtLongFired = state.RightTriggerDown;
+            _xLongFired = (state.Buttons & PadButtons.X) != 0;
+            _yLongFired = (state.Buttons & PadButtons.Y) != 0;
+            _lbLongFired = (state.Buttons & PadButtons.LeftShoulder) != 0;
+            _rbLongFired = (state.Buttons & PadButtons.RightShoulder) != 0;
+            _rsLongFired = (state.Buttons & PadButtons.RightThumb) != 0;
+            _previous = state;
+        }
 
         public List<PadAction> Update(PadState state, double now)
         {
@@ -124,6 +172,14 @@ namespace HometownStoreAccess.Core
                 bool wasDown = (_previous.Buttons & button) != 0;
                 if (isDown && !wasDown) actions.Add(action);
             }
+            // X: the second action; held, the third (move one item, delete a save). Y: details; held, read
+            // the whole screen. LB and RB: previous and next section; held, the first and last item.
+            // Right stick click: pause; held, the next category of the message history.
+            Button(state, PadButtons.X, ref _xDownAt, ref _xLongFired, PadAction.ActivateAlt, PadAction.ActivateThird, now, actions);
+            Button(state, PadButtons.Y, ref _yDownAt, ref _yLongFired, PadAction.Details, PadAction.ReadScreen, now, actions);
+            Button(state, PadButtons.LeftShoulder, ref _lbDownAt, ref _lbLongFired, PadAction.PreviousSection, PadAction.FirstItem, now, actions);
+            Button(state, PadButtons.RightShoulder, ref _rbDownAt, ref _rbLongFired, PadAction.NextSection, PadAction.LastItem, now, actions);
+            Button(state, PadButtons.RightThumb, ref _rsDownAt, ref _rsLongFired, PadAction.TogglePause, PadAction.HistoryCategory, now, actions);
             // Back: tap for the keys of this screen, hold for the key list. Start: tap for the pause menu,
             // hold for the mod settings. Taps fire on release, holds as soon as the time has passed.
             TapOrHold((state.Buttons & PadButtons.Back) != 0, (_previous.Buttons & PadButtons.Back) != 0, now, ref _backDownAt, ref _backLongFired, PadAction.Help, PadAction.KeyList, actions);
@@ -139,6 +195,11 @@ namespace HometownStoreAccess.Core
             if (_newer.Update(state.RightStickRight, now)) actions.Add(PadAction.HistoryNewer);
             _previous = state;
             return actions;
+        }
+
+        private void Button(PadState state, PadButtons button, ref double downAt, ref bool longFired, PadAction tap, PadAction hold, double now, List<PadAction> actions)
+        {
+            TapOrHold((state.Buttons & button) != 0, (_previous.Buttons & button) != 0, now, ref downAt, ref longFired, tap, hold, actions);
         }
 
         private static void TapOrHold(bool isDown, bool wasDown, double now, ref double downAt, ref bool longFired, PadAction tap, PadAction hold, List<PadAction> actions)

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using HarmonyLib;
 using HometownStoreAccess.Core;
 using HometownStoreAccess.Speech;
@@ -50,6 +51,30 @@ namespace HometownStoreAccess.Patches
             if (saving) panel.ShowSaveGame();
             else panel.ShowLoadGame();
             SpeechService.Say(Loc.Get("save_renamed", slot._currentSaveFileName), false, MsgCategory.Notices);
+        }
+    }
+
+    /// <summary>
+    /// Game bug: the "this will overwrite this save" warning stayed armed after Cancel (or after the save
+    /// screen was closed), so the next Confirm with any taken name overwrote that save at once, without
+    /// a warning. Every new name box now starts without it, and changing the name clears it, since the
+    /// warning was about the earlier name. The game then warns again before overwriting.
+    /// </summary>
+    [HarmonyPatch(typeof(SaveSlotPanel), "OpenNewSaveInputPanel")]
+    internal static class SaveOverwriteWarningPatch
+    {
+        private static readonly HashSet<int> Hooked = new HashSet<int>();
+
+        private static void Postfix(SaveSlotPanel __instance)
+        {
+            if (__instance == null) return;
+            if (__instance.pendingConfirm != null) __instance.pendingConfirm.SetActive(false);
+            if (__instance.inputNameField == null || !Hooked.Add(__instance.GetInstanceID())) return;
+            SaveSlotPanel panel = __instance;
+            panel.inputNameField.onValueChanged.AddListener(_ =>
+            {
+                if (panel != null && panel.pendingConfirm != null && panel.pendingConfirm.activeSelf) panel.pendingConfirm.SetActive(false);
+            });
         }
     }
 }

@@ -25,8 +25,40 @@ namespace HometownStoreAccess.Game
         private static string _lastGuideKey;
         private static bool _rush, _ended, _storageFull;
 
+        // Customers often come in and leave a few at a time: those within a second are said in one message.
+        private const float GroupWindow = 1.0f;
+        private static readonly List<string> Arrivals = new List<string>();
+        private static readonly List<string> Departures = new List<string>();
+        private static float _arrivalsSince, _departuresSince;
+
+        // A message that already says the money (a sale, a purchase, a lottery ticket) makes the separate
+        // "every change of money" message for that same change only a repeat. Only that one change is
+        // left unsaid: any other change in the same frame (an event's bonus at the cashier) still is.
+        private static int _cashQuietFrame = -1;
+        private static System.Predicate<int> _cashQuietWhich;
+
+        /// <summary>The money change in this frame that <paramref name="which"/> picks is said by its own message.</summary>
+        public static void QuietCash(System.Predicate<int> which)
+        {
+            _cashQuietFrame = Time.frameCount;
+            _cashQuietWhich = which;
+        }
+
+        /// <summary>After the action: a change that did not come (a ticket that could not be bought) mutes nothing.</summary>
+        public static void ClearCashQuiet() => _cashQuietWhich = null;
+
+        /// <summary>True, once, for the money change that a message already says.</summary>
+        public static bool TakeCashQuiet(int amount)
+        {
+            if (_cashQuietFrame != Time.frameCount || _cashQuietWhich == null || !_cashQuietWhich(amount)) return false;
+            _cashQuietWhich = null;
+            return true;
+        }
+
         public static void Reset()
         {
+            Arrivals.Clear();
+            Departures.Clear();
             ShelfCounts.Clear();
             MachineDone.Clear();
             TutorialNotes.Clear();
@@ -37,6 +69,7 @@ namespace HometownStoreAccess.Game
 
         public static void Update()
         {
+            FlushGroups(false);
             if (Time.unscaledTime < _nextPoll) return;
             _nextPoll = Time.unscaledTime + 0.3f;
             GameControl gc = GameControl.Instance;
@@ -89,11 +122,19 @@ namespace HometownStoreAccess.Game
             if (tc != null && open)
             {
                 bool rush = tc.ReachedRushTime();
-                if (rush && !_rush) SpeechService.Say(Loc.Get("closing_time"), false, MsgCategory.Events);
+                bool ended = GameText.ShopClosed(tc);
+                // Closed already when closing time is first seen (a save loaded after closing, or nobody in
+                // the shop at closing time): only "shop closed" is said.
+                if (rush && !_rush && !ended)
+                {
+                    FlushGroups(true);
+                    SpeechService.Say(Loc.Get("closing_time"), false, MsgCategory.Events);
+                }
                 _rush = rush;
-                bool ended = tc.ReachedEndOfTime();
                 if (ended && !_ended)
                 {
+                    // The last customers' "left the shop" comes before "everyone has gone".
+                    FlushGroups(true);
                     AudioCues.Play(Cue.Arrive);
                     SpeechService.Say(Loc.Get("shop_closed_now"), false, MsgCategory.Events);
                 }
@@ -133,6 +174,40 @@ namespace HometownStoreAccess.Game
             }
         }
 
+        public static void CustomerArrived(string name, float pan)
+        {
+            if (!Plugin.Settings.AnnounceCustomers.Value) return;
+            if (Arrivals.Count == 0)
+            {
+                _arrivalsSince = Time.unscaledTime;
+                AudioCues.Play(Cue.CustomerArrive, pan);
+            }
+            Arrivals.Add(name);
+        }
+
+        public static void CustomerLeft(string name)
+        {
+            if (!Plugin.Settings.AnnounceCustomersLeaving.Value) return;
+            if (Departures.Count == 0) _departuresSince = Time.unscaledTime;
+            Departures.Add(name);
+        }
+
+        /// <param name="now">True: say what is waiting at once (before closing time or a new phase is said).</param>
+        public static void FlushGroups(bool now)
+        {
+            FlushGroup(Arrivals, _arrivalsSince, now, Plugin.Settings.AnnounceCustomers.Value, "customer_arrived", "customers_arrived_same", "customers_arrived_mixed");
+            FlushGroup(Departures, _departuresSince, now, Plugin.Settings.AnnounceCustomersLeaving.Value, "customer_left", "customers_left_same", "customers_left_mixed");
+        }
+
+        private static void FlushGroup(List<string> names, float since, bool now, bool enabled, string one, string same, string mixed)
+        {
+            if (names.Count == 0 || (!now && Time.unscaledTime - since < GroupWindow)) return;
+            // The setting may have been turned off while these were waiting.
+            string text = enabled ? GroupedNames.Describe(names, one, same, mixed) : null;
+            names.Clear();
+            if (text != null) SpeechService.Say(text, false, MsgCategory.Customers);
+        }
+
         public static void Customer(string message, Cue? cue = null, float pan = 0f)
         {
             if (!Plugin.Settings.AnnounceCustomers.Value) return;
@@ -157,6 +232,7 @@ namespace HometownStoreAccess.Game
         private static void Postfix(GameControl __instance, GamePhase __state, GamePhase newGamePhase)
         {
             if (__instance.CurrentGamePhase == __state) return;
+            EventAnnouncer.FlushGroups(true);
             switch (newGamePhase)
             {
                 case GamePhase.Morning:
@@ -204,7 +280,7 @@ namespace HometownStoreAccess.Game
             if (customer?.customerID == null) return;
             CustomerObject obj = CustomerSpawnSystem.Instance.customerOnScreen.LastOrDefault();
             float pan = obj != null ? EventAnnouncer.PanOfWorld(obj.transform.position) : -1f;
-            EventAnnouncer.Customer(Loc.Get("customer_arrived", GameText.Name(customer.customerID)), Cue.CustomerArrive, pan);
+            EventAnnouncer.CustomerArrived(GameText.Name(customer.customerID), pan);
         }
     }
 
@@ -232,24 +308,33 @@ namespace HometownStoreAccess.Game
             if (__instance.currentCustomerState != CustomerState.WalkOut || __instance.customerProfile?.customerID == null) return;
             AccessibilityRoot root = AccessibilityRoot.Instance;
             if (root == null || !root.InGame) return;
-            EventAnnouncer.Customer(Loc.Get("customer_left", GameText.Name(__instance.customerProfile.customerID)));
+            EventAnnouncer.CustomerLeft(GameText.Name(__instance.customerProfile.customerID));
         }
     }
 
     [HarmonyPatch(typeof(CashierObject), nameof(CashierObject.CheckOut))]
     internal static class CheckoutPatch
     {
-        private static void Prefix(CustomerObject customer, out (int value, string items, string name) __state)
+        private static void Prefix(CustomerObject customer, out (int value, string items, string name, bool quiet) __state)
         {
-            __state = (0, string.Empty, string.Empty);
+            __state = (0, string.Empty, string.Empty, false);
             if (customer == null || customer.focusToCashier) return;
-            __state = (Mathf.RoundToInt(customer.inventoryBasket.CalculateAllItemsValue()), GameText.Contents(customer.inventoryBasket), GameText.CustomerName(customer));
+            int value = Mathf.RoundToInt(customer.inventoryBasket.CalculateAllItemsValue());
+            // The sale message says the new money itself. Not when the customer brings an event: its
+            // reward, paid out first, might be the same amount, and both changes are then said as usual.
+            bool quiet = value > 0 && Plugin.Settings.AnnounceSales.Value && (customer.carryImpact == null || !customer.carryImpact.HaveImpact());
+            if (quiet) EventAnnouncer.QuietCash(a => a == value);
+            __state = (value, GameText.Contents(customer.inventoryBasket), GameText.CustomerName(customer), quiet);
         }
 
-        private static void Postfix((int value, string items, string name) __state)
+        private static void Postfix((int value, string items, string name, bool quiet) __state)
         {
+            EventAnnouncer.ClearCashQuiet();
             if (__state.value <= 0 || !Plugin.Settings.AnnounceSales.Value) return;
-            SpeechService.Say(Loc.Get("sale", __state.name, __state.value, __state.items), false, MsgCategory.Sales);
+            string text = __state.quiet && Plugin.Settings.AnnounceCashChanges.Value
+                ? Loc.Get("sale_cash", __state.name, __state.value, __state.items, ResourceManager.Instance.cash)
+                : Loc.Get("sale", __state.name, __state.value, __state.items);
+            SpeechService.Say(text, false, MsgCategory.Sales);
         }
     }
 
@@ -311,7 +396,7 @@ namespace HometownStoreAccess.Game
     {
         private static void Postfix(int amount)
         {
-            if (!Plugin.Settings.AnnounceCashChanges.Value || amount == 0) return;
+            if (!Plugin.Settings.AnnounceCashChanges.Value || amount == 0 || EventAnnouncer.TakeCashQuiet(amount)) return;
             // The game gives its starting money as the scene loads, before a save sets the real amount.
             AccessibilityRoot root = AccessibilityRoot.Instance;
             // (It does so before Unity reports the scene as loaded, while the mod still thinks it is in the menu.)
@@ -323,10 +408,16 @@ namespace HometownStoreAccess.Game
     [HarmonyPatch(typeof(TradePanel), nameof(TradePanel.CheckOut))]
     internal static class TradeCheckoutPatch
     {
-        private static void Prefix(out int __state) => __state = ResourceManager.Instance.cash;
+        private static void Prefix(out int __state)
+        {
+            __state = ResourceManager.Instance.cash;
+            // The purchase message says what is left: not the payment again.
+            EventAnnouncer.QuietCash(a => a < 0);
+        }
 
         private static void Postfix(int __state)
         {
+            EventAnnouncer.ClearCashQuiet();
             int spent = __state - ResourceManager.Instance.cash;
             if (spent > 0) SpeechService.Say(Loc.Get("trade_bought", spent, ResourceManager.Instance.cash), true, MsgCategory.Sales);
         }

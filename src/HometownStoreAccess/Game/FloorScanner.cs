@@ -36,7 +36,15 @@ namespace HometownStoreAccess.Game
         public static void ChangeCategory(int direction)
         {
             int i = System.Array.IndexOf(Order, _category);
-            _category = Order[((i + direction) % Order.Length + Order.Length) % Order.Length];
+            int next = ChoiceStep.Step(i, Order.Length, direction, UI.NavSettings.Wrap, out bool atEdge);
+            if (atEdge)
+            {
+                // "Wrap around" is off: the category stays at the end, as a choice does.
+                AudioCues.Play(Cue.Edge);
+                SpeechService.Say(TextCleaner.Join(", ", CategoryName(_category), Loc.Get("scan_count", Targets().Count)), true);
+                return;
+            }
+            _category = Order[next];
             _lastKey = null;
             List<Target> t = Targets();
             AudioCues.Play(Cue.Wrap);
@@ -67,8 +75,20 @@ namespace HometownStoreAccess.Game
                 if (next < 0) next = direction > 0 ? targets.Count : -1;
             }
             bool wrapped = false;
-            if (next >= targets.Count) { next = 0; wrapped = true; }
-            if (next < 0) { next = targets.Count - 1; wrapped = true; }
+            if (next < 0 || next >= targets.Count)
+            {
+                if (!UI.NavSettings.Wrap)
+                {
+                    // "Wrap around" is off: nothing further that way. Stay, with the edge sound and (as a
+                    // list says its item at the end) the thing the cursor is on.
+                    AudioCues.Play(Cue.Edge, FloorNav.Pan(FloorCursor.Row, FloorCursor.X));
+                    if (current >= 0 && targets[current].X == FloorCursor.X && !Placement.Active)
+                        SpeechService.Say(TextCleaner.Join(", ", targets[current].Label, Loc.Get("position_of", current + 1, targets.Count)), true);
+                    return;
+                }
+                next = next < 0 ? targets.Count - 1 : 0;
+                wrapped = true;
+            }
             Target target = targets[next];
             _lastKey = target.Key;
             FloorCursor.SetPosition(target.X, target.Y);

@@ -95,6 +95,14 @@ namespace HometownStoreAccess.UI
             if (TextEntry.Active) return;
             bool enter = ModInput.Down(KeyCode.Return) || ModInput.Down(KeyCode.KeypadEnter);
             if (enter && (Time.unscaledTime < _enterGuardUntil || TextEntry.FinishedRecently)) return;
+            if (enter && ModInput.NoFallback)
+            {
+                // A controller hold of X: only the focused item's third action, never a screen's own Enter
+                // (opening a building, going on in a conversation) when X was held a little too long.
+                if (Current.UsesListNavigation) HandleListInput();
+                else AudioCues.Play(Cue.Edge);
+                return;
+            }
             bool consumed = false;
             try { consumed = Current.HandleInput(); } catch (Exception e) { Log.Error("Context " + Current.Id + " input failed: " + e); }
             if (!consumed && Current.UsesListNavigation) HandleListInput();
@@ -402,7 +410,7 @@ namespace HometownStoreAccess.UI
             bool handled;
             try
             {
-                if (ctrl) handled = f.ActivateThird() || f.Activate();
+                if (ctrl) handled = f.ActivateThird() || (!ModInput.NoFallback && f.Activate());
                 else if (shift) handled = f.ActivateAlt() || f.Activate();
                 else handled = f.Activate();
             }
@@ -410,6 +418,12 @@ namespace HometownStoreAccess.UI
             {
                 Log.Error("Activate failed: " + e);
                 handled = true;
+            }
+            if (!handled && ModInput.NoFallback)
+            {
+                // X held on something without a third action: nothing happens, which the edge sound says.
+                AudioCues.Play(Cue.Edge);
+                return;
             }
             if (!handled) SpeechService.Say(f.Speak(), true);
             AudioCues.Play(Cue.Activate);

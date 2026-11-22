@@ -75,6 +75,8 @@ namespace HometownStoreAccess.Input
         private static bool _disabled;
         private static int _padIndex = -1;
         private static uint _scanSlot;
+        private static bool _seedNext;
+        private static bool _enabled = true;
         private static float _nextScan;
         private static float _rumbleUntil;
         private static bool _announcedConnect;
@@ -91,9 +93,30 @@ namespace HometownStoreAccess.Input
             SpeechService.Say(Loc.Get(connected ? "controller_connected" : "controller_disconnected"), false);
         }
 
+        /// <summary>
+        /// The Controller setting was turned off: let go of the controller. Instructions name the keyboard keys
+        /// again, and nothing held now acts when it is turned back on (the controller then connects afresh).
+        /// </summary>
+        private static void TurnedOff()
+        {
+            _enabled = false;
+            if (_padIndex >= 0) StopRumble();
+            _padIndex = -1;
+            _announcedConnect = false;
+            _seedNext = false;
+            Mapping.Reset();
+            Loc.PadMode = false;
+        }
+
         public static void Update()
         {
-            if (Plugin.Settings == null || !Plugin.Settings.ControllerEnabled.Value) return;
+            if (Plugin.Settings == null) return;
+            if (!Plugin.Settings.ControllerEnabled.Value)
+            {
+                if (_enabled) TurnedOff();
+                return;
+            }
+            _enabled = true;
             if (_simulatedFrames > 0 || _simulatedRelease)
             {
                 PadState sim = _simulatedFrames > 0 ? _simulated : default(PadState);
@@ -141,6 +164,8 @@ namespace HometownStoreAccess.Input
                     }
                     _probeFound = -1;
                     _padIndex = found;
+                    // Its first state is taken as already held (see below).
+                    _seedNext = true;
                     if (!_announcedConnect)
                     {
                         _announcedConnect = true;
@@ -152,6 +177,8 @@ namespace HometownStoreAccess.Input
                 {
                     _padIndex = -1;
                     _announcedConnect = false;
+                    // Buttons held when it dropped out must not count as released when it comes back.
+                    Mapping.Reset();
                     ConnectionChanged(false);
                     return;
                 }
@@ -165,6 +192,13 @@ namespace HometownStoreAccess.Input
                 };
                 ControllerMapping.NormalizeStick(s.Gamepad.sThumbLX, s.Gamepad.sThumbLY, LeftStickDeadZone, out state.LeftX, out state.LeftY);
                 ControllerMapping.NormalizeStick(s.Gamepad.sThumbRX, s.Gamepad.sThumbRY, RightStickDeadZone, out state.RightX, out state.RightY);
+                if (_seedNext)
+                {
+                    // A button held while the controller (re)connects is not a new press.
+                    _seedNext = false;
+                    Mapping.Seed(state, Time.unscaledTime);
+                    return;
+                }
                 List<PadAction> actions = Mapping.Update(state, Time.unscaledTime);
                 if (actions.Count > 0) Loc.PadMode = true;
                 foreach (PadAction a in actions) Dispatch(a);
@@ -238,7 +272,11 @@ namespace HometownStoreAccess.Input
                 case PadAction.Help: ModInput.Inject(KeyCode.F1); break;
                 case PadAction.Repeat: ModInput.Inject(KeyCode.R, ctrl: true); break;
                 case PadAction.Status: ModInput.Inject(KeyCode.T, ctrl: true); break;
-                case PadAction.Customers: ModInput.Inject(KeyCode.K, ctrl: true); break;
+                case PadAction.Customers:
+                    // On the map (no customers in the evening) the left stick click starts and ends walk mode.
+                    if (AccessibilityRoot.Instance?.Contexts.Current?.Id == "map") ModInput.Inject(KeyCode.W, ctrl: true);
+                    else ModInput.Inject(KeyCode.K, ctrl: true);
+                    break;
                 case PadAction.TogglePause: ModInput.Inject(KeyCode.P, ctrl: true); break;
                 case PadAction.CategoryPrevious: ModInput.Inject(KeyCode.UpArrow, ctrl: true); break;
                 case PadAction.CategoryNext: ModInput.Inject(KeyCode.DownArrow, ctrl: true); break;
@@ -248,6 +286,11 @@ namespace HometownStoreAccess.Input
                 case PadAction.ModSettings: ModInput.Inject(KeyCode.F5); break;
                 case PadAction.RecallStory: ModInput.Inject(KeyCode.Backslash); break;
                 case PadAction.Goal: ModInput.Inject(KeyCode.J, ctrl: true); break;
+                case PadAction.ActivateThird: ModInput.Inject(KeyCode.Return, ctrl: true, noFallback: true); break;
+                case PadAction.ReadScreen: ModInput.Inject(KeyCode.R, shift: true, ctrl: true); break;
+                case PadAction.FirstItem: ModInput.Inject(KeyCode.Home); break;
+                case PadAction.LastItem: ModInput.Inject(KeyCode.End); break;
+                case PadAction.HistoryCategory: ModInput.Inject(KeyCode.RightBracket); break;
                 case PadAction.Back: GameActions.Back(); break;
                 case PadAction.Pause:
                     if (Contexts.Overlay.IsOpen) Contexts.Overlay.Close();

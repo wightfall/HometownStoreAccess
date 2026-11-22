@@ -29,6 +29,16 @@ namespace HometownStoreAccess.Core
             return list;
         }
 
+        private static readonly System.Text.RegularExpressions.Regex NameTimes = new System.Text.RegularExpressions.Regex(@"^(.+?) x(\d+)$");
+
+        /// <summary>"Candy x3" as "Candy: 3" (the "x" is read as a letter). For a reward's item or building line.</summary>
+        public static string Quantity(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            var m = NameTimes.Match(text);
+            return m.Success ? Loc.Get("item_stack", m.Groups[1].Value, m.Groups[2].Value) : text;
+        }
+
         /// <summary>
         /// The budget rows as one sentence. The game shows both rows even when one limit stays the
         /// same (with placeholder text), so only the limits that change are read.

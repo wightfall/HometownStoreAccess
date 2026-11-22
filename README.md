@@ -123,7 +123,8 @@ to repeat. On the shop floor and in walk mode, letters work without Ctrl.
 At the end of a list, Down goes round to the first item with the wrap sound, and Page Down in the
 last section goes to the first section. To stop at the ends instead (with the edge sound), turn off
 **Wrap around at the ends of lists** in the mod settings. This also applies to Left and Right on a
-choice such as the game language; Enter always goes on to the next value.
+choice such as the game language or a category, to Ctrl+Up and Ctrl+Down on categories, and to Up
+and Down in the shop floor scanner; Enter always goes on to the next value.
 
 ### Main menu and options
 
@@ -142,7 +143,9 @@ in the game) and About (the version).
 
 When you save under a name that is already taken (an empty name means "Save Game"), the game warns
 that the save will be overwritten, and you hear the warning. Pressing Confirm again overwrites that
-save; Cancel keeps it.
+save; Cancel keeps it. Changing the name, or opening the name box again, starts over, so the game
+always warns before it overwrites a save. (In the game itself the warning stays armed after Cancel,
+and the next Confirm overwrites without one; the mod fixes that.)
 
 ### Message history
 
@@ -243,6 +246,9 @@ each reply also says what it leads to when the game shows that. The Speed up and
 buttons are at the end of the list (Enter presses them). The log opens on the newest line; Up reads
 the earlier ones, and Escape closes it.
 
+A reward after a conversation is read as soon as it appears. If you press Enter before that, Enter
+reads it, and the next Enter closes it.
+
 | Key | Action |
 | --- | --- |
 | Backslash | The current line again |
@@ -324,25 +330,27 @@ leave it as it is.
 | --- | --- |
 | D-pad, left stick | Arrow keys |
 | A | Enter |
-| X | Alternative action (Shift+Enter) |
-| Y | Details |
+| X | Alternative action (Shift+Enter); hold for the third action (Ctrl+Enter): move one item, delete a save |
+| Y | Details; hold to read the whole screen (Ctrl+Shift+R) |
 | B | Back |
-| LB, RB | Previous, next section |
+| LB, RB | Previous, next section; hold for the first, last item (Home, End) |
 | Start | Pause menu; hold for the mod settings (F5) |
 | Back | Help for this screen (F1); hold for the key list (Shift+F1) |
 | Left trigger | Repeat; in a conversation, hold to hear the line again (Backslash) |
 | Right trigger | Status (day and time); hold for the current goal or tutorial step (J) |
-| Left stick click | Customers |
-| Right stick click | Pause or resume |
+| Left stick click | Customers; on the map, walk mode (Ctrl+W) |
+| Right stick click | Pause or resume; hold for the next category of the message history (Right bracket) |
 | Right stick up, down | Previous, next category (Ctrl+Up, Ctrl+Down) |
 | Right stick left, right | Older, newer message (Comma, Period) |
 
 On the shop floor, RB (like Tab) switches to the toolbar, the game's own buttons: the next phase
 (open the shop, go to the map), build mode, the game speed, all stock, customers, the event journal
-and the others. That is how you open build mode and move the day on with a controller. A few things
-need the keyboard: typing (naming a save), deleting a save, moving a single item (Ctrl+Enter), the
-first and last item (Home, End), walk mode on the map (Ctrl+W), the categories of the message
-history, and F3.
+and the others. That is how you open build mode and move the day on with a controller. Only typing (a save's
+name), the first and last message of the history and F3 need the keyboard.
+
+The buttons with a second action on hold (X, Y, LB, RB and the right stick click) act when you let
+go of them. Holding X a little too long on something without a third action plays the edge sound
+instead of doing what A does.
 
 ## Categories
 
@@ -422,9 +430,11 @@ headings, so you hear the section name alone, and Down goes to its first setting
 - **Speech and language:** game language (every language the game has, plus your translation
   files), mod language, speech output (Auto, NVDA, JAWS, OneCore, SAPI and others), announce list
   positions, write speech to the log, a detailed log for bug reports
-- **Announcements:** customers coming and going, sales at the cashier, empty shelves, deliveries
-  and machines, customer speech bubbles, every change of money, read dialog automatically,
-  tutorial notes and key hints, Steam achievements
+- **Announcements:** customers coming in and getting upset, customers leaving the shop (customers
+  who come in or leave together are said in one message), sales at the cashier, empty shelves,
+  deliveries and machines, customer speech bubbles, every change of money (a sale, a purchase, a
+  lottery ticket or a building you sell is said once, with the money you have now), read dialog
+  automatically, tutorial notes and key hints, Steam achievements
 - **Sound cues:** sound cues on or off, menu sounds, the overall sound cue volume
 - **Volume of each sound cue:** a section of its own, so Page Down skips it
 - **Controls:** wrap around at the ends of lists, skip the logo intro and shorten the loading fade,
@@ -527,8 +537,10 @@ echo state> BepInEx\hsa_cmd.txt
 
 The results, and everything the mod says (lines with `[Speech]`), are written to
 `BepInEx\LogOutput.log`. The game only runs while its window has the focus, so a command waits
-until you switch back to the game. Write the next command only after the file is gone: two key
-presses that arrive in the same moment count as one. Lines that start with `#` are skipped.
+until you switch back to the game. Write the next command only after the file is gone (writing it
+again before then replaces the commands not yet read). Several lines in one file run together: key
+presses with the same Shift, Ctrl and Alt arrive in the same frame, and another combination or the
+same key again in the next frame. Lines that start with `#` are skipped.
 
 Names are the game's English asset names, and part of a name is enough, in any case (`Incense`
 finds "Incense Sticks"). `buildings`, `trades`, `places` and `journals` list them. When you are

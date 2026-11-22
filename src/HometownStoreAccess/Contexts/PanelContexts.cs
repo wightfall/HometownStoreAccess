@@ -59,7 +59,13 @@ namespace HometownStoreAccess.Contexts
                 var bill = t.GetComponent<Content_BillList>();
                 if (bill == null || !t.gameObject.activeInHierarchy) continue;
                 Content_BillList b = bill;
-                items.Add(new TextItem(() => TextCleaner.Join(", ", UiUtil.Text(b.textName), UiUtil.Text(b.amount), UiUtil.Text(b.cost)), key + n++) { Group = group });
+                // "Candy, x2, 4 baht" as "Candy: 2, 4 baht" (the "x" is read as a letter).
+                items.Add(new TextItem(() =>
+                {
+                    string name = UiUtil.Text(b.textName);
+                    string amount = UiUtil.Text(b.amount).TrimStart('x', ' ');
+                    return TextCleaner.Join(", ", amount.Length > 0 ? Loc.Get("item_stack", name, amount) : name, UiUtil.Text(b.cost));
+                }, key + n++) { Group = group });
             }
             if (n == 0) items.Add(new TextItem(Loc.Get("summary_none"), key + ":none") { Group = group });
         }
@@ -545,7 +551,10 @@ namespace HometownStoreAccess.Contexts
                         }
                         string number = UiUtil.Text(p.selectNumberText);
                         string moneyBefore = UiUtil.Text(p.currentMoney);
+                        // The ticket message says the money left.
+                        EventAnnouncer.QuietCash(a => a < 0);
                         UiUtil.Click(p.buyButton.gameObject);
+                        EventAnnouncer.ClearCashQuiet();
                         // Not enough money or already bought: the game shows a notice, which is read instead.
                         string moneyAfter = UiUtil.Text(p.currentMoney);
                         if (moneyAfter != moneyBefore) SpeechService.Say(Loc.Get("lottery_bought", number, moneyAfter), true, MsgCategory.Shop);
