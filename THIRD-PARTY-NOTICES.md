@@ -8,6 +8,7 @@ the following software, which keeps its own license.
 `prism.dll`: the speech library that talks to screen readers and Windows speech.
 
 - Project: <https://github.com/ethindp/prism>
+- Version: 0.18.4 (the Windows x64 release build)
 - License: Mozilla Public License 2.0 (`licenses/LICENSE-prism-MPL-2.0.txt`)
 - `prism.dll` is distributed unmodified. Its source code is available from the project page.
 

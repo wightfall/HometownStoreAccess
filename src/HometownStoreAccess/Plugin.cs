@@ -14,7 +14,7 @@ namespace HometownStoreAccess
     {
         public const string Guid = "com.wightfall.hometownstoreaccess";
         public const string Name = "Hometown Store Access";
-        public const string Version = "1.4.1";
+        public const string Version = "1.4.2";
 
         internal static Plugin Instance { get; private set; }
         internal static ModSettings Settings { get; private set; }

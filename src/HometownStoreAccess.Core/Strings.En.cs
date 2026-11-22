@@ -9,6 +9,7 @@ namespace HometownStoreAccess.Core
             // General
             ["mod_loaded"] = "Hometown Store Access loaded. Press F1 for help.",
             ["speech_backend_changed"] = "Speech now uses {0}.",
+            ["speech_backend_unavailable"] = "{0} is not available; speech uses {1}.",
             ["loading_game"] = "Loading.",
             ["loading_menu"] = "Going back to the main menu.",
             ["language_changed"] = "Language: {0}.",
@@ -251,7 +252,6 @@ namespace HometownStoreAccess.Core
             ["group_skins"] = "Looks",
             ["group_places"] = "Places",
             ["group_map"] = "Map",
-            ["group_trade_tabs"] = "Categories",
             ["group_trade_filters"] = "Filters",
             ["group_goods"] = "Goods",
             ["group_buildings"] = "Buildings",

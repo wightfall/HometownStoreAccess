@@ -17,6 +17,9 @@ namespace HometownStoreAccess.Speech
         private static IntPtr _backend = IntPtr.Zero;
         private static PrismNative.AvailabilityCallback _callbackKeepAlive;
         private static int _reselectRequested;
+        // Set when speaking failed: the backend is made anew even if it is the same one (its old instance is broken).
+        private static int _replaceRequested;
+        private static int _lastReplaceTick;
         private static bool _initialized;
         private static string _preferredBackend = "Auto";
 
@@ -96,10 +99,14 @@ namespace HometownStoreAccess.Speech
         }
 
         /// <summary>Picks the configured backend, or the best available one ("Auto").</summary>
-        public static void SelectBackend(bool announce)
+        public static void SelectBackend(bool announce) => SelectBackend(announce, false);
+
+        /// <param name="replace">Use the newly made backend even when it is the same kind as the current one.</param>
+        private static void SelectBackend(bool announce, bool replace)
         {
             if (_ctx == IntPtr.Zero) return;
             IntPtr chosen = IntPtr.Zero;
+            bool preferredFailed = false;
             try
             {
                 if (!string.Equals(_preferredBackend, "Auto", StringComparison.OrdinalIgnoreCase))
@@ -107,6 +114,7 @@ namespace HometownStoreAccess.Speech
                     chosen = CreateNamedBackend(_preferredBackend);
                     if (chosen == IntPtr.Zero)
                     {
+                        preferredFailed = true;
                         Log.Warn("Preferred speech backend '" + _preferredBackend + "' is not available; using the best available backend.");
                     }
                 }
@@ -126,17 +134,24 @@ namespace HometownStoreAccess.Speech
             string newName = PrismNative.FromUtf8(PrismNative.prism_backend_name(chosen));
             if (_backend != IntPtr.Zero)
             {
-                if (string.Equals(newName, BackendName, StringComparison.Ordinal))
+                bool same = string.Equals(newName, BackendName, StringComparison.Ordinal);
+                if (same && !replace)
                 {
                     PrismNative.prism_backend_free(chosen);
+                    if (announce && preferredFailed) Say(Loc.Get("speech_backend_unavailable", _preferredBackend, BackendName), true);
                     return;
                 }
                 PrismNative.prism_backend_free(_backend);
+                // The same output started again: nothing to tell the player.
+                if (same) announce = false;
             }
             _backend = chosen;
             BackendName = newName;
             Log.Info("Speech backend: " + BackendName);
-            if (announce) Say(Loc.Get("speech_backend_changed", BackendName), true);
+            if (announce)
+            {
+                Say(preferredFailed ? Loc.Get("speech_backend_unavailable", _preferredBackend, BackendName) : Loc.Get("speech_backend_changed", BackendName), true);
+            }
         }
 
         private static IntPtr CreateNamedBackend(string name)
@@ -146,10 +161,15 @@ namespace HometownStoreAccess.Speech
             {
                 ulong id = PrismNative.prism_registry_id_at(_ctx, (UIntPtr)i);
                 string n = PrismNative.FromUtf8(PrismNative.prism_registry_name(_ctx, id));
-                if (string.Equals(n, name, StringComparison.OrdinalIgnoreCase))
-                {
-                    return PrismNative.prism_registry_create(_ctx, id);
-                }
+                if (!string.Equals(n, name, StringComparison.OrdinalIgnoreCase)) continue;
+                IntPtr backend = PrismNative.prism_registry_create(_ctx, id);
+                if (backend == IntPtr.Zero) return IntPtr.Zero;
+                // Created by name, the backend has to be started before it can speak.
+                int err = PrismNative.prism_backend_initialize(backend);
+                if (err == PrismNative.PrismOk || err == PrismNative.PrismErrorAlreadyInitialized) return backend;
+                Log.Warn("Speech backend '" + n + "' could not start: " + PrismNative.FromUtf8(PrismNative.prism_error_string(err)) + ".");
+                PrismNative.prism_backend_free(backend);
+                return IntPtr.Zero;
             }
             return IntPtr.Zero;
         }
@@ -161,7 +181,13 @@ namespace HometownStoreAccess.Speech
             SelectBackend(announce: true);
         }
 
-        /// <summary>Names of all backends Prism knows on this system (available or not).</summary>
+        // Prism 0.18.4 backends that are not speech for a player: one copies every message over the
+        // clipboard, the other says nothing. They stay out of the settings list (PRISM_BACKEND_CLIPBOARD,
+        // PRISM_BACKEND_NO_SPEECH in prism.h).
+        private const ulong ClipboardBackendId = 0x7056908DE8F9F991UL;
+        private const ulong NoSpeechBackendId = 0xC2C0EAB0BF97A5F0UL;
+
+        /// <summary>Names of the backends Prism knows on this system (available or not) that a player can choose.</summary>
         public static System.Collections.Generic.List<string> BackendNames()
         {
             var list = new System.Collections.Generic.List<string>();
@@ -170,6 +196,7 @@ namespace HometownStoreAccess.Speech
             for (int i = 0; i < count; i++)
             {
                 ulong id = PrismNative.prism_registry_id_at(_ctx, (UIntPtr)i);
+                if (id == ClipboardBackendId || id == NoSpeechBackendId) continue;
                 list.Add(PrismNative.FromUtf8(PrismNative.prism_registry_name(_ctx, id)));
             }
             return list;
@@ -222,9 +249,10 @@ namespace HometownStoreAccess.Speech
         /// <summary>Main-thread pump: handles backend reselection and flushes the frame buffer.</summary>
         public static void Update(double now)
         {
-            if (Interlocked.Exchange(ref _reselectRequested, 0) == 1)
+            bool replace = Interlocked.Exchange(ref _replaceRequested, 0) == 1;
+            if (Interlocked.Exchange(ref _reselectRequested, 0) == 1 || replace)
             {
-                SelectBackend(announce: true);
+                SelectBackend(true, replace);
             }
             Flush(now);
         }
@@ -247,8 +275,14 @@ namespace HometownStoreAccess.Speech
                 int err = PrismNative.prism_backend_output(_backend, PrismNative.Utf8Z(text), interrupt);
                 if (err != 0)
                 {
-                    Log.Warn("Prism output failed: " + PrismNative.FromUtf8(PrismNative.prism_error_string(err)) + "; reselecting backend.");
-                    Interlocked.Exchange(ref _reselectRequested, 1);
+                    // At most once a second, so a backend that keeps failing is not made anew every frame.
+                    int tick = Environment.TickCount;
+                    if (unchecked(tick - _lastReplaceTick) > 1000 || _lastReplaceTick == 0)
+                    {
+                        _lastReplaceTick = tick;
+                        Log.Warn("Prism output failed: " + PrismNative.FromUtf8(PrismNative.prism_error_string(err)) + "; starting the speech backend again.");
+                        Interlocked.Exchange(ref _replaceRequested, 1);
+                    }
                 }
             }
             catch (Exception e)

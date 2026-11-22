@@ -462,7 +462,9 @@ For any other language, you can translate both the mod and the game text with pl
 
 - **No speech at all:** check that `winhttp.dll` and the `BepInEx` folder are in the game folder.
   Then look at `BepInEx\LogOutput.log`: it should contain "Hometown Store Access". If your screen
-  reader is not picked up, set the speech output to it in the settings (F5).
+  reader is not picked up, set the speech output to it in the settings (F5). When the output you
+  choose cannot start (it is not installed or not running), the mod says so and uses the best one
+  available.
 - **Speech is too chatty:** turn off announcements you do not need in the settings, for example
   every change of money.
 - **Something is not read or does not work:** press Ctrl+Shift+R to read the whole screen and
