@@ -7,6 +7,26 @@ using Steamworks.Data;
 namespace HometownStoreAccess.Patches
 {
     /// <summary>
+    /// Testing: while the test commands are on (setting TestHooks), the game's achievement unlocks are not sent to
+    /// Steam. A test conversation, event or reward can trigger one, and a test must never unlock a player's real
+    /// achievements. The unlock is written to the log instead.
+    /// </summary>
+    [HarmonyPatch(typeof(SteamIntegration), nameof(SteamIntegration.UnlockAchievement))]
+    [HarmonyPriority(Priority.First)]
+    internal static class TestAchievementGuard
+    {
+        // The game's money check asks every frame: each achievement is logged once.
+        private static readonly System.Collections.Generic.HashSet<E_Achievement> Logged = new System.Collections.Generic.HashSet<E_Achievement>();
+
+        private static bool Prefix(E_Achievement achievement)
+        {
+            if (Plugin.Settings == null || !Plugin.Settings.TestHooks.Value) return true;
+            if (Logged.Add(achievement)) Log.Info("[test] achievement " + achievement + " not unlocked: the test commands are on");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Steam shows an unlocked achievement only in its overlay, which screen readers do not read.
     /// When the game unlocks one that was still locked, say its Steam name and description.
     /// </summary>

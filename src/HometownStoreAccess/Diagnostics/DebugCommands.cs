@@ -366,6 +366,85 @@ namespace HometownStoreAccess.Diagnostics
                     else GameProgressionControl.Instance.RunDialogEvent(found);
                     break;
                 }
+                case "pictures":
+                {
+                    // pictures: the conversations' story pictures, and every portrait that changes from one line to
+                    // the next at the same place (what a player sees change while reading)
+                    int lineCount = 0, pictureLines = 0, changes = 0;
+                    var used = new SortedDictionary<string, int>(StringComparer.Ordinal);
+                    var picEffects = new SortedDictionary<string, int>(StringComparer.Ordinal);
+                    var places = new[] { PortraitPosition.Left, PortraitPosition.Center, PortraitPosition.Right };
+                    // Also the conversations no scene object holds yet: the story events bring theirs along.
+                    Resources.LoadAll<RunEventType>(string.Empty);
+                    Resources.LoadAll<DialogEvent>(string.Empty);
+                    foreach (DialogEvent d in Resources.FindObjectsOfTypeAll<DialogEvent>())
+                    {
+                        if (d == null || d.dialogLines == null) continue;
+                        if (arg.Length > 0)
+                        {
+                            // pictures <conversation>: every line of it, with its speaker and its pictures' effects.
+                            if (d.name.IndexOf(arg, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                            for (int li = 0; li < d.dialogLines.Count; li++)
+                            {
+                                DialogLine dli = d.dialogLines[li];
+                                if (dli == null) continue;
+                                var shown = new List<string>();
+                                foreach (PortraitPosition pp in places)
+                                {
+                                    PortraitData pdi = dli.GetPortraitData(pp);
+                                    if (pdi != null && pdi.portrait != null) shown.Add(pp + " " + pdi.portrait.name + " " + pdi.transitionType);
+                                }
+                                string who = dli.dialogLine != null ? dli.dialogLine.GetName(d.name, LanguageControl.CurrentLanguage) : "?";
+                                Log.Info("[pictures] " + d.name + " " + li + " " + who + ": " + string.Join(", ", shown.ToArray()));
+                            }
+                            continue;
+                        }
+                        var before = new Dictionary<PortraitPosition, string>();
+                        for (int i = 0; i < d.dialogLines.Count; i++)
+                        {
+                            DialogLine dl = d.dialogLines[i];
+                            if (dl == null) continue;
+                            lineCount++;
+                            if (dl.cg_img != null)
+                            {
+                                pictureLines++;
+                                Log.Info("[pictures] " + d.name + " line " + i + ": story picture " + dl.cg_img.name + (string.IsNullOrEmpty(dl.cg_color) ? string.Empty : " (" + dl.cg_color + ")"));
+                            }
+                            foreach (PortraitPosition pos in places)
+                            {
+                                PortraitData pd = dl.GetPortraitData(pos);
+                                string now = pd != null && pd.portrait != null ? pd.portrait.name : null;
+                                if (now != null) used[now] = used.TryGetValue(now, out int c) ? c + 1 : 1;
+                                if (pd != null && pd.portrait != null && pd.transitionType != PortraitTransitionType.None)
+                                {
+                                    string picEffect = pd.transitionType.ToString();
+                                    picEffects[picEffect] = picEffects.TryGetValue(picEffect, out int picCount) ? picCount + 1 : 1;
+                                    if (pd.transitionType == PortraitTransitionType.Shake) Log.Info("[pictures] " + d.name + " line " + i + ": " + pos + " " + pd.portrait.name + " shakes");
+                                }
+                                if (before.TryGetValue(pos, out string was) && was != null && now != null && was != now)
+                                {
+                                    changes++;
+                                    Log.Info("[pictures] " + d.name + " line " + i + ": " + pos + " " + was + " -> " + now);
+                                }
+                                before[pos] = now;
+                            }
+                        }
+                    }
+                    Log.Info("[pictures] " + lineCount + " lines, " + pictureLines + " with a story picture, " + changes + " portrait changes; portraits used: " + string.Join(", ", used.Select(kv => kv.Key + " x" + kv.Value).ToArray()));
+                    Log.Info("[pictures] effects: " + string.Join(", ", picEffects.Select(kv => kv.Key + " x" + kv.Value).ToArray()));
+                    CharacterCollectionManager picCollection = CharacterCollectionManager.Instance;
+                    if (picCollection != null)
+                    {
+                        Log.Info("[pictures] collection: " + picCollection.allCharacterPortraits.Count + " entries, " + picCollection.metCharacters.Count + " met: " + string.Join(", ", picCollection.allCharacterPortraits.Where(x => x != null).Select(x => x.name + "=" + (x.portrait != null ? x.portrait.name : "-") + (x.isSecret ? " secret" : string.Empty) + (x.detailsKey == null ? " (no text)" : " (" + x.detailsKey.GetName(x.name, LanguageControl.CurrentLanguage) + " / " + x.detailsKey.GetDescription(x.name, LanguageControl.CurrentLanguage) + ")")).ToArray()));
+                    }
+                    else Log.Info("[pictures] collection: none");
+                    foreach (string picName in used.Keys)
+                    {
+                        CharacterPortrait picEntry = picCollection != null ? picCollection.allCharacterPortraits.FirstOrDefault(x => x != null && x.portrait != null && x.portrait.name == picName) : null;
+                        Log.Info("[pictures] " + picName + ": " + (picEntry == null ? "not in the portrait collection" : picEntry.detailsKey == null ? "in the collection, no text" : "named " + picEntry.detailsKey.GetName(picEntry.name, LanguageControl.CurrentLanguage)));
+                    }
+                    break;
+                }
                 case "events":
                     // events: every story event the game's own dev tool can run
                     foreach (RunEventType e in Resources.LoadAll<RunEventType>("")) Log.Info("[events] " + e.name);
@@ -449,6 +528,11 @@ namespace HometownStoreAccess.Diagnostics
                     SteamIntegration steam = SteamIntegration.instance;
                     bool connected = steam != null && steam.connectedToSteam;
                     Log.Info("[achievements] Steam " + (connected ? "connected" : "not connected"));
+                    // The guard that keeps tests from unlocking real achievements: is it on the game's unlock?
+                    var unlock = HarmonyLib.AccessTools.Method(typeof(SteamIntegration), nameof(SteamIntegration.UnlockAchievement));
+                    var patches = unlock != null ? HarmonyLib.Harmony.GetPatchInfo(unlock) : null;
+                    bool guarded = patches != null && patches.Prefixes.Any(x => x.PatchMethod.DeclaringType == typeof(Patches.TestAchievementGuard));
+                    Log.Info("[achievements] test guard on the game's unlock: " + (guarded ? "yes" : "NO") + "; unlocks blocked now: " + (guarded && Plugin.Settings.TestHooks.Value ? "yes" : "no"));
                     foreach (E_Achievement a in Enum.GetValues(typeof(E_Achievement)))
                     {
                         string state = connected ? (steam.IsAchievementUnlocked(a) ? "unlocked" : "locked") : "?";
@@ -466,9 +550,27 @@ namespace HometownStoreAccess.Diagnostics
                 case "achievement":
                 {
                     // achievement <name or number>: says the announcement of that achievement, without unlocking it on Steam
+                    // achievement lock <name or number>: locks it again on Steam (undoes a test that let the game unlock it)
+                    bool lockIt = arg.StartsWith("lock ", StringComparison.OrdinalIgnoreCase);
+                    string which = lockIt ? arg.Substring(5).Trim() : arg;
                     E_Achievement a;
-                    if (int.TryParse(arg, out int number) && Enum.IsDefined(typeof(E_Achievement), number)) a = (E_Achievement)number;
-                    else if (!Enum.TryParse(arg, true, out a)) { Log.Warn("achievement: give a name or number (achievements lists them)"); break; }
+                    if (int.TryParse(which, out int number) && Enum.IsDefined(typeof(E_Achievement), number)) a = (E_Achievement)number;
+                    else if (!Enum.TryParse(which, true, out a)) { Log.Warn("achievement: give a name or number (achievements lists them)"); break; }
+                    if (lockIt)
+                    {
+                        SteamIntegration lockSteam = SteamIntegration.instance;
+                        if (lockSteam == null || !lockSteam.connectedToSteam)
+                        {
+                            Log.Warn("achievement lock: Steam is not connected");
+                            break;
+                        }
+                        // The game names its achievements "Achievement_<number>" (SteamIntegration.UnlockAchievement).
+                        var steamAchievement = new Steamworks.Data.Achievement("Achievement_" + (int)a);
+                        bool cleared = steamAchievement.Clear();
+                        bool stored = Steamworks.SteamUserStats.StoreStats();
+                        Log.Info("[achievement] " + a + " locked again: cleared " + cleared + ", stored " + stored + ", now " + (lockSteam.IsAchievementUnlocked(a) ? "unlocked" : "locked"));
+                        break;
+                    }
                     SpeechService.Say(Patches.AchievementPatch.Describe(a), false, Core.MsgCategory.Events);
                     break;
                 }
@@ -610,9 +712,10 @@ namespace HometownStoreAccess.Diagnostics
             "trades: every shop's stock today | trade <shop>: open a shop | places: every map place | points <n>: travel points | goto <place>: arrive at a place | unlock <place>|all",
             "journals: every event and its tasks | journal <name>: start an event | journal check: check the events now | events / event <name>: story events | dialog [name]: conversations",
             "reward money|item|blueprint|customer|trust|budget|wish|trade|vehicle <arg>: a reward screen | open lottery|vehicle|characters",
-            "achievements: the game's Steam achievements | achievement <name or number>: say its announcement (unlocks nothing)",
+            "achievements: the game's Steam achievements | achievement <name or number>: say its announcement (unlocks nothing) | achievement lock <name or number>: lock it again on Steam",
             "cues: every sound cue's length, peak and volume | cues play: also plays them one by one",
             "table <table> [entry] | export <locale> | missing <locale>: game text",
+            "pictures [conversation]: conversation pictures, faces and effects | pick <dropdown> <item>: click a dropdown item",
         };
     }
 }
