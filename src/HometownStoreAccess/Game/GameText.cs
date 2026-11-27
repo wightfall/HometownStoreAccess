@@ -8,6 +8,18 @@ namespace HometownStoreAccess.Game
     /// <summary>Names and descriptions taken from the game's own localization tables, plus summaries built from game data.</summary>
     internal static class GameText
     {
+        /// <summary>The weather of the shop's scene (game 1.7.12), or null (an older game, the main menu).</summary>
+        public static WeatherManager Weather() => UI.SceneCache.Get<WeatherManager>();
+
+        /// <summary>"Clear", "Light rain", "Heavy fog"...</summary>
+        public static string WeatherText(WeatherManager wm)
+        {
+            if (wm == null) return Loc.Get("weather_clear");
+            string key = WeatherWords.Key(wm.CurrentWeather.ToString(), wm.Intensity);
+            // A kind of weather this mod does not know yet (a later game version): its name.
+            return key != null ? Loc.Get(key) : TextCleaner.HumanizeName(wm.CurrentWeather.ToString());
+        }
+
         public static string Name(Item item) => item == null ? "?" : Cached(item, 0, () => Safe(() => item.detailsKey.GetName(item.name, LanguageControl.CurrentLanguage), item.name));
         public static string Description(Item item) => item == null ? string.Empty : Cached(item, 1, () => Safe(() => item.detailsKey.GetDescription(item.name, LanguageControl.CurrentLanguage), string.Empty));
         public static string Name(Building b) => b == null ? "?" : Cached(b, 0, () => Safe(() => b.detailsKey.GetName(b.name, LanguageControl.CurrentLanguage), b.name));

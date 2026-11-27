@@ -526,7 +526,7 @@ namespace HometownStoreAccess.Contexts
         }
     }
 
-    /// <summary>Phase, day, time and money in one line.</summary>
+    /// <summary>Phase, day, time, money, shop level and weather in one line.</summary>
     internal static class StatusText
     {
         public static string Short()
@@ -557,6 +557,9 @@ namespace HometownStoreAccess.Contexts
             if (ResourceManager.Instance != null) parts.Add(GameText.Money(ResourceManager.Instance.cash));
             // The game shows the shop's level only through its size; customers' trust needs it.
             if (StoreManager.Instance != null) parts.Add(Loc.Get("status_shop_level", StoreManager.Instance.StoreLevel + 1));
+            // Rain and fog are only seen on the screen (game 1.7.12).
+            WeatherManager wm = GameText.Weather();
+            if (wm != null) parts.Add(GameText.WeatherText(wm));
             return TextCleaner.Join(", ", parts.ToArray());
         }
 

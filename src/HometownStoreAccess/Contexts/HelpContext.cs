@@ -115,7 +115,7 @@ namespace HometownStoreAccess.Contexts
             foreach (Cue cue in Enum.GetValues(typeof(Cue)))
             {
                 Cue c = cue;
-                items.Add(new ActionItem(() => AudioCues.Name(c), () => AudioCues.Preview(c), "cue:" + c) { Group = sounds, DetailFunc = () => Loc.Get("hint_cue_play") });
+                items.Add(new ActionItem(() => AudioCues.Name(c), () => AudioCues.Preview(c), "cue:" + c) { Group = sounds, OwnSound = true, DetailFunc = () => Loc.Get("hint_cue_play") });
             }
             items.Add(new ActionItem(() => Loc.Get("label_open_settings"), () => Overlay.Show(Overlay.Kind.Settings, Overlay.Underlying, Overlay.InGame), "open_settings") { Group = Loc.Get("group_actions") });
             items.Add(new ActionItem(() => Loc.Get("label_close"), Overlay.Close, "close") { Group = Loc.Get("group_actions") });
@@ -174,6 +174,7 @@ namespace HometownStoreAccess.Contexts
             items.Add(Toggle(s.AnnounceShaking, "set_shaking", ann));
             items.Add(Toggle(s.AnnounceTutorial, "set_tutorial", ann));
             items.Add(Toggle(s.AnnounceAchievements, "set_achievements", ann));
+            items.Add(Toggle(s.AnnounceWeather, "set_weather", ann));
 
             string audio = Loc.Get("set_group_audio");
             items.Add(Toggle(s.AudioCues, "set_cues", audio));
@@ -345,6 +346,7 @@ namespace HometownStoreAccess.Contexts
         public override string Label() => _label();
         public override string Value() => Mathf.RoundToInt(_entry.Value * 100f) + "%";
         public override string Role() => Loc.Get("role_slider");
+        public override bool PlaysOwnSound => true;
 
         public override bool Adjust(int direction, bool large)
         {

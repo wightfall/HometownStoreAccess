@@ -106,6 +106,8 @@ namespace HometownStoreAccess.Audio
             src.pitch = Mathf.Clamp(pitch, 0.25f, 3f);
             src.volume = Mathf.Clamp01(volume * Plugin.Settings.AudioCueVolume.Value * Plugin.Settings.CueVolume(cue).Value);
             src.Play();
+            // For tests: which cues a key played (only with the test commands on).
+            if (Plugin.Settings.TestHooks.Value) Log.Info("[cue] " + cue);
         }
 
         /// <summary>Length (ms) and peak level of each generated cue, for the "cues" test command.</summary>

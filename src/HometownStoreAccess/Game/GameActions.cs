@@ -88,7 +88,8 @@ namespace HometownStoreAccess.Game
         {
             if (building == null || building is DeliveryObject || PopupOpen) return;
             int count = 0;
-            if (building is ShelfObject shelf) count += shelf.ShelfInventory.ItemList.Count;
+            // Slots locked to a kind of goods stay when empty: the game counts only the filled ones (1.7.12).
+            if (building is ShelfObject shelf) count += shelf.ShelfInventory.FilledSlotCount();
             else if (building is ManufactureObject m) count += m.InputInventory.ItemList.Count + m.OutputInventory.ItemList.Count;
             string name = GameText.Name(building.ID);
             if (count > 0)

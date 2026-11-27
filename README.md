@@ -110,7 +110,7 @@ to repeat. On the shop floor and in walk mode, letters work without Ctrl.
 | Enter | Activate |
 | Shift+Enter | Alternative action (for example sell one, or move half a stack) |
 | Ctrl+Enter | Third action (for example move one item) |
-| Page Up, Page Down / Tab, Shift+Tab | Previous or next section (the main menu, the options and the mod settings have sections too) |
+| Page Up, Page Down / Tab, Shift+Tab | Heading of the previous or next section |
 | Home, End | First or last item |
 | Letters | Jump to the next item starting with that letter |
 | Ctrl+Up, Ctrl+Down | Previous or next category, on screens with categories (see [Categories](#categories)) |
@@ -122,6 +122,13 @@ to repeat. On the shop floor and in walk mode, letters work without Ctrl.
 | F5 | Mod settings |
 | Escape | Back, close, or open the pause menu, as in the game. In a text box, Escape only stops editing. |
 
+A list with more than one section starts each section with a heading line of its own, such as
+"Basket, heading, 3 items": the main menu, the options, the map, the shops, shelves, the credits, the
+key list and the mod settings all have them. Page Up and Page Down (or Tab) land on the heading, so
+you hear the section's name alone, and Down goes on to its items, which are read without the section
+name in front of them. A list with only one section has no heading: its name is said with the item
+you reach first. Enter on a heading does nothing.
+
 At the end of a list, Down goes round to the first item with the wrap sound, and Page Down in the
 last section goes to the first section. To stop at the ends instead (with the edge sound), turn off
 **Wrap around at the ends of lists** in the mod settings. This also applies to Left and Right on a
@@ -131,13 +138,17 @@ and Down in the shop floor scanner; Enter always goes on to the next value.
 ### Main menu and options
 
 The main menu has two sections: Continue, New game, Load game and Exit; then, with Page Down, the
-game language, Options, Credits, Discord and the music switch. On Game language, Left and Right
+heading "Settings and more", followed by the game language, Options, Credits, Discord and the music
+switch. On Game language, Left and Right
 switch the language at once and Enter goes on to the next one. Continue, New game and loading a save
 say "Loading" as soon as you press Enter.
 
 Two buttons act at once, without asking, and say so when you reach them: Exit closes the game, and
 New game starts a new one whose autosave, from its second day, replaces the game that Continue loads.
 To keep your current game, save it under its own name first (pause menu, Save).
+
+Credits are in sections, as the game shows them: Developed by, Core team, Collaborators, Testers
+and Special thanks. Page Down goes from one heading to the next.
 
 Options (the pause menu in the game) has the sections General (full screen, show info, game
 language), Sound (overall, music and effects volume), Game (save, back to the main menu, quit; only
@@ -168,7 +179,7 @@ Hold Ctrl while a list is open.
 | Key | Action |
 | --- | --- |
 | C | Money |
-| T | Day, phase and time (travel points in the evening), money and shop level |
+| T | Day, phase and time (travel points in the evening), money, shop level and weather |
 | P | Pause or resume while the shop is open |
 | 1, 2, 3 | Normal, double, fast game speed |
 | N | Next phase: open the shop, go to the map, or end the day |
@@ -176,6 +187,12 @@ Hold Ctrl while a list is open.
 | K | Customers in the shop and what they are doing |
 | J | Current goal or tutorial step |
 | G | Everything in storage |
+
+Each morning the game picks the day's weather: clear, rain or fog, light, moderate or heavy. It is
+only a picture on the screen, so the mod says when it starts, changes or stops ("Weather: heavy
+rain"), and T says it at any time. A save that loads with rain or fog says it too; clear weather
+is said only when it follows rain or fog. To keep quiet about it, turn off **Weather** in the mod
+settings (T still says it). The game calls its weather "still in testing" in version 1.7.12.
 
 Many events in the demo have no name in any language (the game's event journal shows an empty
 title). The mod names them after what they ask for: the place they send you to ("Event at
@@ -202,6 +219,12 @@ goods), and walking onto storage says how full it is and what is in it. All stor
 share one storage, so each one reads the same goods. The delivery truck also lists everything it
 carries.
 
+When the truck comes with goods you hear "Delivery truck has arrived" and what it brings. It comes
+every morning, and also whenever it holds goods and the map is closed: goods you buy on the map in
+the evening are in the truck in front of your shop as soon as you close the map, as the game shows
+it (the game's tutorial says they come the next morning, but the game itself sends the truck at
+once).
+
 ### Build mode (B)
 
 | Key | Action |
@@ -223,8 +246,15 @@ carries.
 Each has two lists: the building's items and your storage (or the delivery truck). Tab jumps
 between them. Enter moves the whole stack to the other side, Shift+Enter moves half and Ctrl+Enter
 moves one. Ctrl+I describes an item: price, how it stacks, and which shelves it fits on. The
-actions section has the move-everything buttons and Close. When the goods belong to more than one
-category, Ctrl+Up and Ctrl+Down (or the Category item at the top) show one category at a time.
+actions section has the move-everything buttons, which say what they moved ("Moved to the shelf:
+Candy: 22"), and Close. When the goods belong to more than one category, Ctrl+Up and Ctrl+Down (or
+the Category item at the top) show one category at a time.
+
+On a shelf opened with the storage or the truck, each slot is followed by its lock, a check box
+("Lock slot to Candy, not checked"), as the game shows a lock button on each slot. Enter locks the
+slot to its kind of goods: it stays on the shelf when it sells out or you take the goods away
+("Candy: 0"), and moving everything from the storage fills it with the same goods again. Unlocking
+an empty slot removes it.
 
 Enter on a cashier opens its looks. The game shows them only as pictures, so the mod names them:
 plain ones in your language (Default, Cat, Frozen), the others by their own names.
@@ -285,8 +315,9 @@ Each place also says when it has an event from the event journal or is new, and 
 when the area it leads to has such a place, like the game's markers on the map. A place's details
 also name its events ("Events here: Event at Temple").
 
-End of the day finishes the evening. The map's own buttons (customers, event journal, daily summary,
-all stock, settings) are in the map section at the end of the list.
+End of the day finishes the evening. The map section at the end of the list has your travel points,
+your money (the map shows it since game 1.7.12), what you bought today, End of the day, Close map and
+the map's own buttons (customers, event journal, daily summary, settings, all stock).
 
 After a trip the focus is on the place you arrived at ("Temple, you are here"), also when you
 close a shop or come into another area by a road sign. To go back into a shop, the lottery or the
@@ -321,7 +352,8 @@ The screen has these sections, and Page Up and Page Down move between them:
 - **Basket**: what you are buying (change amounts here too), the total and what money is left,
   then Check out and Close.
 
-The goods arrive in your delivery truck the next morning.
+The goods go into your delivery truck at once. When you close the map the truck is in front of your
+shop with them, also in the evening, and you hear it arrive (see [Shop floor](#shop-floor)).
 
 What a shop sells is chosen by the game: it changes from day to day (some goods are picked at
 random, and the amounts too), and more goods appear as your shop level goes up. The mod lists
@@ -375,7 +407,9 @@ entries it has, and the focus moves to the first one.
 - **Shops on the map**: all products, goods, each kind of goods, buildings, each kind of building
 - **Build mode**: shelves, storage, machines, cashiers, decorations
 - **All stock** (the toolbar and map button; G only reads the storage aloud): each kind of goods
-  (the list starts with the total, as the game's header does)
+  (the list starts with the game's own lines: the total, the storage slots in use, and the goods
+  waiting on the delivery truck; each product then says how many are in storage, on shelves and,
+  when there are any, waiting for delivery)
 - **Shelves, storage and the delivery truck**: each kind of goods
 - **Event journal**: events in progress and finished events
 
@@ -448,7 +482,7 @@ headings, so you hear the section name alone, and Down goes to its first setting
   deliveries and machines, customer speech bubbles, every change of money (a sale, a purchase, a
   lottery ticket or a building you sell is said once, with the money you have now), read dialog
   automatically, faces and story pictures in conversations, shaking pictures in conversations,
-  tutorial notes and key hints, Steam achievements
+  tutorial notes and key hints, Steam achievements, weather (rain and fog)
 - **Sound cues:** sound cues on or off, menu sounds, the overall sound cue volume
 - **Volume of each sound cue:** a section of its own, so Page Down skips it
 - **Controls:** wrap around at the ends of lists, skip the logo intro and shorten the loading fade,
@@ -470,11 +504,12 @@ the mod also becomes the game's own choice when it is English or Thai.
 
 The game's Japanese, Indonesian and Chinese text is mostly untranslated in the demo. The mod ships
 complete translations of the game text for these languages (story, items, places, customers and
-menus), in `BepInEx\plugins\HometownStoreAccess\translations`. Text the game still lacks falls back
+menus, including the new lines of game version 1.7.12), in
+`BepInEx\plugins\HometownStoreAccess\translations`. Text the game still lacks falls back
 to English instead of showing an error. Some captions the game leaves in English in every language
 ("Next Day", "Quit To OS", the reward screen and others) are spoken in your language too. A few
 spelling mistakes in the game's Thai text that make a voice misread them are corrected (for example
-the detergent, "ผงซักฟอก"); the game shows the corrected text too.
+the detergent, "ผงซักฟอก", or "ปฏิเสธ" for Decline); the game shows the corrected text too.
 
 Language names are also said in English ("ไทย, Thai", "日本語, Japanese"), so you always hear which
 language you picked. With the mod language on Automatic, the mod speaks the game's language. If your

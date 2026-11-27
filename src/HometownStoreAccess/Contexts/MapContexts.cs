@@ -255,6 +255,10 @@ namespace HometownStoreAccess.Contexts
 
             string map = Loc.Get("group_map");
             items.Add(new TextItem(TravelPoints, "points") { Group = map });
+            // The money the map shows (game 1.7.12).
+            Transform cash = p.transform.Find("PhaseMainInterface/cash Text");
+            TMPro.TMP_Text cashText = cash != null && cash.gameObject.activeInHierarchy ? cash.GetComponent<TMPro.TMP_Text>() : null;
+            if (cashText != null) items.Add(new TextItem(() => Loc.Get("map_money", UiUtil.Text(cashText)), "money") { Group = map });
             items.Add(new TextItem(PurchasedToday, "basket") { Group = map });
             UiScan.AddControl(items, p.endOfTheDayButton, map);
             Transform close = p.transform.Find("CloseMap");

@@ -18,6 +18,7 @@ namespace HometownStoreAccess
         public readonly ConfigEntry<bool> AnnouncePictures;
         public readonly ConfigEntry<bool> AnnounceShaking;
         public readonly ConfigEntry<bool> AnnounceAchievements;
+        public readonly ConfigEntry<bool> AnnounceWeather;
         public readonly ConfigEntry<bool> AnnounceCustomersLeaving;
 
         public readonly ConfigEntry<bool> AnnouncePosition;
@@ -76,6 +77,7 @@ namespace HometownStoreAccess
             // 1.4.3 split leaving off the Customers setting: whoever had turned customers off keeps it quiet.
             if (!hadCustomersLeaving) AnnounceCustomersLeaving.Value = AnnounceCustomers.Value;
             AnnounceAchievements = config.Bind("Announcements", "Achievements", true, "Say Steam achievements when the game unlocks them (Steam shows them only in its overlay).");
+            AnnounceWeather = config.Bind("Announcements", "Weather", true, "Say when rain or fog starts, changes or stops (the game rolls the weather every morning). The T key says the weather either way.");
 
             AudioCues = config.Bind("Audio", "Cues", true, "Play positional audio cues for the shop floor cursor, placement, customers and menus.");
             MenuSounds = config.Bind("Audio", "MenuSounds", true, "Play short sounds when moving through menus, wrapping around and reaching the edge of a list.");

@@ -26,3 +26,16 @@ Customer_Name/Thug = อันธพาล
 Dialog_Description/Event_Grandma_Reveal_Locations_15 = เออ ๆ ไปได้ละ ข้าจะตำน้ำพริก
 Dialog_Description/Event_Tutorial_Visit_SurplusMaket_5 = ไอ้ตลาดที่เราจะไปกันเนี่ยมันเป็นตลาดของเหลือสต็อก มันจะมีของขายไม่ซ้ำทุกวัน
 Customer_Description/[2] Otaku = กลุ่มคน "แห่งวัฒนธรรม"
+# Found in 1.5.0 (game 1.7.12): the new storage list, a misread word (ฎ for ฏ), misspellings, an abbreviation, doubled marks.
+StorageSummary/DeliveryHeader = ของมาส่ง: {v1} ({v2} ประเภท)
+StorageSummary/DeilveryHeader = ของมาส่ง: {v1} ({v2} ประเภท)
+Dialog_Response_Name/Response_DontHelpFindDog = ปฏิเสธ
+Product_Name/Police Station = สถานีตำรวจ
+Shelf_Name/Police Station = สถานีตำรวจ
+Product_Name/Cosmetic = เครื่องสำอาง
+Product_Name/Cosmetic (Uthai Thip) = เครื่องสำอาง
+Product_Name/Souvenir (Elephant Keychain) = ของฝาก (พวงกุญแจช้าง)
+Dialog_Description/Event_Response_Help_Shaman_0 = คุณทำตามที่หมอผีบอก วางเครื่องเซ่นไหว้และจบความทรมาน(ไหล่)ของเด็กโปกซะ
+Dialog_Description/Event_Main_Upgrade_To_Level_4_2 = ไม่นาน ๆ เข้าเรื่องเถอะ ร้านเอ็งลุงช่วยปรับปรุงใหม่ให้ภายในพรุ่งนี้เลยแล้วกัน
+Dialog_Description/Event_Main_Upgrade_To_Level_4_7 = ไม่นาน ๆ เข้าเรื่องเถอะ ร้านเอ็งลุงช่วยปรับปรุงใหม่ให้ภายในพรุ่งนี้เลยแล้วกัน
+Dialog_Description/Event_Response_Help_Ghost_0 = คุณหยุดมือ ไม่วางของเซ่น..และพิธีกรรมก็จบลงอย่างนั้น

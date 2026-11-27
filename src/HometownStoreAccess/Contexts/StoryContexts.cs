@@ -37,6 +37,8 @@ namespace HometownStoreAccess.Contexts
         public override bool ReservesSpace => true;
         public override bool ResetFocusOnEnter => true;
         public override bool AnnounceFocusOnEnter => false;
+        // The first reply must be the first item (Enter picks it): no heading in front of it.
+        public override bool HeadingItems => false;
         public override MsgCategory IntroCategory => MsgCategory.Dialog;
 
         private static DialogPanel Panel

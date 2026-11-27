@@ -30,6 +30,8 @@ namespace HometownStoreAccess.UI
         private float _announceAskedAt;
         private string _lastAnnouncedGroup;
         private float _enterGuardUntil;
+        // Whether the current list has heading items (see ScreenContext.HeadingItems).
+        private bool _hasHeadings;
 
         public ScreenContext Current { get; private set; }
         public IReadOnlyList<NavItem> Items => _items;
@@ -259,6 +261,11 @@ namespace HometownStoreAccess.UI
                 Log.Error("Context " + Current.Id + " build failed: " + e);
             }
             if (Current.HeadingItems) InsertHeadings(_items);
+            _hasHeadings = false;
+            foreach (NavItem item in _items)
+            {
+                if (item is HeadingItem) { _hasHeadings = true; break; }
+            }
             // Keys must be unique for focus tracking: suffix duplicates.
             var seen = new Dictionary<string, int>();
             foreach (NavItem item in _items)
@@ -283,6 +290,7 @@ namespace HometownStoreAccess.UI
         {
             var groups = new List<string>(items.Count);
             foreach (NavItem i in items) groups.Add(i.Group);
+            if (!ChoiceStep.WantsHeadings(groups)) return;
             var starts = new Dictionary<int, int>();
             foreach (KeyValuePair<int, int> s in ChoiceStep.SectionStarts(groups)) starts[s.Key] = s.Value;
             var result = new List<NavItem>(items.Count + starts.Count);
@@ -407,6 +415,12 @@ namespace HometownStoreAccess.UI
                 SpeechService.Say(Loc.Get("nothing_here"), true);
                 return;
             }
+            if (f is HeadingItem)
+            {
+                // A heading does nothing: it is read again, without the click of a button.
+                SpeechService.Say(f.Speak(), true);
+                return;
+            }
             bool handled;
             try
             {
@@ -426,7 +440,8 @@ namespace HometownStoreAccess.UI
                 return;
             }
             if (!handled) SpeechService.Say(f.Speak(), true);
-            AudioCues.Play(Cue.Activate);
+            // A sound cue item plays only its own cue, as Left and Right do on a volume.
+            if (!(handled && f.PlaysOwnSound)) AudioCues.Play(Cue.Activate);
             AnnounceFocusIfChanged();
         }
 
@@ -461,8 +476,9 @@ namespace HometownStoreAccess.UI
             }
             string text = SafeString(f.Speak);
             string group = f.Group ?? string.Empty;
-            // With heading items the heading says the section: items are read on their own.
-            bool headings = Current != null && Current.HeadingItems;
+            // With heading items the heading says the section: items are read on their own. (A list
+            // of one section has no heading: its name is said in front of the item.)
+            bool headings = _hasHeadings;
             if (includeGroup && !headings && group.Length > 0 && group != _lastAnnouncedGroup)
             {
                 text = TextCleaner.Join(", ", group, text);

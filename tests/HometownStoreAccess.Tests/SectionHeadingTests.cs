@@ -28,6 +28,21 @@ namespace HometownStoreAccess.Tests
         }
 
         [Fact]
+        public void HeadingsOnlyWhenPageDownHasSomewhereToGo()
+        {
+            // 1.5.0: every list with sections gets headings, not only the key list and settings.
+            // The main menu: the game buttons without a name, then "More".
+            Assert.True(ChoiceStep.WantsHeadings(new List<string> { "", "", "", "More", "More" }));
+            Assert.True(ChoiceStep.WantsHeadings(new List<string> { "Places", "Places", "Map" }));
+            // One section only: its name stays in front of the item, no heading.
+            Assert.False(ChoiceStep.WantsHeadings(new List<string> { "Saves", "Saves" }));
+            // No names at all (credits, a notice): nothing to head.
+            Assert.False(ChoiceStep.WantsHeadings(new List<string> { "", null, "" }));
+            Assert.False(ChoiceStep.WantsHeadings(new List<string>()));
+            Assert.False(ChoiceStep.WantsHeadings(null));
+        }
+
+        [Fact]
         public void EmptyListHasNoSections()
         {
             Assert.Empty(ChoiceStep.SectionStarts(new List<string>()));

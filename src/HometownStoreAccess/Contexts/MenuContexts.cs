@@ -105,6 +105,43 @@ namespace HometownStoreAccess.Contexts
         }
     }
 
+    /// <summary>
+    /// The credits (main menu): Close, then one section per heading the panel shows (Developed by,
+    /// Core team, Collaborators, Testers, Special thanks), so Page Down jumps from heading to heading.
+    /// </summary>
+    internal sealed class CreditsContext : PanelContext
+    {
+        // The headings' object names in the game (fixed English, "Speical" as the game spells it).
+        private static readonly HashSet<string> Headings = new HashSet<string> { "Developed by", "Core Team", "Collaborators", "Testers", "Speical Thanks", "Special Thanks" };
+
+        public CreditsContext() : base("credits", 80, () => SceneCache.Find("CreditPanel"), () => Loc.Get("ctx_credits"), includeTexts: true) { }
+
+        public override void Build(List<NavItem> items)
+        {
+            GameObject root = Root;
+            Transform content = root != null ? root.transform.Find("Panel/Scroll View/Viewport/Content") : null;
+            if (content == null)
+            {
+                // Unknown layout (a later game version): every control and line, as before.
+                base.Build(items);
+                return;
+            }
+            Transform close = root.transform.Find("Panel/CloseButton");
+            if (close != null) UiScan.AddControl(items, close.GetComponent<Button>());
+            string group = string.Empty;
+            foreach (Transform child in content)
+            {
+                if (!child.gameObject.activeInHierarchy) continue;
+                var t = child.GetComponent<TMP_Text>();
+                if (t == null) continue;
+                string text = UiUtil.Text(t);
+                if (text.Length == 0) continue;
+                if (Headings.Contains(child.name.Trim())) { group = text; continue; }
+                UiScan.AddText(items, t, group);
+            }
+        }
+    }
+
     /// <summary>The options / pause panel (both scenes).</summary>
     internal sealed class OptionsContext : ScreenContext
     {

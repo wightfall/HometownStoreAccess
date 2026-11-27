@@ -29,6 +29,9 @@ namespace HometownStoreAccess.UI
         public virtual bool Enabled => true;
         public virtual GameObject Target => null;
 
+        /// <summary>Enter plays a sound of its own (a sound cue): the list's activate click is left out.</summary>
+        public virtual bool PlaysOwnSound => false;
+
         /// <summary>Enter.</summary>
         public virtual bool Activate() => false;
         /// <summary>Shift+Enter (controller X).</summary>
@@ -101,6 +104,9 @@ namespace HometownStoreAccess.UI
         public Action OnActivateThird;
         public Func<int, bool, bool> OnAdjust;
         public GameObject TargetObject;
+        public bool OwnSound;
+
+        public override bool PlaysOwnSound => OwnSound;
 
         public ActionItem(Func<string> label, Action onActivate, string key = null)
         {

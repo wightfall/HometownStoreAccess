@@ -365,26 +365,43 @@ namespace HometownStoreAccess.Contexts
             ResourceManager rm = ResourceManager.Instance;
             Dictionary<Item, int> storage = rm.AllResourceInStorage();
             Dictionary<Item, int> shelves = rm.AllResourceOnSelf();
-            var all = storage.Keys.Union(shelves.Keys).Where(i => i != null).OrderBy(GameText.Name).ToList();
-            if (all.Count == 0) items.Add(new TextItem(Loc.Get("nothing_in_stock"), "none"));
-            else
-            {
-                // The game's header: "All items: 42 (5 kinds)".
-                int sum = all.Sum(i => (storage.TryGetValue(i, out int a) ? a : 0) + (shelves.TryGetValue(i, out int b) ? b : 0));
-                items.Add(new TextItem(Loc.Get("stock_total", sum, all.Count), "stock_total"));
-            }
+            // Since game 1.7.12 the list also counts the goods the delivery truck holds.
+            Dictionary<Item, int> delivery = rm.delivery != null ? rm.delivery.SummaryItemDictionary() : new Dictionary<Item, int>();
+            int Amount(Dictionary<Item, int> d, Item i) => d.TryGetValue(i, out int n) ? n : 0;
+            var all = storage.Keys.Union(shelves.Keys).Union(delivery.Keys)
+                .Where(i => i != null && Amount(storage, i) + Amount(shelves, i) + Amount(delivery, i) > 0)
+                .OrderBy(GameText.Name).ToList();
+            // The game's header ("All items: 42 (5 kinds)"), storage slots and delivery lines.
+            int sum = all.Sum(i => Amount(storage, i) + Amount(shelves, i) + Amount(delivery, i));
+            items.Add(new TextItem(() => HeaderLine(p, sum, all.Count), "stock_total"));
+            if (p.slotsText != null && p.slotsText.gameObject.activeInHierarchy && UiUtil.Text(p.slotsText).Length > 0)
+                items.Add(new TextItem(() => UiUtil.Text(p.slotsText), "stock_slots"));
+            if (p.deliveryText != null && p.deliveryText.gameObject.activeInHierarchy && UiUtil.Text(p.deliveryText).Length > 0)
+                items.Add(new TextItem(() => UiUtil.Text(p.deliveryText), "stock_delivery"));
             _filter.Prepare(all.Select(i => i.itemCategory.ToString()));
             if (_filter.Active) items.Add(_filter.Item(string.Empty));
             foreach (Item it in all)
             {
                 if (!_filter.Matches(it.itemCategory.ToString())) continue;
                 Item item = it;
-                storage.TryGetValue(item, out int s);
-                shelves.TryGetValue(item, out int sh);
-                int total = s + sh, inStorage = s, onShelves = sh;
-                items.Add(new TextItem(() => Loc.Get("stock_line", GameText.Name(item), total, inStorage, onShelves), "stock:" + item.name, () => GameText.ItemDetails(item)));
+                int inStorage = Amount(storage, item), onShelves = Amount(shelves, item), inDelivery = Amount(delivery, item);
+                int total = inStorage + onShelves + inDelivery;
+                items.Add(new TextItem(() => inDelivery > 0
+                    ? Loc.Get("stock_line_delivery", GameText.Name(item), total, inStorage, onShelves, inDelivery)
+                    : Loc.Get("stock_line", GameText.Name(item), total, inStorage, onShelves), "stock:" + item.name, () => GameText.ItemDetails(item)));
             }
             items.Add(new ActionItem(() => Loc.Get("label_close"), () => p.Close(), "close"));
+        }
+
+        /// <summary>
+        /// The game's own header ("All items: 42 (5 kinds)", "Nothing in stock"; the game refreshes it as
+        /// the panel opens and twice a second), or the mod's words when it shows none.
+        /// </summary>
+        private static string HeaderLine(StorageSummaryPanel p, int total, int kinds)
+        {
+            string head = p.headerText != null ? UiUtil.Text(p.headerText) : string.Empty;
+            if (head.Length > 0) return head;
+            return kinds == 0 ? Loc.Get("nothing_in_stock") : Loc.Get("stock_total", total, kinds);
         }
     }
 

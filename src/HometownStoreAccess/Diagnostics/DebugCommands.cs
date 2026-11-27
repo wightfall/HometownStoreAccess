@@ -139,6 +139,34 @@ namespace HometownStoreAccess.Diagnostics
                 case "state":
                     Log.Info("[state] " + (StateProvider != null ? StateProvider() : "(no provider)"));
                     break;
+                case "weather":
+                {
+                    // weather [Clear|Rain|Fog] [0-100]: shows the weather, or sets it as the game's developer panel does.
+                    WeatherManager wm = Game.GameText.Weather();
+                    if (wm == null) { Log.Info("[weather] no WeatherManager"); break; }
+                    string[] wp = arg.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (wp.Length > 0 && Enum.TryParse(wp[0], true, out WeatherType wt))
+                    {
+                        int strength = wp.Length > 1 && int.TryParse(wp[1], out int ws) ? ws : 50;
+                        wm.SetWeather(wt, strength);
+                    }
+                    Log.Info("[weather] " + wm.CurrentWeather + " " + wm.Intensity + " (daily roll " + wm.randomDaily + ")");
+                    break;
+                }
+                case "items":
+                {
+                    // Every item of the current list as it is spoken, with its section.
+                    UI.ContextManager cm = AccessibilityRoot.Instance != null ? AccessibilityRoot.Instance.Contexts : null;
+                    if (cm == null || cm.Current == null) { Log.Info("[items] no screen"); break; }
+                    Log.Info("[items] " + cm.Current.Id + " " + cm.Items.Count);
+                    for (int i = 0; i < cm.Items.Count; i++)
+                    {
+                        string spoken;
+                        try { spoken = cm.Items[i].Speak(); } catch (System.Exception e) { spoken = "ERR " + e.Message; }
+                        Log.Info("[items] " + i + (cm.Items[i] == cm.Focused ? " *" : "  ") + " [" + cm.Items[i].Group + "] " + spoken);
+                    }
+                    break;
+                }
                 case "perf":
                     // perf [seconds]: how long the mod's parts take per frame, written to the log.
                     Perf.Begin(arg.Length > 0 && float.TryParse(arg, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float secs) ? secs : 5f);
