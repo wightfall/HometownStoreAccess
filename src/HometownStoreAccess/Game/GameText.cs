@@ -8,6 +8,23 @@ namespace HometownStoreAccess.Game
     /// <summary>Names and descriptions taken from the game's own localization tables, plus summaries built from game data.</summary>
     internal static class GameText
     {
+        private static readonly Dictionary<string, LocalizationTable> Tables = new Dictionary<string, LocalizationTable>();
+
+        /// <summary>
+        /// One of the game's text tables, found by its name when the mod runs. A game update that adds a
+        /// table renumbers the ones after it (1.7.12 added StorageSummary before Vehicle_Name), and a number
+        /// built into the mod would then read the wrong table.
+        /// </summary>
+        public static LocalizationTable Table(string name)
+        {
+            if (!Tables.TryGetValue(name, out LocalizationTable t))
+            {
+                t = (LocalizationTable)System.Enum.Parse(typeof(LocalizationTable), name);
+                Tables[name] = t;
+            }
+            return t;
+        }
+
         /// <summary>The weather of the shop's scene (game 1.7.12), or null (an older game, the main menu).</summary>
         public static WeatherManager Weather() => UI.SceneCache.Get<WeatherManager>();
 
@@ -82,7 +99,7 @@ namespace HometownStoreAccess.Game
             TextCache[key] = s;
             return s;
         }
-        public static string VehicleName(Vehicle v) => Safe(() => LocalizationManager.GetString(LocalizationTable.Vehicle_Name, v.ToString()), v.ToString());
+        public static string VehicleName(Vehicle v) => Safe(() => LocalizationManager.GetString(Table("Vehicle_Name"), v.ToString()), v.ToString());
 
         public static string Money(int amount) => Loc.Get("money_baht", amount);
         public static string Money(float amount) => Loc.Get("money_baht", Mathf.RoundToInt(amount));
@@ -277,15 +294,15 @@ namespace HometownStoreAccess.Game
             if (gc == null) return string.Empty;
             switch (gc.CurrentGamePhase)
             {
-                case GamePhase.Morning: return Safe(() => LocalizationManager.GetString(LocalizationTable.MainInterface, "Phase Morning"), "Morning");
+                case GamePhase.Morning: return Safe(() => LocalizationManager.GetString(Table("MainInterface"), "Phase Morning"), "Morning");
                 case GamePhase.Noon:
                     // After closing time the phase is "closing soon" until the last customer has gone,
                     // then "shop closed" (not both at once).
                     if (ShopClosed(TimeControl.Instance)) return Loc.Get("phase_shop_closed");
                     return TimeControl.Instance != null && TimeControl.Instance.ReachedRushTime()
                         ? Loc.Get("phase_closing")
-                        : Safe(() => LocalizationManager.GetString(LocalizationTable.MainInterface, "Phase Daylight"), "Daylight");
-                case GamePhase.Evening: return Safe(() => LocalizationManager.GetString(LocalizationTable.MainInterface, "Phase Evening"), "Evening");
+                        : Safe(() => LocalizationManager.GetString(Table("MainInterface"), "Phase Daylight"), "Daylight");
+                case GamePhase.Evening: return Safe(() => LocalizationManager.GetString(Table("MainInterface"), "Phase Evening"), "Evening");
                 default: return Loc.Get("phase_summary");
             }
         }

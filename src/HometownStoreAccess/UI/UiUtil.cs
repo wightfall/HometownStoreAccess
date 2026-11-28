@@ -121,6 +121,15 @@ namespace HometownStoreAccess.UI
         public static bool Click(GameObject go)
         {
             if (go == null || !go.activeInHierarchy) return false;
+            // A popup that is still opening (game 1.7.12) switches its buttons off for up to half a second,
+            // and a click then does nothing: the click waits for the button instead.
+            if (LockedByOpeningPopup(go.GetComponent<Button>()))
+            {
+                Log.Debug("Click on " + go.name + " waits for its popup to finish opening");
+                _pendingClick = go;
+                _pendingUntil = Time.unscaledTime + PendingClickTimeout;
+                return true;
+            }
             EventSystem es = EventSystem.current;
             if (es == null)
             {
@@ -143,6 +152,39 @@ namespace HometownStoreAccess.UI
             bool handled = ExecuteEvents.Execute(go, data, ExecuteEvents.pointerClickHandler);
             if (go != null && go.activeInHierarchy) ExecuteEvents.Execute(go, data, ExecuteEvents.pointerExitHandler);
             return handled;
+        }
+
+        // A click that waits for its popup to finish opening, and until when it may wait (the game's lock
+        // lasts at most 0.5 s of real time).
+        private const float PendingClickTimeout = 1f;
+        private static GameObject _pendingClick;
+        private static float _pendingUntil;
+
+        /// <summary>True when the button is one a popup switched off while its opening animation runs.</summary>
+        private static bool LockedByOpeningPopup(Button b)
+        {
+            if (b == null || b.enabled) return false;
+            foreach (PopupAnimation pa in SceneCache.All<PopupAnimation>())
+            {
+                if (pa != null && pa.lockedButtons != null && pa.lockedButtons.Contains(b)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>Every frame: makes the waiting click once its popup has let go of the button.</summary>
+        public static void TickPendingClick()
+        {
+            GameObject go = _pendingClick;
+            if (go == null) return;
+            if (!go.activeInHierarchy || Time.unscaledTime > _pendingUntil)
+            {
+                _pendingClick = null;
+                return;
+            }
+            var b = go.GetComponent<Button>();
+            if (b != null && !b.enabled) return;
+            _pendingClick = null;
+            Click(go);
         }
 
         /// <summary>Sends only a pointer-click with the given button (used for right-click equivalents).</summary>

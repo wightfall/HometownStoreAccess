@@ -15,7 +15,8 @@ namespace HometownStoreAccess.Installer
     /// <summary>
     /// A deliberately simple window: every control has an accessible name, the tab order follows the
     /// visual order, results are shown in a message box (always announced by screen readers) and in a
-    /// read-only status box you can tab to and review.
+    /// read-only status box you can tab to and review. The window opens on the status box (what was
+    /// found, what is installed); when it updates an older mod, on the read-only What's new box instead.
     /// </summary>
     internal sealed class MainForm : Form
     {
@@ -35,19 +36,28 @@ namespace HometownStoreAccess.Installer
         private readonly Button _checkUpdates = new Button();
         private readonly Button _openFolder = new Button();
         private readonly Button _close = new Button();
+        private readonly Label _whatsNewLabel = new Label();
+        private readonly TextBox _whatsNew = new TextBox();
         private readonly string _payloadVersion;
+        private readonly string _notes;
+        // The installed mod's version (from its DLL) and what the main button does, as last refreshed.
+        private string _installedVersion;
+        private InstallAction _action = InstallAction.Install;
         private readonly List<string> _languageCodes = new List<string>(Loc.SupportedLanguages);
         private bool _loading = true;
 
         public MainForm(string detectedFolder)
         {
             _payloadVersion = Program.PayloadVersion();
+            _notes = Program.WhatsNew();
+            bool notes = UpdateInfo.NoteLines(_notes).Count > 0;
             Font = new Font("Segoe UI", 10f);
             AutoScaleMode = AutoScaleMode.Dpi;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(660, 560);
+            // The release notes of this version go in a column of their own on the right.
+            ClientSize = new Size(notes ? 1000 : 660, 560);
 
             Place(_languageLabel, 16, 14, 200, 24, 0);
             Place(_language, 220, 10, 424, 28, 1);
@@ -75,22 +85,31 @@ namespace HometownStoreAccess.Installer
             _status.Multiline = true;
             _status.ReadOnly = true;
             _status.ScrollBars = ScrollBars.Vertical;
-            Place(_install, 16, 320, 210, 36, 8);
+            if (notes)
+            {
+                Place(_whatsNewLabel, 672, 14, 312, 22, 8);
+                Place(_whatsNew, 672, 40, 312, 506, 9);
+                _whatsNew.Multiline = true;
+                _whatsNew.ReadOnly = true;
+                _whatsNew.ScrollBars = ScrollBars.Vertical;
+                _whatsNew.Text = string.Join(Environment.NewLine, UpdateInfo.NoteLines(_notes));
+            }
+            Place(_install, 16, 320, 210, 36, 10);
             _install.Click += (s, e) => DoInstall();
-            Place(_uninstall, 234, 320, 210, 36, 9);
+            Place(_uninstall, 234, 320, 210, 36, 11);
             _uninstall.Click += (s, e) => DoUninstall();
-            Place(_launchAfter, 16, 364, 628, 28, 10);
+            Place(_launchAfter, 16, 364, 628, 28, 12);
             _launchAfter.Checked = InstallerPrefs.LaunchAfter;
             _launchAfter.CheckedChanged += (s, e) => InstallerPrefs.LaunchAfter = _launchAfter.Checked;
-            Place(_setGameLanguage, 16, 394, 628, 28, 11);
+            Place(_setGameLanguage, 16, 394, 628, 28, 13);
             _setGameLanguage.Checked = InstallerPrefs.SetGameLanguage;
             _setGameLanguage.CheckedChanged += (s, e) => InstallerPrefs.SetGameLanguage = _setGameLanguage.Checked;
-            Place(_removeBepInEx, 16, 424, 628, 28, 12);
-            Place(_checkUpdates, 16, 462, 210, 36, 13);
+            Place(_removeBepInEx, 16, 424, 628, 28, 14);
+            Place(_checkUpdates, 16, 462, 210, 36, 15);
             _checkUpdates.Click += async (s, e) => await CheckForUpdates(manual: true);
-            Place(_openFolder, 234, 462, 210, 36, 14);
+            Place(_openFolder, 234, 462, 210, 36, 16);
             _openFolder.Click += (s, e) => OpenGameFolder();
-            Place(_close, 452, 510, 192, 36, 15);
+            Place(_close, 452, 510, 192, 36, 17);
             _close.Click += (s, e) => Close();
 
             AcceptButton = _install;
@@ -99,8 +118,10 @@ namespace HometownStoreAccess.Installer
             _loading = false;
             Shown += async (s, e) =>
             {
-                if (SteamLocator.IsGameFolder(_folder.Text)) _install.Focus();
-                else _folder.Focus();
+                // The read-only status says what was found (the game folder, the installed version). When
+                // this installer updates an older mod, its What's new comes first instead.
+                if (_action == InstallAction.Update && _whatsNew.Parent != null) _whatsNew.Focus();
+                else _status.Focus();
                 await CheckForUpdates(manual: false);
             };
         }
@@ -138,6 +159,8 @@ namespace HometownStoreAccess.Installer
             _browse.Text = Loc.Get("inst_browse");
             _statusLabel.Text = Loc.Get("inst_status");
             _status.AccessibleName = Loc.Get("inst_status");
+            _whatsNewLabel.Text = Loc.Get("inst_whats_new_in", _payloadVersion ?? "?");
+            _whatsNew.AccessibleName = _whatsNewLabel.Text;
             _uninstall.Text = Loc.Get("inst_uninstall");
             _launchAfter.Text = Loc.Get("inst_launch_after");
             _setGameLanguage.Text = Loc.Get("inst_set_game_language");
@@ -164,20 +187,41 @@ namespace HometownStoreAccess.Installer
                 return;
             }
             InstallStatus st = ModInstaller.GetStatus(folder);
+            bool installed = st.State == InstallState.Installed;
+            _installedVersion = installed ? st.InstalledVersion : null;
+            _action = UpdateInfo.ActionFor(installed, _installedVersion, _payloadVersion);
             string text;
             switch (st.State)
             {
                 case InstallState.Installed:
                     text = Loc.Get("inst_status_installed", st.InstalledVersion ?? "?");
-                    _install.Text = _payloadVersion != null && _payloadVersion == st.InstalledVersion ? Loc.Get("inst_reinstall") : Loc.Get("inst_update");
                     break;
                 case InstallState.BepInExOnly:
                     text = Loc.Get("inst_status_bepinex_only");
-                    _install.Text = Loc.Get("inst_install");
                     break;
                 default:
                     text = Loc.Get("inst_status_none");
+                    break;
+            }
+            // What this installer would do, with its own version.
+            string payload = _payloadVersion ?? "?";
+            switch (_action)
+            {
+                case InstallAction.Update:
+                    _install.Text = Loc.Get("inst_update");
+                    text += Environment.NewLine + Loc.Get("inst_status_will_update", payload);
+                    break;
+                case InstallAction.Reinstall:
+                    _install.Text = Loc.Get("inst_reinstall");
+                    text += Environment.NewLine + Loc.Get("inst_status_same", payload);
+                    break;
+                case InstallAction.InstallOlder:
+                    _install.Text = Loc.Get("inst_install_older");
+                    text += Environment.NewLine + Loc.Get("inst_status_older", payload);
+                    break;
+                default:
                     _install.Text = Loc.Get("inst_install");
+                    text += Environment.NewLine + Loc.Get("inst_status_will_install", payload);
                     break;
             }
             if (st.OtherPluginsPresent) text += Environment.NewLine + Loc.Get("inst_other_plugins");
@@ -211,6 +255,12 @@ namespace HometownStoreAccess.Installer
 
         private void DoInstall()
         {
+            if (_action == InstallAction.InstallOlder
+                && MessageBox.Show(this, Loc.Get("inst_confirm_older", _payloadVersion ?? "?", _installedVersion ?? "?"), Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+            {
+                _install.Focus();
+                return;
+            }
             if (!CheckGameClosed()) return;
             try
             {
@@ -343,7 +393,10 @@ namespace HometownStoreAccess.Installer
             }
         }
 
-        /// <summary>Asks GitHub for the latest release; offers it when newer than this installer.</summary>
+        /// <summary>
+        /// Asks GitHub for the latest release; offers it when it is newer than both this installer and the
+        /// mod that is installed. "You have" is the newer of the installed mod (its DLL) and this installer.
+        /// </summary>
         private async Task CheckForUpdates(bool manual)
         {
             ReleaseInfo latest;
@@ -356,16 +409,25 @@ namespace HometownStoreAccess.Installer
                 if (manual) MessageBox.Show(this, Loc.Get("inst_update_failed", e.Message), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            if (latest == null || !UpdateInfo.IsNewer(latest.Version, _payloadVersion ?? "0"))
+            string current = HaveVersion();
+            if (latest == null || !UpdateInfo.ShouldOffer(latest.Version, _installedVersion, _payloadVersion))
             {
-                if (manual) MessageBox.Show(this, Loc.Get("inst_up_to_date", _payloadVersion ?? "?"), Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (manual) MessageBox.Show(this, Loc.Get("inst_up_to_date", current ?? "?"), Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-            using (var dlg = new UpdateForm(latest, _payloadVersion))
+            using (var dlg = new UpdateForm(latest, current))
             {
                 if (dlg.ShowDialog(this) != DialogResult.Yes) return;
             }
             await DownloadAndRun(latest);
+        }
+
+        /// <summary>The newer of the installed mod's version and this installer's (either may be missing).</summary>
+        private string HaveVersion()
+        {
+            if (_installedVersion == null) return _payloadVersion;
+            if (_payloadVersion == null) return _installedVersion;
+            return UpdateInfo.Compare(_payloadVersion, _installedVersion) > 0 ? _payloadVersion : _installedVersion;
         }
 
         private static ReleaseInfo FetchLatest()

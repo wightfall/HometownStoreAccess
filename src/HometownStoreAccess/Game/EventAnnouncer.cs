@@ -415,12 +415,20 @@ namespace HometownStoreAccess.Game
         }
     }
 
-    [HarmonyPatch(typeof(StoreManager), nameof(StoreManager.StoreLevelUp))]
+    /// <summary>
+    /// The shop grows when the game really upgrades it. Since game 1.7.12 StoreLevelUp only queues the
+    /// upgrade (when you agree to it); DoStoreLevelUp does it, as the day's summary opens: it raises the
+    /// level, puts every building back into the blueprints and plays the upgrade sound.
+    /// </summary>
+    [HarmonyPatch(typeof(StoreManager), nameof(StoreManager.DoStoreLevelUp))]
     internal static class StoreLevelPatch
     {
         private static void Postfix(StoreManager __instance)
         {
             FloorCursor.Reset();
+            // The day's summary opens right after: it is read after this message instead of cutting it off.
+            UI.ContextManager cm = AccessibilityRoot.Instance != null ? AccessibilityRoot.Instance.Contexts : null;
+            if (cm != null && (cm.Current == null || cm.Current.Id != "summary")) cm.GentleNextEntry = true;
             SpeechService.Say(Loc.Get("store_level_up", __instance.StoreLevel + 1), false, MsgCategory.Events);
         }
     }

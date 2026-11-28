@@ -137,7 +137,29 @@ namespace HometownStoreAccess.Diagnostics
                     SpeechService.Say(arg);
                     break;
                 case "state":
-                    Log.Info("[state] " + (StateProvider != null ? StateProvider() : "(no provider)"));
+                {
+                    string state = StateProvider != null ? StateProvider() : "(no provider)";
+                    Log.Info("[state] " + state);
+                    // Also to a file of its own at once (the log is written in bursts): the screen, the
+                    // focus, and the cues and speech since the last state.
+                    File.WriteAllText(Path.Combine(BepInEx.Paths.BepInExRootPath, "hsa_state.txt"), state + " || " + TestTrace.Take(), new System.Text.UTF8Encoding(false));
+                    break;
+                }
+                case "setting":
+                {
+                    // setting <key> <value>: changes a mod option, for example "setting WrapAround false".
+                    string[] setParts = arg.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
+                    string done = setParts.Length == 2 ? Plugin.Settings.SetFromText(setParts[0], setParts[1]) : null;
+                    Log.Info("[setting] " + (done ?? "no such option or value: " + arg));
+                    break;
+                }
+                case "upgrade":
+                    // upgrade: queues a shop upgrade as an event's reply does (it happens at the day's summary);
+                    // upgrade now: does it at once, as the game's "Force Level Up".
+                    if (StoreManager.Instance == null) { Log.Info("[upgrade] no StoreManager"); break; }
+                    if (arg == "now") StoreManager.Instance.ForceStoreLevelUp();
+                    else StoreManager.Instance.StoreLevelUp();
+                    Log.Info("[upgrade] level " + (StoreManager.Instance.StoreLevel + 1) + ", pending " + StoreManager.Instance.PendingStoreLevelUp);
                     break;
                 case "weather":
                 {

@@ -245,6 +245,9 @@ namespace HometownStoreAccess.Contexts
         private bool _floorMode;
         private GameplayMode _lastMode = GameplayMode.Default;
         private bool _hadTemp;
+        // The blueprint being placed: the list comes back to it afterwards (the game takes it out of
+        // the list while it is placed and puts it back at the end when placing is cancelled).
+        private string _placingKey;
         private readonly CategoryFilter _filter = new CategoryFilter(
             o => o == Core.CategoryCycle.All ? Loc.Get("cat_all_blueprints") : TradeContext.CategoryLabel(o),
             i => i.Key != null && i.Key.StartsWith("bp:"));
@@ -324,9 +327,22 @@ namespace HometownStoreAccess.Contexts
             }
             if (_hadTemp && !temp && mode == GameplayMode.BuildMode)
             {
-                // The ghost was placed or cancelled: go back to the blueprint list.
+                // The ghost was placed or cancelled: back to the blueprint list, on the blueprint just
+                // used (or the first one left when that was the last of it).
                 _floorMode = false;
-                AccessibilityRoot.Instance.Contexts.Refresh(announceFocus: true);
+                ContextManager cm = AccessibilityRoot.Instance.Contexts;
+                cm.Refresh(false);
+                int at = -1;
+                for (int i = 0; i < cm.Items.Count && at < 0; i++)
+                {
+                    if (_placingKey != null && cm.Items[i].Key == _placingKey) at = i;
+                }
+                for (int i = 0; i < cm.Items.Count && at < 0; i++)
+                {
+                    if (cm.Items[i].Key != null && cm.Items[i].Key.StartsWith("bp:")) at = i;
+                }
+                if (at >= 0) cm.MoveToSilently(at);
+                cm.AnnounceFocus(includeGroup: true, interrupt: false);
             }
             _hadTemp = temp;
         }
@@ -344,7 +360,11 @@ namespace HometownStoreAccess.Contexts
                 if (!_filter.Matches(KindOf(b))) continue;
                 items.Add(new ActionItem(() => Loc.Get("blueprint_entry", GameText.Name(b), BlueprintAmount(b)), () =>
                 {
-                    if (GameActions.StartPlacing(b)) _floorMode = true;
+                    if (GameActions.StartPlacing(b))
+                    {
+                        _floorMode = true;
+                        _placingKey = "bp:" + b.name;
+                    }
                 }, "bp:" + b.name)
                 {
                     Group = bp,
@@ -396,6 +416,8 @@ namespace HometownStoreAccess.Contexts
             }
             foreach (NavItem i in AccessibilityRoot.Instance.Contexts.Items)
             {
+                // (A section's heading is not an entry: letters never jump to it.)
+                if (i is HeadingItem) continue;
                 try { names.Add(i.Label()); } catch { }
             }
             foreach (string raw in names)

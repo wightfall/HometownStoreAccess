@@ -66,7 +66,11 @@ namespace HometownStoreAccess.Tests
                 Loc.SetLanguage("th");
                 Assert.Equal(Loc.Get("fixed_next_day"), FixedText.Translate("Next Day"));
                 Assert.Equal(Loc.Get("fixed_day", "3"), FixedText.Translate("Day 3"));
-                Assert.Equal(Loc.Get("fixed_storage_shelf", "4", "2"), FixedText.Translate("Storage 4 / Shelf 2"));
+                // Game 1.7.12 translates the storage overview itself: its old English row is left alone.
+                Assert.Equal("Storage 4 / Shelf 2", FixedText.Translate("Storage 4 / Shelf 2"));
+                Assert.Equal("Storage", FixedText.Translate("Storage"));
+                Assert.Equal(Loc.Get("fixed_employees"), FixedText.Translate("Employees"));
+                Assert.Equal(Loc.Get("fixed_no_employees"), FixedText.Translate("No employees yet"));
                 Assert.Equal(Loc.Get("fixed_game_version", "0.7.11A"), FixedText.Translate("Hometown Store Version: 0.7.11A"));
                 Assert.Equal(Loc.Get("fixed_version", "0.7.11A"), FixedText.Translate("Version: 0.7.11A"));
                 Assert.Equal(Loc.Get("money_baht", 50), FixedText.Translate("50 baht"));

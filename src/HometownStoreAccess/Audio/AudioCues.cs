@@ -108,6 +108,7 @@ namespace HometownStoreAccess.Audio
             src.Play();
             // For tests: which cues a key played (only with the test commands on).
             if (Plugin.Settings.TestHooks.Value) Log.Info("[cue] " + cue);
+            Diagnostics.TestTrace.Cue(cue.ToString());
         }
 
         /// <summary>Length (ms) and peak level of each generated cue, for the "cues" test command.</summary>

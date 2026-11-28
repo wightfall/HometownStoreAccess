@@ -140,6 +140,7 @@ namespace HometownStoreAccess.Contexts
             }, key)
             {
                 Group = group,
+                PartOfPrevious = true,
                 ValueFunc = () => slot.isLocked ? Loc.Get("state_checked") : Loc.Get("state_unchecked"),
                 RoleFunc = () => Loc.Get("role_checkbox"),
                 DetailFunc = () => Loc.Get("hint_slot_lock"),
@@ -250,6 +251,8 @@ namespace HometownStoreAccess.Contexts
     {
         public override string Id => "manufacture";
         public override int Priority => 55;
+        // Whether the recipe chooser was open at the last rebuild, and whether it has just closed.
+        private bool _chooserOpen, _chooserClosed;
         public override bool ResetFocusOnNewVisit => true;
 
         private static ManufacturePanel Panel => UIPanelManager.Instance != null ? UIPanelManager.Instance._refManufacturePanel : null;
@@ -276,7 +279,10 @@ namespace HometownStoreAccess.Contexts
             string storageName = storage != null ? UiUtil.Text(storage.shelfNameText) : string.Empty;
             string machine = GameText.Name(m.ID);
 
-            if (p.allCraftRecipePanel != null && p.allCraftRecipePanel.activeInHierarchy)
+            bool chooser = p.allCraftRecipePanel != null && p.allCraftRecipePanel.activeInHierarchy;
+            _chooserClosed = _chooserOpen && !chooser;
+            _chooserOpen = chooser;
+            if (chooser)
             {
                 string g = Loc.Get("group_choose_recipe");
                 var recipes = new List<CraftingRecipe> { null };
@@ -344,7 +350,9 @@ namespace HometownStoreAccess.Contexts
         public override string PreferredFocusKey()
         {
             ManufacturePanel p = Panel;
-            if (p == null || p._refManufactureObject == null || p.allCraftRecipePanel == null || !p.allCraftRecipePanel.activeInHierarchy) return null;
+            if (p == null || p._refManufactureObject == null || p.allCraftRecipePanel == null) return null;
+            // The chooser just closed (a recipe was chosen): back on Change recipe.
+            if (!p.allCraftRecipePanel.activeInHierarchy) return _chooserClosed && p.openAllCraftRecipeButton != null ? "btn:" + p.openAllCraftRecipeButton.GetInstanceID() : null;
             CraftingRecipe current = p._refManufactureObject.currentRecipe;
             return "recipe:" + (current != null ? current.name : "none");
         }

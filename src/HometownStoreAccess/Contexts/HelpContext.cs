@@ -62,7 +62,7 @@ namespace HometownStoreAccess.Contexts
                 // help does not already say it (key names are the same in every language).
                 ContextManager cm = AccessibilityRoot.Instance != null ? AccessibilityRoot.Instance.Contexts : null;
                 bool told = parts.Exists(p => p.IndexOf("Page Down", StringComparison.OrdinalIgnoreCase) >= 0);
-                if (!told && cm != null && cm.Current == current && cm.GroupCount > 1) parts.Add(Loc.Get("help_groups"));
+                if (!told && cm != null && cm.Current == current && cm.GroupCount > 1) parts.Add(Loc.Get(cm.HasHeadings ? "help_groups" : "help_sections"));
             }
             if (inGame) parts.Add(Loc.Get("help_game_short"));
             // "Shift+F1 lists every key, F5 opens the settings" is not news inside the key list or settings.
@@ -77,20 +77,20 @@ namespace HometownStoreAccess.Contexts
         public override string Id => "key_list";
         public override int Priority => 1000;
         public override bool HeadingItems => true;
+        public override bool StartsOnHeading => true;
         public override bool ResetFocusOnEnter => true;
         public override bool IsActive() => Overlay.Open == Overlay.Kind.KeyList;
         public override string Title() => Loc.Get("ctx_key_list");
 
         public override void Build(List<NavItem> items)
         {
-            int n = 0;
             void Section(string group, string block)
             {
                 if (string.IsNullOrEmpty(block)) return;
                 foreach (string line in block.Split('\n'))
                 {
                     string t = line.Trim();
-                    if (t.Length > 0) items.Add(new TextItem(t, "k" + n++) { Group = group });
+                    if (t.Length > 0) items.Add(new TextItem(t, "k:" + group + ":" + t) { Group = group });
                 }
             }
             ScreenContext under = Overlay.Underlying;
@@ -145,6 +145,7 @@ namespace HometownStoreAccess.Contexts
         public override string Id => "mod_settings";
         public override int Priority => 1001;
         public override bool HeadingItems => true;
+        public override bool StartsOnHeading => true;
         public override bool IsActive() => Overlay.Open == Overlay.Kind.Settings;
         public override string Title() => Loc.Get("ctx_mod_settings");
         public override string Intro() => Loc.Get("hint_settings");

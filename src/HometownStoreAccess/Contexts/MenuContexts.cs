@@ -223,6 +223,11 @@ namespace HometownStoreAccess.Contexts
     {
         public override string Id => "save_slots";
         public override int Priority => 94;
+        // Whether the name box was open at the last rebuild, and whether it has just closed.
+        private bool _nameBoxOpen, _nameBoxClosed;
+
+        /// <summary>The name box closed (saved or cancelled): back on New save, not on a save by position.</summary>
+        public override string PreferredFocusKey() => _nameBoxClosed ? "newsave" : null;
 
         private static SaveSlotPanel Panel
         {
@@ -250,7 +255,10 @@ namespace HometownStoreAccess.Contexts
         {
             SaveSlotPanel p = Panel;
             if (p == null) return;
-            if (p.inputNamePanel != null && p.inputNamePanel.activeInHierarchy)
+            bool nameBox = p.inputNamePanel != null && p.inputNamePanel.activeInHierarchy;
+            _nameBoxClosed = _nameBoxOpen && !nameBox;
+            _nameBoxOpen = nameBox;
+            if (nameBox)
             {
                 string g = Loc.Get("group_save_name");
                 UiScan.Add(items, p.inputNamePanel, g, includeTexts: true);

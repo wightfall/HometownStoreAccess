@@ -94,7 +94,7 @@ namespace HometownStoreAccess.Game
             string name = GameText.Name(building.ID);
             if (count > 0)
             {
-                UIPanelManager.Instance.ShowConfirmPanel(LocalizationManager.GetString(LocalizationTable.ConfirmAndNotify, "UI/Popup/GameControl/A"), delegate
+                UIPanelManager.Instance.ShowConfirmPanel(LocalizationManager.GetString(GameText.Table("ConfirmAndNotify"), "UI/Popup/GameControl/A"), delegate
                 {
                     BuildingSystem.Instance.PickupBuilding(building, force: true);
                     SpeechService.Say(Loc.Get("picked_up", name), true);
@@ -119,7 +119,7 @@ namespace HometownStoreAccess.Game
             if (!BuildingSystem.Instance.HasEnoughBlueprint(building, 1)) return;
             int price = Mathf.RoundToInt(building.marketValue * 0.2f);
             string name = GameText.Name(building);
-            UIPanelManager.Instance.ShowConfirmPanel(LocalizationManager.GetString(LocalizationTable.ConfirmAndNotify, "UI/Popup/ContentBuilding", name, price.ToString()), delegate
+            UIPanelManager.Instance.ShowConfirmPanel(LocalizationManager.GetString(GameText.Table("ConfirmAndNotify"), "UI/Popup/ContentBuilding", name, price.ToString()), delegate
             {
                 if (SummaryPanel.Instance != null) SummaryPanel.Instance.AddBill(isSell: true, building, 1, price);
                 EventAnnouncer.QuietCash(a => a == price);

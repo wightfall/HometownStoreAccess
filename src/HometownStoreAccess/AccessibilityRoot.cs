@@ -121,6 +121,7 @@ namespace HometownStoreAccess
                 long t = Perf.Start();
                 Controller.Update();
                 ModInput.BeginFrame();
+                UI.UiUtil.TickPendingClick();
                 Perf.Stop("controller", t);
                 if (Plugin.Settings.TestHooks.Value) DebugCommands.Poll();
                 t = Perf.Start();

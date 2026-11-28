@@ -95,6 +95,62 @@ namespace HometownStoreAccess.Contexts
         {
             CustomerPanel p = Panel;
             if (p == null) return;
+            if (p.showEmployeePage) BuildEmployees(items, p);
+            else BuildCustomers(items, p);
+            // The panel's pages (game 1.7.12): its tabs, after the list so the screen still opens on it.
+            string pages = Loc.Get("group_pages");
+            AddTab(items, p.customerTabButton, !p.showEmployeePage, pages);
+            AddTab(items, p.employeeTabButton, p.showEmployeePage, pages);
+            UiScan.AddControl(items, CloseButton(p), string.Empty, () => Loc.Get("label_close"));
+        }
+
+        private static void AddTab(List<NavItem> items, Button tab, bool selected, string group)
+        {
+            if (tab == null || !UiUtil.IsShown(tab.gameObject)) return;
+            Button b = tab;
+            items.Add(new ActionItem(() => UiUtil.LabelFor(b.gameObject), () =>
+            {
+                UiUtil.Click(b.gameObject);
+                // The choice, then the page's first entry once the game has replaced the old page's rows.
+                SpeechService.Say(Loc.Get("state_selected"), true);
+                ContextManager cm = AccessibilityRoot.Instance.Contexts;
+                cm.AfterGameUpdate(() =>
+                {
+                    cm.Refresh(false);
+                    NavItem first = cm.Items.Count > 0 && cm.Items[0].Group != group ? cm.Items[0] : null;
+                    if (first != null) SpeechService.Say(first.Speak(), false);
+                });
+            }, "tab:" + b.GetInstanceID())
+            {
+                Group = group,
+                ValueFunc = () => selected ? Loc.Get("state_selected") : null,
+                TargetObject = b.gameObject,
+            });
+        }
+
+        /// <summary>The employees page: each employee with what the game shows, and its Working switch.</summary>
+        private static void BuildEmployees(List<NavItem> items, CustomerPanel p)
+        {
+            if (p.contentEmployeeGroupParent != null)
+            {
+                foreach (Transform t in p.contentEmployeeGroupParent)
+                {
+                    var g = t.GetComponent<ContentEmployeeGroup>();
+                    if (g == null || !t.gameObject.activeInHierarchy) continue;
+                    ContentEmployeeGroup e = g;
+                    items.Add(new TextItem(() => TextCleaner.Join(", ", UiUtil.Text(e.nameText), UiUtil.Text(e.statsText)), "emp:" + e.GetInstanceID(), () => UiUtil.Text(e.descriptionText)));
+                    if (e.workingToggle != null && e.workingToggle.gameObject.activeInHierarchy) items.Add(new ToggleItem(e.workingToggle));
+                }
+            }
+            if (p.noEmployeeText != null && p.noEmployeeText.activeInHierarchy)
+            {
+                var text = p.noEmployeeText.GetComponentInChildren<TMPro.TMP_Text>(true);
+                UiScan.AddText(items, text);
+            }
+        }
+
+        private static void BuildCustomers(List<NavItem> items, CustomerPanel p)
+        {
             foreach (Transform t in p.contentCustomerGroupParent)
             {
                 var g = t.GetComponent<ContentCustomerGroup>();
@@ -111,7 +167,6 @@ namespace HometownStoreAccess.Contexts
                     ValueFunc = () => prof.IsFavorite ? Loc.Get("favorite") : null,
                 });
             }
-            UiScan.AddControl(items, CloseButton(p), string.Empty, () => Loc.Get("label_close"));
         }
 
         private static Button CloseButton(CustomerPanel p)
@@ -196,11 +251,11 @@ namespace HometownStoreAccess.Contexts
             // The game's captions for these are Thai in every language. Only one shows at a time.
             if (p.eventInprogressButton != null && p.eventInprogressButton.gameObject.activeInHierarchy)
             {
-                items.Add(new ActionItem(() => Loc.Get("label_show_view", Loc.Get("journal_in_progress")), () => SwitchView(), "view") { Group = actions });
+                items.Add(new ActionItem(() => Loc.Get("label_show_view", Loc.Get("journal_in_progress")), () => SwitchView(0), "view") { Group = actions });
             }
             else if (p.eventDoneButton != null && p.eventDoneButton.gameObject.activeInHierarchy)
             {
-                items.Add(new ActionItem(() => Loc.Get("label_show_view", Loc.Get("journal_done")), () => SwitchView(), "view") { Group = actions });
+                items.Add(new ActionItem(() => Loc.Get("label_show_view", Loc.Get("journal_done")), () => SwitchView(0), "view") { Group = actions });
             }
             Transform close = p.transform.Find("Close");
             if (close != null) UiScan.AddControl(items, close.GetComponent<Button>(), actions, () => Loc.Get("label_close"));
@@ -210,23 +265,42 @@ namespace HometownStoreAccess.Contexts
         public override bool HandleInput()
         {
             if (!Input.ModInput.Ctrl || !(Input.ModInput.Down(KeyCode.UpArrow) || Input.ModInput.Down(KeyCode.DownArrow))) return false;
-            return SwitchView();
+            return SwitchView(Input.ModInput.Down(KeyCode.DownArrow) ? 1 : -1);
         }
 
-        /// <summary>Shows the other view, then reads its name and first event.</summary>
-        private bool SwitchView()
+        /// <summary>
+        /// Shows the other view, then reads its name and first event. The views go in the order events in
+        /// progress, finished events: Ctrl+Down goes to the next, Ctrl+Up to the previous, round the ends
+        /// only with "Wrap around" on; <paramref name="direction"/> 0 (Enter on the item) always switches.
+        /// </summary>
+        private bool SwitchView(int direction)
         {
             EventJournalPanel p = Panel;
             if (p == null) return false;
             Button b = p.eventInprogressButton != null && p.eventInprogressButton.gameObject.activeInHierarchy ? p.eventInprogressButton : p.eventDoneButton;
             if (b == null || !b.gameObject.activeInHierarchy) return false;
+            // 0: events in progress, 1: finished events.
+            int now = p.checkDoneJournals ? 1 : 0;
+            bool wraps = direction != 0 && now + direction != 1 - now;
+            if (wraps && !NavSettings.Wrap)
+            {
+                Audio.AudioCues.Play(Audio.Cue.Edge);
+                SpeechService.Say(Title(), true);
+                return true;
+            }
             UiUtil.Click(b.gameObject);
-            Audio.AudioCues.Play(Audio.Cue.Wrap);
-            ContextManager cm = AccessibilityRoot.Instance.Contexts;
-            cm.Refresh(false);
-            cm.MoveToSilently(0);
+            Audio.AudioCues.Play(wraps ? Audio.Cue.Wrap : Audio.Cue.Move);
             SpeechService.Say(Title(), true);
-            cm.AnnounceFocus(includeGroup: true, interrupt: false);
+            // The game puts the other view's events in now and removes the old ones at the end of the
+            // frame: the first event is read once they are gone (its heading's name is said with it).
+            ContextManager cm = AccessibilityRoot.Instance.Contexts;
+            cm.AfterGameUpdate(() =>
+            {
+                cm.Refresh(false);
+                cm.MoveToSilently(cm.Items.Count > 1 && cm.Items[0] is HeadingItem ? 1 : 0);
+                cm.ForgetSection();
+                cm.AnnounceFocus(includeGroup: true, interrupt: false);
+            });
             return true;
         }
 

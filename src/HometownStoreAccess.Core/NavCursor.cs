@@ -137,6 +137,39 @@ namespace HometownStoreAccess.Core
         }
 
         /// <summary>
+        /// Where the focus goes when the focused item has gone from a rebuilt list (goods moved away, a
+        /// basket line removed): the nearest item of the old list that is still there, first within the
+        /// vanished item's own section (one step after it, then one before, and so on), then anywhere.
+        /// Headings are skipped. Returns its index in <paramref name="newKeys"/>, or -1 when none is left.
+        /// </summary>
+        public static int NearestSurvivor(IList<string> oldKeys, IList<string> oldGroups, int oldIndex, IList<string> newKeys, Func<string, bool> isHeading)
+        {
+            if (oldKeys == null || newKeys == null || oldIndex < 0 || oldIndex >= oldKeys.Count) return -1;
+            var where = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (int i = 0; i < newKeys.Count; i++)
+            {
+                if (newKeys[i] != null && !where.ContainsKey(newKeys[i])) where[newKeys[i]] = i;
+            }
+            string group = oldGroups != null && oldIndex < oldGroups.Count ? oldGroups[oldIndex] ?? string.Empty : string.Empty;
+            for (int pass = 0; pass < 2; pass++)
+            {
+                for (int d = 1; d < oldKeys.Count; d++)
+                {
+                    for (int side = 0; side < 2; side++)
+                    {
+                        int j = side == 0 ? oldIndex + d : oldIndex - d;
+                        if (j < 0 || j >= oldKeys.Count) continue;
+                        if (pass == 0 && (oldGroups == null || j >= oldGroups.Count || !string.Equals(oldGroups[j] ?? string.Empty, group, StringComparison.Ordinal))) continue;
+                        string k = oldKeys[j];
+                        if (k == null || (isHeading != null && isHeading(k))) continue;
+                        if (where.TryGetValue(k, out int at)) return at;
+                    }
+                }
+            }
+            return -1;
+        }
+
+        /// <summary>
         /// First-letter navigation: finds the next item after the current one whose label starts with
         /// <paramref name="prefix"/> (case-insensitive), wrapping around. Returns false if none.
         /// </summary>

@@ -116,8 +116,10 @@ finally {
 }
 Write-Host "Wrote $zipPath"
 
-# Installer with the zip embedded
-Invoke-Dotnet (@("build", "src\HometownStoreAccess.Installer\HometownStoreAccess.Installer.csproj", "-c", "Release", "-nologo", "-p:ReleaseZip=$zipPath") + $extra)
+# Installer with the zip embedded, and this version's release notes for its What's new box
+$notes = Join-Path $root "docs\release-notes\$version.md"
+if (-not (Test-Path $notes)) { throw "Release notes missing: $notes" }
+Invoke-Dotnet (@("build", "src\HometownStoreAccess.Installer\HometownStoreAccess.Installer.csproj", "-c", "Release", "-nologo", "-p:ReleaseZip=$zipPath", "-p:WhatsNew=$notes") + $extra)
 $exe = Join-Path $root "src\HometownStoreAccess.Installer\bin\Release\net472\HometownStoreAccessInstaller.exe"
 Copy-Item $exe $dist -Force
 Write-Host "Wrote $(Join-Path $dist 'HometownStoreAccessInstaller.exe')"

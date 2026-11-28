@@ -103,6 +103,29 @@ namespace HometownStoreAccess
 
         public ConfigEntry<float> CueVolume(Audio.Cue cue) => _cueVolumes[cue];
 
+        /// <summary>
+        /// For the test commands: sets the option with this key (in any section) from text; returns its new
+        /// value, or null when there is no such option or the text does not fit it.
+        /// </summary>
+        public string SetFromText(string key, string value)
+        {
+            foreach (ConfigDefinition def in _config.Keys)
+            {
+                if (!string.Equals(def.Key, key, System.StringComparison.OrdinalIgnoreCase)) continue;
+                ConfigEntryBase entry = _config[def];
+                try
+                {
+                    entry.SetSerializedValue(value);
+                }
+                catch (System.Exception)
+                {
+                    return null;
+                }
+                return def.Section + "." + def.Key + " = " + entry.GetSerializedValue();
+            }
+            return null;
+        }
+
         /// <summary>Puts every option (except the developer ones) back to its default value.</summary>
         public void ResetToDefaults()
         {

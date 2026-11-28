@@ -123,17 +123,23 @@ to repeat. On the shop floor and in walk mode, letters work without Ctrl.
 | Escape | Back, close, or open the pause menu, as in the game. In a text box, Escape only stops editing. |
 
 A list with more than one section starts each section with a heading line of its own, such as
-"Basket, heading, 3 items": the main menu, the options, the map, the shops, shelves, the credits, the
+"Basket, 3 items, heading": the main menu, the options, the map, the shops, shelves, the credits, the
 key list and the mod settings all have them. Page Up and Page Down (or Tab) land on the heading, so
-you hear the section's name alone, and Down goes on to its items, which are read without the section
-name in front of them. A list with only one section has no heading: its name is said with the item
-you reach first. Enter on a heading does nothing.
+you hear the section's name alone, and Down goes on to its entries, which are read without the
+section name in front of them. When you come into a section another way (a letter, End, Up from the
+next section, or a screen that opens), its name is said in front of the entry. A screen opens on its
+first entry, not on a heading (the key list and the mod settings open on their first heading). A list
+with only one section has no heading. Enter on a heading does nothing, and letters skip headings.
+When an entry goes away (goods moved, a basket line removed), the focus goes to the nearest entry in
+the same section and you hear it.
 
 At the end of a list, Down goes round to the first item with the wrap sound, and Page Down in the
 last section goes to the first section. To stop at the ends instead (with the edge sound), turn off
 **Wrap around at the ends of lists** in the mod settings. This also applies to Left and Right on a
-choice such as the game language or a category, to Ctrl+Up and Ctrl+Down on categories, and to Up
-and Down in the shop floor scanner; Enter always goes on to the next value.
+choice such as the game language or a category, to Ctrl+Up and Ctrl+Down on categories (and on the
+event journal's two views), and to Up and Down in the shop floor scanner; Enter always goes on to the
+next value. A letter always searches the whole list: when it goes round the end you hear the wrap
+sound. At the ends of the game's sliders (the volumes in Options) you hear the edge sound.
 
 ### Main menu and options
 
@@ -194,6 +200,10 @@ rain"), and T says it at any time. A save that loads with rain or fog says it to
 is said only when it follows rain or fog. To keep quiet about it, turn off **Weather** in the mod
 settings (T still says it). The game calls its weather "still in testing" in version 1.7.12.
 
+When an event upgrades your shop, the game does it as the day's summary opens (since version
+1.7.12; agreeing to it only books it). You hear "Your shop grew to level 2" then, before the summary:
+every building goes back into your blueprints, to be placed again in the bigger shop.
+
 Many events in the demo have no name in any language (the game's event journal shows an empty
 title). The mod names them after what they ask for: the place they send you to ("Event at
 Temple"), else the goods or buildings they need ("Event: Paper"), else the shop level. The game
@@ -219,7 +229,7 @@ goods), and walking onto storage says how full it is and what is in it. All stor
 share one storage, so each one reads the same goods. The delivery truck also lists everything it
 carries.
 
-When the truck comes with goods you hear "Delivery truck has arrived" and what it brings. It comes
+When the truck comes with goods you hear "Delivery truck arrived with" and what it brings. It comes
 every morning, and also whenever it holds goods and the map is closed: goods you buy on the map in
 the evening are in the truck in front of your shop as soon as you close the map, as the game shows
 it (the game's tutorial says they come the next morning, but the game itself sends the truck at
@@ -261,6 +271,10 @@ plain ones in your language (Default, Cat, Frozen), the others by their own name
 
 I on the shop floor, and Ctrl+I in build mode, describe a building like the game's tooltip: name,
 description, size, value, and what a shelf holds.
+
+The Customers panel lists your regular customers. Since game version 1.7.12 it also has pages: Page
+Down goes to them, Customer groups and Employees, and Enter shows a page. The demo has no employees
+yet, so that page says so.
 
 The character collection says each character's number, so the ones not met yet ("Character 3: not
 met yet") can be told apart. Game bug: in the demo the collection's entries have no pictures, so the
@@ -312,7 +326,8 @@ These two keys work only during a conversation. On a controller, hold the left t
 | W (walk mode) | Leave walk mode |
 
 Each place also says when it has an event from the event journal or is new, and a road sign says
-when the area it leads to has such a place, like the game's markers on the map. A place's details
+when the area it leads to has such a place, like the game's markers on the map. (An event that asks
+for money is marked only once you have that much, as the game does since version 1.7.12.) A place's details
 also name its events ("Events here: Event at Temple").
 
 End of the day finishes the evening. The map section at the end of the list has your travel points,
@@ -603,7 +618,9 @@ done, set `TestHooks = false` again and delete `BepInEx\hsa_dumps` and any `BepI
 | Command | What it does |
 | --- | --- |
 | `help` | Writes the list of commands to the log. |
-| `state` | The active mod screen, how many items its list has, and what is focused. |
+| `state` | The active mod screen, how many items its list has, and what is focused; also written to `BepInEx\hsa_state.txt` at once, with the sound cues played and the speech sent since the last `state`. |
+| `items` | Every item of the active screen's list as it is spoken, with its section, and which one is focused. |
+| `setting <name> <value>` | Changes a mod setting by its name in the settings file, for example `setting WrapAround false`. It is saved, as a change in F5 is. |
 | `say <text>` | Speaks the text. |
 | `key <KeyCode> [shift] [ctrl] [alt]` | Presses a mod key, with Unity key names such as `DownArrow`, `Return`, `PageDown`, `F1` or `B`. Only the mod sees it: keys the game reads itself (Escape, the speed keys 1 to 3, typing into a text field) need a real key press. |
 | `pad <buttons> [frames]` | Controller input, held for that many frames (2 if not given; holding about 0.6 s, as for the key list, needs about 240). Buttons: `a b x y start back lb rb ls rs up down left right lt rt`, sticks: `lsup lsdown lsleft lsright rsup rsdown rsleft rsright`. |
@@ -628,6 +645,8 @@ done, set `TestHooks = false` again and delete `BepInEx\hsa_dumps` and any `BepI
 | `stock <item> [n]` | Puts goods straight onto the first placed shelf that can hold them. When no placed shelf can, the log names the shelves that can. Events that ask for goods on shelves count these. |
 | `blueprint <name> [n]` | Adds buildings to your blueprints, to place in build mode. |
 | `buildings` | Lists every building with its kind and category. |
+| `upgrade`, `upgrade now` | Queues a shop upgrade, as an event's reply does (the game does it when the day's summary opens), or does it at once. Use a test save: the shop really grows. |
+| `weather [Clear, Rain or Fog] [0-100]` | Says the weather, or sets it as the game's developer panel does (the strength is 50 when not given). |
 
 **Shops and the map**
 
@@ -683,6 +702,8 @@ done, set `TestHooks = false` again and delete `BepInEx\hsa_dumps` and any `BepI
   announced. No test command unlocks an achievement. A test can still make the game unlock one
   itself (a conversation, money, a reward), so while the test commands are on, the game's own
   unlocks are not sent to Steam: they are written to the log instead.
+- **Weather:** `weather Rain 85` says "Weather: heavy rain", `weather Fog 35` "thin fog" and
+  `weather Clear` "clear sky"; T then says it too.
 - **Sound cues:** `cues play` plays every cue after its name. Each should be clearly audible, also on
   laptop speakers.
 - **A translation:** `missing ja` writes what the Japanese game text lacks.

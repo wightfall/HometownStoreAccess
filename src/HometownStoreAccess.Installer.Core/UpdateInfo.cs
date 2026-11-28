@@ -16,6 +16,16 @@ namespace HometownStoreAccess.Installer
         public string PageUrl;
     }
 
+    /// <summary>What the installer's main button does.</summary>
+    public enum InstallAction
+    {
+        Install,
+        Update,
+        Reinstall,
+        /// <summary>This installer carries an older version than the one installed.</summary>
+        InstallOlder,
+    }
+
     public static class UpdateInfo
     {
         public const string Repository = "wightfall/HometownStoreAccess";
@@ -91,6 +101,35 @@ namespace HometownStoreAccess.Installer
             return a > b;
         }
 
+        /// <summary>-1, 0 or 1 as <paramref name="a"/> is lower, the same or higher; null when either is not a version.</summary>
+        public static int? Compare(string a, string b)
+        {
+            if (!TryParse(a, out Version va) || !TryParse(b, out Version vb)) return null;
+            return Math.Sign(Normalize(va).CompareTo(Normalize(vb)));
+        }
+
+        // 1.5 and 1.5.0 are the same version.
+        private static Version Normalize(Version v) => new Version(v.Major, v.Minor, Math.Max(0, v.Build), Math.Max(0, v.Revision));
+
+        /// <summary>
+        /// Whether to offer the latest release: only when it is newer than both the mod that is installed
+        /// and the one this installer carries (an old installer run on an up-to-date mod offers nothing).
+        /// </summary>
+        public static bool ShouldOffer(string latest, string installed, string payload)
+        {
+            if (!IsNewer(latest, payload ?? "0")) return false;
+            return installed == null || Compare(installed, "0") == null || IsNewer(latest, installed);
+        }
+
+        /// <summary>What the Install button does, from the installed version (null: none) and this installer's.</summary>
+        public static InstallAction ActionFor(bool installed, string installedVersion, string payloadVersion)
+        {
+            if (!installed) return InstallAction.Install;
+            int? c = Compare(payloadVersion, installedVersion);
+            if (c == null) return InstallAction.Update;
+            return c > 0 ? InstallAction.Update : c == 0 ? InstallAction.Reinstall : InstallAction.InstallOlder;
+        }
+
         private static bool TryParse(string s, out Version v)
         {
             v = null;
@@ -109,7 +148,12 @@ namespace HometownStoreAccess.Installer
             foreach (string raw in (notes ?? string.Empty).Replace("\r", string.Empty).Split('\n'))
             {
                 string l = raw.Trim();
-                if (l.StartsWith("#", StringComparison.Ordinal)) l = l.TrimStart('#').Trim();
+                if (l.StartsWith("#", StringComparison.Ordinal))
+                {
+                    l = l.TrimStart('#').Trim();
+                    // How to download and run the installer: it is already running.
+                    if (string.Equals(l, "Install", StringComparison.OrdinalIgnoreCase)) break;
+                }
                 if (l.StartsWith("- ", StringComparison.Ordinal) || l.StartsWith("* ", StringComparison.Ordinal)) l = l.Substring(2);
                 l = l.Replace("**", string.Empty).Replace("`", string.Empty);
                 if (l.Length > 0) lines.Add(l);

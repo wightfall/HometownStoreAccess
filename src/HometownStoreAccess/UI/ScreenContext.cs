@@ -61,6 +61,12 @@ namespace HometownStoreAccess.UI
         public virtual bool HeadingItems => true;
 
         /// <summary>
+        /// When true, the screen opens on the heading of its first section (the key list and the mod
+        /// settings); otherwise it opens on the first entry, with the section's name said in front of it.
+        /// </summary>
+        public virtual bool StartsOnHeading => false;
+
+        /// <summary>
         /// Start at the first item when the screen was closed since it was last used (a new visit), but
         /// keep the focus when it was only covered by a popup (a confirmation, a notice).
         /// </summary>

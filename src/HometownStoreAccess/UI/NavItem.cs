@@ -32,6 +32,12 @@ namespace HometownStoreAccess.UI
         /// <summary>Enter plays a sound of its own (a sound cue): the list's activate click is left out.</summary>
         public virtual bool PlaysOwnSound => false;
 
+        /// <summary>
+        /// False for an item that only belongs to the one before it (a shelf slot's lock): it is not
+        /// counted in its section's heading or in "2 of 5".
+        /// </summary>
+        public virtual bool CountsInSection => true;
+
         /// <summary>Enter.</summary>
         public virtual bool Activate() => false;
         /// <summary>Shift+Enter (controller X).</summary>
@@ -75,6 +81,7 @@ namespace HometownStoreAccess.UI
     /// <summary>A section heading in a list with heading items (see ScreenContext.HeadingItems).</summary>
     internal sealed class HeadingItem : NavItem
     {
+        public const string KeyPrefix = "heading:";
         private readonly string _name;
         private readonly int _count;
 
@@ -85,9 +92,10 @@ namespace HometownStoreAccess.UI
             Group = name;
         }
 
-        public override string Key => "heading:" + _name;
+        // Numbers in a section's name change (slots used): the key leaves them out, so the focus stays.
+        public override string Key => KeyPrefix + System.Text.RegularExpressions.Regex.Replace(_name ?? string.Empty, @"\d+", "#");
         public override string Label() => _name;
-        public override string Value() => Loc.Get("heading_items", _count);
+        public override string Value() => _count == 1 ? Loc.Get("heading_item_one") : Loc.Get("heading_items", _count);
         public override string Role() => Loc.Get("role_heading");
     }
 
@@ -105,8 +113,11 @@ namespace HometownStoreAccess.UI
         public Func<int, bool, bool> OnAdjust;
         public GameObject TargetObject;
         public bool OwnSound;
+        /// <summary>Set for an item that belongs to the one before it (see <see cref="NavItem.CountsInSection"/>).</summary>
+        public bool PartOfPrevious;
 
         public override bool PlaysOwnSound => OwnSound;
+        public override bool CountsInSection => !PartOfPrevious;
 
         public ActionItem(Func<string> label, Action onActivate, string key = null)
         {
@@ -252,6 +263,8 @@ namespace HometownStoreAccess.UI
             // Snap near the ends so 0% and 100% are reachable despite float steps.
             if (Mathf.Abs(v - _slider.minValue) < step * 0.5f) v = _slider.minValue;
             if (Mathf.Abs(v - _slider.maxValue) < step * 0.5f) v = _slider.maxValue;
+            // Already at the end: the edge sound, as at the end of a list.
+            if (Mathf.Approximately(v, _slider.value)) Audio.AudioCues.Play(Audio.Cue.Edge);
             _slider.value = v;
             Speech.SpeechService.Say(Value());
             return true;

@@ -162,6 +162,14 @@ namespace HometownStoreAccess.Tests
             Assert.Equal(3, lines.Count);
         }
 
+        [Fact]
+        public void NoteLinesLeaveOutTheInstallSection()
+        {
+            // 1.5.0: the installer shows the notes itself; how to run the installer is not news there.
+            List<string> lines = UpdateInfo.NoteLines("Summary.\n\n## What's new\n\n- A\n\n## Bug fixes\n\n- B\n\n## Install\n\nClose the game, download the installer.\n");
+            Assert.Equal(new[] { "Summary.", "What's new", "A", "Bug fixes", "B" }, lines.ToArray());
+        }
+
         [Theory]
         [InlineData("v1.2.0", "1.1.9", true)]
         [InlineData("1.0.0", "1.0.0", false)]
