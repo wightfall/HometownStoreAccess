@@ -95,6 +95,94 @@ namespace HometownStoreAccess.Contexts
         {
             CustomerPanel p = Panel;
             if (p == null) return;
+            if (p.showEmployeePage) BuildEmployees(items, p);
+            else BuildCustomers(items, p);
+            // The panel's pages (game 1.7.12): its tabs, after the list so the screen still opens on it.
+            string pages = Loc.Get("group_pages");
+            AddTab(items, p.customerTabButton, !p.showEmployeePage, pages);
+            AddTab(items, p.employeeTabButton, p.showEmployeePage, pages);
+            UiScan.AddControl(items, CloseButton(p), string.Empty, () => Loc.Get("label_close"));
+        }
+
+        private static void AddTab(List<NavItem> items, Button tab, bool selected, string group)
+        {
+            if (tab == null || !UiUtil.IsShown(tab.gameObject)) return;
+            Button b = tab;
+            items.Add(new ActionItem(() => UiUtil.LabelFor(b.gameObject), () =>
+            {
+                // The choice, then the page's first entry once the game has replaced the old page's rows
+                // (and once the click is made: an opening panel locks its buttons for a moment).
+                UiUtil.ClickThen(b.gameObject, () =>
+                {
+                    SpeechService.Say(Loc.Get("state_selected"), true);
+                    ContextManager cm = AccessibilityRoot.Instance.Contexts;
+                    cm.AfterGameUpdate(() =>
+                    {
+                        cm.Refresh(false);
+                        NavItem first = cm.Items.Count > 0 && cm.Items[0].Group != group ? cm.Items[0] : null;
+                        if (first != null) SpeechService.Say(first.Speak(), false);
+                    });
+                });
+            }, "tab:" + b.GetInstanceID())
+            {
+                Group = group,
+                ValueFunc = () => selected ? Loc.Get("state_selected") : null,
+                TargetObject = b.gameObject,
+            });
+        }
+
+        /// <summary>The employees page: each employee with what the game shows, and its Working switch.</summary>
+        private static void BuildEmployees(List<NavItem> items, CustomerPanel p)
+        {
+            if (p.contentEmployeeGroupParent != null)
+            {
+                foreach (Transform t in p.contentEmployeeGroupParent)
+                {
+                    var g = t.GetComponent<ContentEmployeeGroup>();
+                    if (g == null || !t.gameObject.activeInHierarchy) continue;
+                    ContentEmployeeGroup e = g;
+                    // Keyed by the employee: the game builds the rows again shortly after the panel opens.
+                    string id = e.employeeProfile != null && e.employeeProfile.employeeID != null ? e.employeeProfile.employeeID.name : e.GetInstanceID().ToString();
+                    items.Add(new TextItem(() => TextCleaner.Join(", ", UiUtil.Text(e.nameText), UiUtil.Text(e.statsText), Holding(e.employeeProfile)), "emp:" + id, () => UiUtil.Text(e.descriptionText)));
+                    Toggle working = e.workingToggle;
+                    if (working != null && working.gameObject.activeInHierarchy)
+                    {
+                        // Its switch belongs to the row above (not counted on its own).
+                        items.Add(new ActionItem(() => Loc.Get("fixed_working"), () =>
+                        {
+                            if (!working.IsInteractable()) { SpeechService.Say(Loc.Get("state_unavailable"), true); return; }
+                            UiUtil.ClickThen(working.gameObject, () => SpeechService.Say(working.isOn ? Loc.Get("state_checked") : Loc.Get("state_unchecked"), true));
+                        }, "emp:" + id + ":working")
+                        {
+                            PartOfPrevious = true,
+                            ValueFunc = () => working.isOn ? Loc.Get("state_checked") : Loc.Get("state_unchecked"),
+                            RoleFunc = () => Loc.Get("role_checkbox"),
+                            TargetObject = working.gameObject,
+                        });
+                    }
+                }
+            }
+            if (p.noEmployeeText != null && p.noEmployeeText.activeInHierarchy)
+            {
+                var text = p.noEmployeeText.GetComponentInChildren<TMPro.TMP_Text>(true);
+                UiScan.AddText(items, text);
+            }
+        }
+
+        /// <summary>"Holding: Candy: 2, ..." for the goods an employee carries (the game shows their icons).</summary>
+        private static string Holding(EmployeeProfile prof)
+        {
+            if (prof == null || prof.handItems == null || prof.handItems.Count == 0) return null;
+            var parts = new List<string>();
+            foreach (ItemSlotData slot in prof.handItems)
+            {
+                if (slot != null && slot.ID != null) parts.Add(GameText.Stack(slot));
+            }
+            return parts.Count == 0 ? null : Loc.Get("fixed_holding") + ": " + string.Join(", ", parts.ToArray());
+        }
+
+        private static void BuildCustomers(List<NavItem> items, CustomerPanel p)
+        {
             foreach (Transform t in p.contentCustomerGroupParent)
             {
                 var g = t.GetComponent<ContentCustomerGroup>();
@@ -103,15 +191,14 @@ namespace HometownStoreAccess.Contexts
                 CustomerProfile prof = g.customerProfile;
                 items.Add(new ActionItem(() => Describe(prof), () =>
                 {
-                    UiUtil.Click(group.favoriteButton.gameObject);
-                    SpeechService.Say(prof.IsFavorite ? Loc.Get("favorite_on") : Loc.Get("favorite_off"), true);
+                    UiUtil.ClickThen(group.favoriteButton.gameObject, () =>
+                        SpeechService.Say(prof.IsFavorite ? Loc.Get("favorite_on") : Loc.Get("favorite_off"), true));
                 }, "cust:" + prof.customerID.name)
                 {
                     DetailFunc = () => TextCleaner.Join(". ", GameText.Description(prof.customerID), Loc.Get("hint_favorite")),
                     ValueFunc = () => prof.IsFavorite ? Loc.Get("favorite") : null,
                 });
             }
-            UiScan.AddControl(items, CloseButton(p), string.Empty, () => Loc.Get("label_close"));
         }
 
         private static Button CloseButton(CustomerPanel p)
@@ -183,7 +270,8 @@ namespace HometownStoreAccess.Contexts
                     tasks.Add(done && !p.checkDoneJournals ? Loc.Get("task_done", text) : text);
                 }
                 string group = title;
-                items.Add(new TextItem(() => Loc.Get("task_count", tasks.Count), "j" + i) { Group = group });
+                // The event's heading says how many tasks it has; an event without tasks still gets a line.
+                if (tasks.Count == 0) items.Add(new TextItem(() => Loc.Get("task_count", tasks.Count), "j" + i) { Group = group });
                 int k = 0;
                 foreach (string task in tasks) items.Add(new TextItem(task, "j" + i + "t" + k++) { Group = group });
                 i++;
@@ -196,11 +284,11 @@ namespace HometownStoreAccess.Contexts
             // The game's captions for these are Thai in every language. Only one shows at a time.
             if (p.eventInprogressButton != null && p.eventInprogressButton.gameObject.activeInHierarchy)
             {
-                items.Add(new ActionItem(() => Loc.Get("label_show_view", Loc.Get("journal_in_progress")), () => SwitchView(), "view") { Group = actions });
+                items.Add(new ActionItem(() => Loc.Get("label_show_view", Loc.Get("journal_in_progress")), () => SwitchView(0), "view") { Group = actions });
             }
             else if (p.eventDoneButton != null && p.eventDoneButton.gameObject.activeInHierarchy)
             {
-                items.Add(new ActionItem(() => Loc.Get("label_show_view", Loc.Get("journal_done")), () => SwitchView(), "view") { Group = actions });
+                items.Add(new ActionItem(() => Loc.Get("label_show_view", Loc.Get("journal_done")), () => SwitchView(0), "view") { Group = actions });
             }
             Transform close = p.transform.Find("Close");
             if (close != null) UiScan.AddControl(items, close.GetComponent<Button>(), actions, () => Loc.Get("label_close"));
@@ -210,23 +298,44 @@ namespace HometownStoreAccess.Contexts
         public override bool HandleInput()
         {
             if (!Input.ModInput.Ctrl || !(Input.ModInput.Down(KeyCode.UpArrow) || Input.ModInput.Down(KeyCode.DownArrow))) return false;
-            return SwitchView();
+            return SwitchView(Input.ModInput.Down(KeyCode.DownArrow) ? 1 : -1);
         }
 
-        /// <summary>Shows the other view, then reads its name and first event.</summary>
-        private bool SwitchView()
+        /// <summary>
+        /// Shows the other view, then reads its name and first event. The views go in the order events in
+        /// progress, finished events: Ctrl+Down goes to the next, Ctrl+Up to the previous, round the ends
+        /// only with "Wrap around" on; <paramref name="direction"/> 0 (Enter on the item) always switches.
+        /// </summary>
+        private bool SwitchView(int direction)
         {
             EventJournalPanel p = Panel;
             if (p == null) return false;
             Button b = p.eventInprogressButton != null && p.eventInprogressButton.gameObject.activeInHierarchy ? p.eventInprogressButton : p.eventDoneButton;
             if (b == null || !b.gameObject.activeInHierarchy) return false;
-            UiUtil.Click(b.gameObject);
-            Audio.AudioCues.Play(Audio.Cue.Wrap);
-            ContextManager cm = AccessibilityRoot.Instance.Contexts;
-            cm.Refresh(false);
-            cm.MoveToSilently(0);
-            SpeechService.Say(Title(), true);
-            cm.AnnounceFocus(includeGroup: true, interrupt: false);
+            // 0: events in progress, 1: finished events.
+            int now = p.checkDoneJournals ? 1 : 0;
+            bool wraps = direction != 0 && now + direction != 1 - now;
+            if (wraps && !NavSettings.Wrap)
+            {
+                Audio.AudioCues.Play(Audio.Cue.Edge);
+                SpeechService.Say(Title(), true);
+                return true;
+            }
+            Audio.AudioCues.Play(wraps ? Audio.Cue.Wrap : Audio.Cue.Move);
+            UiUtil.ClickThen(b.gameObject, () =>
+            {
+                SpeechService.Say(Title(), true);
+                // The game puts the other view's events in now and removes the old ones at the end of the
+                // frame: the first event is read once they are gone (its heading's name is said with it).
+                ContextManager cm = AccessibilityRoot.Instance.Contexts;
+                cm.AfterGameUpdate(() =>
+                {
+                    cm.Refresh(false);
+                    cm.MoveToSilently(cm.Items.Count > 1 && cm.Items[0] is HeadingItem ? 1 : 0);
+                    cm.ForgetSection();
+                    cm.AnnounceFocus(includeGroup: true, interrupt: false);
+                });
+            });
             return true;
         }
 
@@ -365,26 +474,43 @@ namespace HometownStoreAccess.Contexts
             ResourceManager rm = ResourceManager.Instance;
             Dictionary<Item, int> storage = rm.AllResourceInStorage();
             Dictionary<Item, int> shelves = rm.AllResourceOnSelf();
-            var all = storage.Keys.Union(shelves.Keys).Where(i => i != null).OrderBy(GameText.Name).ToList();
-            if (all.Count == 0) items.Add(new TextItem(Loc.Get("nothing_in_stock"), "none"));
-            else
-            {
-                // The game's header: "All items: 42 (5 kinds)".
-                int sum = all.Sum(i => (storage.TryGetValue(i, out int a) ? a : 0) + (shelves.TryGetValue(i, out int b) ? b : 0));
-                items.Add(new TextItem(Loc.Get("stock_total", sum, all.Count), "stock_total"));
-            }
+            // Since game 1.7.12 the list also counts the goods the delivery truck holds.
+            Dictionary<Item, int> delivery = rm.delivery != null ? rm.delivery.SummaryItemDictionary() : new Dictionary<Item, int>();
+            int Amount(Dictionary<Item, int> d, Item i) => d.TryGetValue(i, out int n) ? n : 0;
+            var all = storage.Keys.Union(shelves.Keys).Union(delivery.Keys)
+                .Where(i => i != null && Amount(storage, i) + Amount(shelves, i) + Amount(delivery, i) > 0)
+                .OrderBy(GameText.Name).ToList();
+            // The game's header ("All items: 42 (5 kinds)"), storage slots and delivery lines.
+            int sum = all.Sum(i => Amount(storage, i) + Amount(shelves, i) + Amount(delivery, i));
+            items.Add(new TextItem(() => HeaderLine(p, sum, all.Count), "stock_total"));
+            if (p.slotsText != null && p.slotsText.gameObject.activeInHierarchy && UiUtil.Text(p.slotsText).Length > 0)
+                items.Add(new TextItem(() => UiUtil.Text(p.slotsText), "stock_slots"));
+            if (p.deliveryText != null && p.deliveryText.gameObject.activeInHierarchy && UiUtil.Text(p.deliveryText).Length > 0)
+                items.Add(new TextItem(() => UiUtil.Text(p.deliveryText), "stock_delivery"));
             _filter.Prepare(all.Select(i => i.itemCategory.ToString()));
             if (_filter.Active) items.Add(_filter.Item(string.Empty));
             foreach (Item it in all)
             {
                 if (!_filter.Matches(it.itemCategory.ToString())) continue;
                 Item item = it;
-                storage.TryGetValue(item, out int s);
-                shelves.TryGetValue(item, out int sh);
-                int total = s + sh, inStorage = s, onShelves = sh;
-                items.Add(new TextItem(() => Loc.Get("stock_line", GameText.Name(item), total, inStorage, onShelves), "stock:" + item.name, () => GameText.ItemDetails(item)));
+                int inStorage = Amount(storage, item), onShelves = Amount(shelves, item), inDelivery = Amount(delivery, item);
+                int total = inStorage + onShelves + inDelivery;
+                items.Add(new TextItem(() => inDelivery > 0
+                    ? Loc.Get("stock_line_delivery", GameText.Name(item), total, inStorage, onShelves, inDelivery)
+                    : Loc.Get("stock_line", GameText.Name(item), total, inStorage, onShelves), "stock:" + item.name, () => GameText.ItemDetails(item)));
             }
             items.Add(new ActionItem(() => Loc.Get("label_close"), () => p.Close(), "close"));
+        }
+
+        /// <summary>
+        /// The game's own header ("All items: 42 (5 kinds)", "Nothing in stock"; the game refreshes it as
+        /// the panel opens and twice a second), or the mod's words when it shows none.
+        /// </summary>
+        private static string HeaderLine(StorageSummaryPanel p, int total, int kinds)
+        {
+            string head = p.headerText != null ? UiUtil.Text(p.headerText) : string.Empty;
+            if (head.Length > 0) return head;
+            return kinds == 0 ? Loc.Get("nothing_in_stock") : Loc.Get("stock_total", total, kinds);
         }
     }
 

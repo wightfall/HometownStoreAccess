@@ -226,8 +226,9 @@ namespace HometownStoreAccess.Contexts
             var after = Data(p, item, shelf);
             if (after.inBasket == before.inBasket) AudioCues.Play(Cue.Edge);
             SpeechService.Say(TextCleaner.Join(", ", Loc.Get("in_basket", after.inBasket, after.stock), Loc.Get("trade_totals", UiUtil.Text(p.summaryPriceText), UiUtil.Text(p.balanceSumText))), true);
-            // The basket section gained or lost a line: keep the focus where it is.
-            AccessibilityRoot.Instance.Contexts.Refresh(false);
+            // The basket section gained or lost a line. When it was the focused line, the focus goes to the
+            // next one in the basket, and that is said.
+            AccessibilityRoot.Instance.Contexts.Refresh(true);
         }
 
         public override IEnumerable<string> HelpLines()

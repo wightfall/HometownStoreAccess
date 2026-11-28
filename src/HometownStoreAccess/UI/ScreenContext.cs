@@ -53,11 +53,18 @@ namespace HometownStoreAccess.UI
         public virtual bool UsesListNavigation => true;
 
         /// <summary>
-        /// When true, each section starts with a heading item of its own (the key list and the mod
-        /// settings): Page Up / Page Down land on the heading alone, and items are read without the
-        /// section name in front of them.
+        /// When true (the default), each named section starts with a heading item of its own when the
+        /// list has two sections or more: Page Up / Page Down land on the heading alone, and items are
+        /// read without the section name in front of them. Off for screens where the first item must
+        /// be the one Enter uses (a conversation's replies).
         /// </summary>
-        public virtual bool HeadingItems => false;
+        public virtual bool HeadingItems => true;
+
+        /// <summary>
+        /// When true, the screen opens on the heading of its first section (the key list and the mod
+        /// settings); otherwise it opens on the first entry, with the section's name said in front of it.
+        /// </summary>
+        public virtual bool StartsOnHeading => false;
 
         /// <summary>
         /// Start at the first item when the screen was closed since it was last used (a new visit), but

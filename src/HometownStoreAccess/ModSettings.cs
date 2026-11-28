@@ -18,6 +18,7 @@ namespace HometownStoreAccess
         public readonly ConfigEntry<bool> AnnouncePictures;
         public readonly ConfigEntry<bool> AnnounceShaking;
         public readonly ConfigEntry<bool> AnnounceAchievements;
+        public readonly ConfigEntry<bool> AnnounceWeather;
         public readonly ConfigEntry<bool> AnnounceCustomersLeaving;
 
         public readonly ConfigEntry<bool> AnnouncePosition;
@@ -76,6 +77,7 @@ namespace HometownStoreAccess
             // 1.4.3 split leaving off the Customers setting: whoever had turned customers off keeps it quiet.
             if (!hadCustomersLeaving) AnnounceCustomersLeaving.Value = AnnounceCustomers.Value;
             AnnounceAchievements = config.Bind("Announcements", "Achievements", true, "Say Steam achievements when the game unlocks them (Steam shows them only in its overlay).");
+            AnnounceWeather = config.Bind("Announcements", "Weather", true, "Say when rain or fog starts, changes or stops (the game rolls the weather every morning). The T key says the weather either way.");
 
             AudioCues = config.Bind("Audio", "Cues", true, "Play positional audio cues for the shop floor cursor, placement, customers and menus.");
             MenuSounds = config.Bind("Audio", "MenuSounds", true, "Play short sounds when moving through menus, wrapping around and reaching the edge of a list.");
@@ -100,6 +102,33 @@ namespace HometownStoreAccess
         }
 
         public ConfigEntry<float> CueVolume(Audio.Cue cue) => _cueVolumes[cue];
+
+        /// <summary>
+        /// For the test commands: sets the option with this key (in any section) from text; returns its new
+        /// value, or null when there is no such option or the text does not fit it.
+        /// </summary>
+        public string SetFromText(string key, string value)
+        {
+            foreach (ConfigDefinition def in _config.Keys)
+            {
+                if (!string.Equals(def.Key, key, System.StringComparison.OrdinalIgnoreCase)) continue;
+                ConfigEntryBase entry = _config[def];
+                string before = entry.GetSerializedValue();
+                try
+                {
+                    entry.SetSerializedValue(value);
+                }
+                catch (System.Exception)
+                {
+                    return null;
+                }
+                string after = entry.GetSerializedValue();
+                // (BepInEx keeps the old value, without an error, when the text does not fit the option.)
+                if (after == before && !string.Equals(before, value, System.StringComparison.OrdinalIgnoreCase)) return null;
+                return def.Section + "." + def.Key + " = " + after;
+            }
+            return null;
+        }
 
         /// <summary>Puts every option (except the developer ones) back to its default value.</summary>
         public void ResetToDefaults()

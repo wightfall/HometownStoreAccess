@@ -61,8 +61,8 @@ namespace HometownStoreAccess.Contexts
                 // Only where it does something (the list has more than one group) and the screen's own
                 // help does not already say it (key names are the same in every language).
                 ContextManager cm = AccessibilityRoot.Instance != null ? AccessibilityRoot.Instance.Contexts : null;
-                bool told = parts.Exists(p => p.IndexOf("Page Down", StringComparison.OrdinalIgnoreCase) >= 0);
-                if (!told && cm != null && cm.Current == current && cm.GroupCount > 1) parts.Add(Loc.Get("help_groups"));
+                bool told = parts.Exists(p => p.IndexOf("Page Down", StringComparison.OrdinalIgnoreCase) >= 0 || p.IndexOf("RB", StringComparison.Ordinal) >= 0);
+                if (!told && cm != null && cm.Current == current && cm.GroupCount > 1) parts.Add(Loc.Get(cm.HasHeadings ? "help_groups" : "help_sections"));
             }
             if (inGame) parts.Add(Loc.Get("help_game_short"));
             // "Shift+F1 lists every key, F5 opens the settings" is not news inside the key list or settings.
@@ -77,20 +77,20 @@ namespace HometownStoreAccess.Contexts
         public override string Id => "key_list";
         public override int Priority => 1000;
         public override bool HeadingItems => true;
+        public override bool StartsOnHeading => true;
         public override bool ResetFocusOnEnter => true;
         public override bool IsActive() => Overlay.Open == Overlay.Kind.KeyList;
         public override string Title() => Loc.Get("ctx_key_list");
 
         public override void Build(List<NavItem> items)
         {
-            int n = 0;
             void Section(string group, string block)
             {
                 if (string.IsNullOrEmpty(block)) return;
                 foreach (string line in block.Split('\n'))
                 {
                     string t = line.Trim();
-                    if (t.Length > 0) items.Add(new TextItem(t, "k" + n++) { Group = group });
+                    if (t.Length > 0) items.Add(new TextItem(t, "k:" + group + ":" + t) { Group = group });
                 }
             }
             ScreenContext under = Overlay.Underlying;
@@ -115,7 +115,7 @@ namespace HometownStoreAccess.Contexts
             foreach (Cue cue in Enum.GetValues(typeof(Cue)))
             {
                 Cue c = cue;
-                items.Add(new ActionItem(() => AudioCues.Name(c), () => AudioCues.Preview(c), "cue:" + c) { Group = sounds, DetailFunc = () => Loc.Get("hint_cue_play") });
+                items.Add(new ActionItem(() => AudioCues.Name(c), () => AudioCues.Preview(c), "cue:" + c) { Group = sounds, OwnSound = true, DetailFunc = () => Loc.Get("hint_cue_play") });
             }
             items.Add(new ActionItem(() => Loc.Get("label_open_settings"), () => Overlay.Show(Overlay.Kind.Settings, Overlay.Underlying, Overlay.InGame), "open_settings") { Group = Loc.Get("group_actions") });
             items.Add(new ActionItem(() => Loc.Get("label_close"), Overlay.Close, "close") { Group = Loc.Get("group_actions") });
@@ -145,6 +145,7 @@ namespace HometownStoreAccess.Contexts
         public override string Id => "mod_settings";
         public override int Priority => 1001;
         public override bool HeadingItems => true;
+        public override bool StartsOnHeading => true;
         public override bool IsActive() => Overlay.Open == Overlay.Kind.Settings;
         public override string Title() => Loc.Get("ctx_mod_settings");
         public override string Intro() => Loc.Get("hint_settings");
@@ -174,6 +175,7 @@ namespace HometownStoreAccess.Contexts
             items.Add(Toggle(s.AnnounceShaking, "set_shaking", ann));
             items.Add(Toggle(s.AnnounceTutorial, "set_tutorial", ann));
             items.Add(Toggle(s.AnnounceAchievements, "set_achievements", ann));
+            items.Add(Toggle(s.AnnounceWeather, "set_weather", ann));
 
             string audio = Loc.Get("set_group_audio");
             items.Add(Toggle(s.AudioCues, "set_cues", audio));
@@ -345,6 +347,7 @@ namespace HometownStoreAccess.Contexts
         public override string Label() => _label();
         public override string Value() => Mathf.RoundToInt(_entry.Value * 100f) + "%";
         public override string Role() => Loc.Get("role_slider");
+        public override bool PlaysOwnSound => true;
 
         public override bool Adjust(int direction, bool large)
         {

@@ -17,6 +17,8 @@ namespace HometownStoreAccess.Tests
             "Customer_Name", "Customer_Description", "Product_Name", "Product_Description", "Shelf_Name", "Shelf_Description",
             "Journal_Name", "Dialog_Name", "Dialog_Description", "Dialog_Response_Name", "Dialog_Response_Description",
             "MessageBox_Description",
+            // Game 1.7.12: the storage list's texts.
+            "StorageSummary",
         };
 
         private static string Folder()
@@ -79,6 +81,22 @@ namespace HometownStoreAccess.Tests
             Assert.Equal("ยายสมศรี", f.Entries["Dialog_Name/Event_Grandma_Reveal_Locations_15"]);
             Assert.Contains("{v1}", f.Entries["ConfirmAndNotify/Warning: All items in Delivery Storage"]);
             foreach (string typo in new[] { "ฝงซัก", "น้ัำ", "สิงค้า", "สมสรี" })
+            {
+                Assert.DoesNotContain(f.Entries.Values, v => v.Contains(typo));
+            }
+        }
+
+        [Fact]
+        public void ThaiMistakesFoundInGame1712AreFixed()
+        {
+            // 1.5.0: the game's new storage list says "ประเทภ", and older lines it still has wrong.
+            LangFile f = LangFile.Load(Path.Combine(Folder(), "th.game.txt"));
+            Assert.Equal("ของมาส่ง: {v1} ({v2} ประเภท)", f.Entries["StorageSummary/DeliveryHeader"]);
+            Assert.Equal("ปฏิเสธ", f.Entries["Dialog_Response_Name/Response_DontHelpFindDog"]);
+            Assert.Equal("สถานีตำรวจ", f.Entries["Product_Name/Police Station"]);
+            Assert.Equal("เครื่องสำอาง", f.Entries["Product_Name/Cosmetic"]);
+            Assert.Equal("ของฝาก (พวงกุญแจช้าง)", f.Entries["Product_Name/Souvenir (Elephant Keychain)"]);
+            foreach (string typo in new[] { "ประเทภ", "ปฎิ", "สถาณี", "ทรมาณ", "สำอางค์", "พกจ", "ไม่่", "คุุณ" })
             {
                 Assert.DoesNotContain(f.Entries.Values, v => v.Contains(typo));
             }

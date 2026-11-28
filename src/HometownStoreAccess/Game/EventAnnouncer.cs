@@ -22,6 +22,8 @@ namespace HometownStoreAccess.Game
         private static readonly Dictionary<int, int> MachineDone = new Dictionary<int, int>();
         private static readonly Dictionary<GameObject, string> TutorialNotes = new Dictionary<GameObject, string>();
         private static int _deliveryCount = -1;
+        private static bool _truckShown;
+        private static GamePhase _lastPhase;
         private static string _lastGuideKey;
         private static bool _rush, _ended, _storageFull;
 
@@ -63,8 +65,11 @@ namespace HometownStoreAccess.Game
             MachineDone.Clear();
             TutorialNotes.Clear();
             _deliveryCount = -1;
+            _truckShown = false;
             _rush = _ended = _storageFull = false;
             _lastGuideKey = null;
+            _weather = null;
+            _weatherStrength = -1;
         }
 
         public static void Update()
@@ -76,6 +81,34 @@ namespace HometownStoreAccess.Game
             if (gc == null || BuildingSystem.Instance == null || ResourceManager.Instance == null) return;
             PollShop(gc);
             PollTutorial();
+            PollWeather();
+        }
+
+        // The weather last said (or seen when the save loaded), as its text key, and the kind and
+        // strength it came from (compared first, so nothing is built while the weather stays).
+        private static string _weather;
+        private static WeatherType _weatherKind;
+        private static int _weatherStrength = -1;
+
+        /// <summary>
+        /// Rain and fog (game 1.7.12) are only pictures on the screen: say when they start, change or
+        /// stop (the game rolls the day's weather each morning). Clear weather when a save loads is
+        /// left unsaid, as there is nothing to see.
+        /// </summary>
+        private static void PollWeather()
+        {
+            WeatherManager wm = GameText.Weather();
+            if (wm == null) return;
+            if (_weather != null && wm.CurrentWeather == _weatherKind && wm.Intensity == _weatherStrength) return;
+            _weatherKind = wm.CurrentWeather;
+            _weatherStrength = wm.Intensity;
+            string now = WeatherWords.Key(wm.CurrentWeather.ToString(), wm.Intensity) ?? wm.CurrentWeather.ToString();
+            if (now == _weather) return;
+            bool first = _weather == null;
+            _weather = now;
+            if (!Plugin.Settings.AnnounceWeather.Value) return;
+            if (first && wm.CurrentWeather == WeatherType.Clear) return;
+            SpeechService.Say(Loc.Get("weather_now", GameText.WeatherText(wm)), false, MsgCategory.Events);
         }
 
         private static void PollShop(GameControl gc)
@@ -87,7 +120,8 @@ namespace HometownStoreAccess.Game
                 if (b is ShelfObject shelf)
                 {
                     int id = shelf.GetInstanceID();
-                    int now = shelf.ShelfInventory.ItemList.Count;
+                    // (A slot locked to a kind of goods stays when it sells out: count the filled ones.)
+                    int now = shelf.ShelfInventory.FilledSlotCount();
                     if (ShelfCounts.TryGetValue(id, out int before) && open && before > 0 && now == 0 && s.AnnounceStock.Value)
                     {
                         SpeechService.Say(Loc.Get("shelf_empty", GameText.Name(shelf.ID)), false, MsgCategory.Shop);
@@ -105,12 +139,19 @@ namespace HometownStoreAccess.Game
                 }
             }
 
+            // The truck with goods, when the game shows it: every morning, and at any other time once it
+            // holds goods and the map is closed (goods bought on the map in the evening come at once). A new
+            // morning says the delivery itself (the phase message), so only other arrivals are said here.
             int delivery = ResourceManager.Instance.delivery.ItemList.Count;
-            bool truckVisiblePhase = gc.CurrentGamePhase == GamePhase.Morning || gc.CurrentGamePhase == GamePhase.Noon;
-            if (_deliveryCount >= 0 && delivery > 0 && _deliveryCount == 0 && truckVisiblePhase)
+            DeliveryObject truck = UI.SceneCache.Get<DeliveryObject>();
+            bool shown = truck != null && truck.isVisible && delivery > 0;
+            bool newMorning = gc.CurrentGamePhase == GamePhase.Morning && _lastPhase != GamePhase.Morning;
+            if (_deliveryCount >= 0 && shown && !_truckShown && !newMorning)
             {
                 SpeechService.Say(Loc.Get("delivery_arrived", GameText.Contents(ResourceManager.Instance.delivery)), false, MsgCategory.Shop);
             }
+            _truckShown = shown;
+            _lastPhase = gc.CurrentGamePhase;
             _deliveryCount = delivery;
 
             Inventory st = ResourceManager.Instance.storage;
@@ -381,12 +422,20 @@ namespace HometownStoreAccess.Game
         }
     }
 
-    [HarmonyPatch(typeof(StoreManager), nameof(StoreManager.StoreLevelUp))]
+    /// <summary>
+    /// The shop grows when the game really upgrades it. Since game 1.7.12 StoreLevelUp only queues the
+    /// upgrade (when you agree to it); DoStoreLevelUp does it, as the day's summary opens: it raises the
+    /// level, puts every building back into the blueprints and plays the upgrade sound.
+    /// </summary>
+    [HarmonyPatch(typeof(StoreManager), nameof(StoreManager.DoStoreLevelUp))]
     internal static class StoreLevelPatch
     {
         private static void Postfix(StoreManager __instance)
         {
             FloorCursor.Reset();
+            // The day's summary opens right after: it is read after this message instead of cutting it off.
+            UI.ContextManager cm = AccessibilityRoot.Instance != null ? AccessibilityRoot.Instance.Contexts : null;
+            if (cm != null && (cm.Current == null || cm.Current.Id != "summary")) cm.GentleNextEntry = true;
             SpeechService.Say(Loc.Get("store_level_up", __instance.StoreLevel + 1), false, MsgCategory.Events);
         }
     }

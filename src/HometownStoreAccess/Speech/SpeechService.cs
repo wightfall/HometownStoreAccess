@@ -268,6 +268,7 @@ namespace HometownStoreAccess.Speech
         {
             if (string.IsNullOrEmpty(text)) return;
             if (LogSpeech) Log.Info("[Speech" + (interrupt ? "!" : "") + "] " + text);
+            Diagnostics.TestTrace.Speech(text);
             try { Spoken?.Invoke(text, interrupt); } catch (Exception e) { Log.Warn("Spoken handler failed: " + e.Message); }
             if (Muted || _backend == IntPtr.Zero) return;
             try

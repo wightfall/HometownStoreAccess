@@ -137,8 +137,58 @@ namespace HometownStoreAccess.Diagnostics
                     SpeechService.Say(arg);
                     break;
                 case "state":
-                    Log.Info("[state] " + (StateProvider != null ? StateProvider() : "(no provider)"));
+                {
+                    string state = StateProvider != null ? StateProvider() : "(no provider)";
+                    Log.Info("[state] " + state);
+                    // Also to a file of its own at once (the log is written in bursts): the screen, the
+                    // focus, and the cues and speech since the last state.
+                    File.WriteAllText(Path.Combine(BepInEx.Paths.BepInExRootPath, "hsa_state.txt"), state + " || " + TestTrace.Take(), new System.Text.UTF8Encoding(false));
                     break;
+                }
+                case "setting":
+                {
+                    // setting <key> <value>: changes a mod option, for example "setting WrapAround false".
+                    string[] setParts = arg.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
+                    string done = setParts.Length == 2 ? Plugin.Settings.SetFromText(setParts[0], setParts[1]) : null;
+                    Log.Info("[setting] " + (done ?? "no such option or value: " + arg));
+                    break;
+                }
+                case "upgrade":
+                    // upgrade: queues a shop upgrade as an event's reply does (it happens at the day's summary);
+                    // upgrade now: does it at once, as the game's "Force Level Up".
+                    if (StoreManager.Instance == null) { Log.Info("[upgrade] no StoreManager"); break; }
+                    if (arg == "now") StoreManager.Instance.ForceStoreLevelUp();
+                    else StoreManager.Instance.StoreLevelUp();
+                    Log.Info("[upgrade] level " + (StoreManager.Instance.StoreLevel + 1) + ", pending " + StoreManager.Instance.PendingStoreLevelUp);
+                    break;
+                case "weather":
+                {
+                    // weather [Clear|Rain|Fog] [0-100]: shows the weather, or sets it as the game's developer panel does.
+                    WeatherManager wm = Game.GameText.Weather();
+                    if (wm == null) { Log.Info("[weather] no WeatherManager"); break; }
+                    string[] wp = arg.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (wp.Length > 0 && Enum.TryParse(wp[0], true, out WeatherType wt))
+                    {
+                        int strength = wp.Length > 1 && int.TryParse(wp[1], out int ws) ? ws : 50;
+                        wm.SetWeather(wt, strength);
+                    }
+                    Log.Info("[weather] " + wm.CurrentWeather + " " + wm.Intensity + " (daily roll " + wm.randomDaily + ")");
+                    break;
+                }
+                case "items":
+                {
+                    // Every item of the current list as it is spoken, with its section.
+                    UI.ContextManager cm = AccessibilityRoot.Instance != null ? AccessibilityRoot.Instance.Contexts : null;
+                    if (cm == null || cm.Current == null) { Log.Info("[items] no screen"); break; }
+                    Log.Info("[items] " + cm.Current.Id + " " + cm.Items.Count);
+                    for (int i = 0; i < cm.Items.Count; i++)
+                    {
+                        string spoken;
+                        try { spoken = cm.Items[i].Speak(); } catch (System.Exception e) { spoken = "ERR " + e.Message; }
+                        Log.Info("[items] " + i + (cm.Items[i] == cm.Focused ? " *" : "  ") + " [" + cm.Items[i].Group + "] " + spoken);
+                    }
+                    break;
+                }
                 case "perf":
                     // perf [seconds]: how long the mod's parts take per frame, written to the log.
                     Perf.Begin(arg.Length > 0 && float.TryParse(arg, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float secs) ? secs : 5f);
@@ -706,7 +756,8 @@ namespace HometownStoreAccess.Diagnostics
         private static readonly string[] HelpText =
         {
             "help: this list",
-            "state: the active screen and focus | say <text>: speak | key <KeyCode> [shift] [ctrl] [alt]: a mod key press | pad <buttons> [frames]: controller input | pad connect, pad disconnect: what plugging a controller in or out does",
+            "state: the active screen and focus (also BepInEx/hsa_state.txt, with the cues and speech since the last state) | items: the screen's list with its sections | say <text>: speak | key <KeyCode> [shift] [ctrl] [alt]: a mod key press | pad <buttons> [frames]: controller input | pad connect, pad disconnect: what plugging a controller in or out does",
+            "setting <name> <value>: change a mod setting (saved) | weather [Clear|Rain|Fog] [0-100]: log or set the weather | upgrade [now]: queue a shop upgrade for the day's summary, or do it now",
             "click <path>: press a button | dump [tag]: the UI tree | world: the shop grid | perf [seconds]: the mod's cost per frame",
             "cash <n>: add money | item <name> [n]: goods into storage | stock <item> [n]: goods onto a shelf | blueprint <name> [n]: buildings | buildings: building names",
             "trades: every shop's stock today | trade <shop>: open a shop | places: every map place | points <n>: travel points | goto <place>: arrive at a place | unlock <place>|all",

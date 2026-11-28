@@ -143,7 +143,7 @@ namespace HometownStoreAccess.Contexts
                 if (prof != null && lt.CurrentAtLocationProfile == prof && !TokenOn(n)) parts.Add(Loc.Get("map_you_are_here"));
                 foreach (Journal j in EventJournalManager.Instance.CurrentJournals)
                 {
-                    if (j != null && j.showToPlayer && j.haveLocationCondition && j.locationTradeThatTrigger == loc.LocationID) { parts.Add(Loc.Get("map_quest")); break; }
+                    if (MarksPlace(j, loc.LocationID)) { parts.Add(Loc.Get("map_quest")); break; }
                 }
                 if (!lt.locationAlreadyNotify.Contains(loc.LocationID)) parts.Add(Loc.Get("map_new"));
                 if (loc.LocationID.lotteryPanel) parts.Add(Loc.Get("map_lottery"));
@@ -155,6 +155,16 @@ namespace HometownStoreAccess.Contexts
                 if (there != null) parts.Add(there);
             }
             return string.Join(", ", parts.ToArray());
+        }
+
+        /// <summary>
+        /// Whether the game marks this place for this event on the map: an event shown in the journal that
+        /// sends you there, and since game 1.7.12 only once you have the money it asks for.
+        /// </summary>
+        private static bool MarksPlace(Journal j, LocationTrade place)
+        {
+            if (j == null || !j.showToPlayer || !j.haveLocationCondition || j.locationTradeThatTrigger == null || j.locationTradeThatTrigger != place) return false;
+            return !j.haveMoneyCondition || (ResourceManager.Instance != null && ResourceManager.Instance.cash >= j.moneyAmount);
         }
 
         /// <summary>
@@ -171,7 +181,7 @@ namespace HometownStoreAccess.Contexts
                 if (!(place is Content_SelectLocation loc) || loc.LocationID == null || !loc.gameObject.activeSelf) continue;
                 foreach (Journal j in EventJournalManager.Instance.CurrentJournals)
                 {
-                    if (j != null && j.showToPlayer && j.haveLocationCondition && j.locationTradeThatTrigger == loc.LocationID) return Loc.Get("map_sign_event");
+                    if (MarksPlace(j, loc.LocationID)) return Loc.Get("map_sign_event");
                 }
                 if (!lt.locationAlreadyNotify.Contains(loc.LocationID)) return Loc.Get("map_sign_new");
             }
@@ -255,6 +265,10 @@ namespace HometownStoreAccess.Contexts
 
             string map = Loc.Get("group_map");
             items.Add(new TextItem(TravelPoints, "points") { Group = map });
+            // The money the map shows (game 1.7.12).
+            Transform cash = p.transform.Find("PhaseMainInterface/cash Text");
+            TMPro.TMP_Text cashText = cash != null && cash.gameObject.activeInHierarchy ? cash.GetComponent<TMPro.TMP_Text>() : null;
+            if (cashText != null) items.Add(new TextItem(() => Loc.Get("map_money", UiUtil.Text(cashText)), "money") { Group = map });
             items.Add(new TextItem(PurchasedToday, "basket") { Group = map });
             UiScan.AddControl(items, p.endOfTheDayButton, map);
             Transform close = p.transform.Find("CloseMap");

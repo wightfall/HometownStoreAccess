@@ -111,6 +111,16 @@ namespace HometownStoreAccess.Installer
             return zip != null ? File.OpenRead(zip) : null;
         }
 
+        /// <summary>The release notes of the version this installer carries, or null (a build without them).</summary>
+        public static string WhatsNew()
+        {
+            using (Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("whats-new.md"))
+            {
+                if (s == null) return null;
+                using (var r = new StreamReader(s, System.Text.Encoding.UTF8)) return r.ReadToEnd();
+            }
+        }
+
         public static string PayloadVersion()
         {
             using (Stream s = OpenPayload())

@@ -118,9 +118,36 @@ namespace HometownStoreAccess.UI
         /// Clicks a UI element the way a mouse would: pointer enter, down, up, click, exit. This keeps the
         /// game's own click sounds, interactable checks and pointer handlers working.
         /// </summary>
-        public static bool Click(GameObject go)
+        public static bool Click(GameObject go) => ClickThen(go, null);
+
+        /// <summary>
+        /// Clicks like <see cref="Click"/>, then runs <paramref name="after"/>: at once, or, when the click has
+        /// to wait for its popup to finish opening, once it is made (so what the click changed is read then,
+        /// not before). <paramref name="after"/> does not run when the waiting click is dropped.
+        /// </summary>
+        public static bool ClickThen(GameObject go, System.Action after)
         {
             if (go == null || !go.activeInHierarchy) return false;
+            // A popup that is still opening (game 1.7.12) switches its buttons off for up to half a second,
+            // and a click then does nothing: the click waits for the button instead.
+            if (LockedByOpeningPopup(go.GetComponent<Button>()))
+            {
+                Log.Debug("Click on " + go.name + " waits for its popup to finish opening");
+                _pendingClick = go;
+                _pendingAfter = after;
+                _pendingUntil = Time.unscaledTime + PendingClickTimeout;
+                return true;
+            }
+            bool done = ClickNow(go);
+            if (after != null)
+            {
+                try { after(); } catch (System.Exception e) { Log.Error("After click failed: " + e); }
+            }
+            return done;
+        }
+
+        private static bool ClickNow(GameObject go)
+        {
             EventSystem es = EventSystem.current;
             if (es == null)
             {
@@ -143,6 +170,49 @@ namespace HometownStoreAccess.UI
             bool handled = ExecuteEvents.Execute(go, data, ExecuteEvents.pointerClickHandler);
             if (go != null && go.activeInHierarchy) ExecuteEvents.Execute(go, data, ExecuteEvents.pointerExitHandler);
             return handled;
+        }
+
+        // A click that waits for its popup to finish opening, and until when it may wait (the game's lock
+        // lasts at most 0.5 s of real time).
+        private const float PendingClickTimeout = 1f;
+        private static GameObject _pendingClick;
+        private static System.Action _pendingAfter;
+        private static float _pendingUntil;
+
+        /// <summary>True when the button is one a popup switched off while its opening animation runs.</summary>
+        private static bool LockedByOpeningPopup(Button b)
+        {
+            if (b == null || b.enabled) return false;
+            // The popup around the button first (panels the game creates while playing are not in the
+            // scene list), then every popup of the scene (one can lock buttons outside its own object).
+            foreach (PopupAnimation pa in b.GetComponentsInParent<PopupAnimation>(true))
+            {
+                if (pa != null && pa.lockedButtons != null && pa.lockedButtons.Contains(b)) return true;
+            }
+            foreach (PopupAnimation pa in SceneCache.All<PopupAnimation>())
+            {
+                if (pa != null && pa.lockedButtons != null && pa.lockedButtons.Contains(b)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>Every frame: makes the waiting click once its popup has let go of the button.</summary>
+        public static void TickPendingClick()
+        {
+            GameObject go = _pendingClick;
+            if (go == null) return;
+            if (!go.activeInHierarchy || Time.unscaledTime > _pendingUntil)
+            {
+                _pendingClick = null;
+                _pendingAfter = null;
+                return;
+            }
+            var b = go.GetComponent<Button>();
+            if (b != null && !b.enabled) return;
+            System.Action after = _pendingAfter;
+            _pendingClick = null;
+            _pendingAfter = null;
+            ClickThen(go, after);
         }
 
         /// <summary>Sends only a pointer-click with the given button (used for right-click equivalents).</summary>

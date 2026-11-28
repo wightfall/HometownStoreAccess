@@ -18,6 +18,12 @@ namespace HometownStoreAccess.Contexts
         public static void Move(ItemSlotData slot, Inventory from, Inventory to, string toName, Amount amount)
         {
             if (slot == null || slot.ID == null || from == null || to == null) return;
+            if (slot.currentAmount <= 0)
+            {
+                // A slot locked to its kind of goods stays when empty: the game ignores a click on it.
+                SpeechService.Say(Loc.Get("state_empty"), true);
+                return;
+            }
             int n;
             switch (amount)
             {
@@ -59,7 +65,12 @@ namespace HometownStoreAccess.Contexts
         }
 
         /// <summary>One list entry per stack in an inventory (only the stacks <paramref name="include"/> accepts).</summary>
-        public static void AddStacks(List<NavItem> items, Inventory inv, Inventory target, string group, string targetName, string keyPrefix, System.Func<Item, bool> include = null)
+        /// <param name="lockable">
+        /// The game shows a lock button on each slot (a shelf's slots while the storage is open, game
+        /// 1.7.12): a locked slot keeps its kind of goods when it empties, for Give all and Take all.
+        /// Each slot is then followed by its lock, a check box.
+        /// </param>
+        public static void AddStacks(List<NavItem> items, Inventory inv, Inventory target, string group, string targetName, string keyPrefix, System.Func<Item, bool> include = null, bool lockable = false)
         {
             if (inv == null) return;
             if (inv.ItemList.Count == 0)
@@ -85,8 +96,63 @@ namespace HometownStoreAccess.Contexts
                 };
                 if (target != null && !target.IsItemsStoreAble(slot.ID)) item.ValueFunc = () => Loc.Get("transfer_cannot_go", targetName);
                 items.Add(item);
+                if (lockable) items.Add(LockItem(inv, slot, group, keyPrefix + ":lock:" + slot.ID.name + ":" + k));
             }
             if (shown == 0) items.Add(new TextItem(Loc.Get("category_empty"), keyPrefix + ":none") { Group = group });
+        }
+
+        /// <summary>
+        /// The game's "move everything" button, which says what it moved (a sighted player sees the goods
+        /// go across). When nothing moved, the game's own notice (no room...) is read, else "nothing moved".
+        /// </summary>
+        public static void AddAll(List<NavItem> items, Button button, Inventory to, string toName, string group, System.Func<string> label)
+        {
+            if (button == null || to == null || !UiUtil.IsShown(button.gameObject)) return;
+            items.Add(new ActionItem(label, () =>
+            {
+                if (!button.IsInteractable())
+                {
+                    SpeechService.Say(Loc.Get("state_unavailable"), true);
+                    return;
+                }
+                Dictionary<Item, int> before = to.SummaryItemDictionary();
+                UiUtil.ClickThen(button.gameObject, () =>
+                {
+                    var moved = new List<string>();
+                    foreach (KeyValuePair<Item, int> kv in to.SummaryItemDictionary())
+                    {
+                        before.TryGetValue(kv.Key, out int was);
+                        if (kv.Key != null && kv.Value > was) moved.Add(Loc.Get("item_stack", GameText.Name(kv.Key), kv.Value - was));
+                    }
+                    if (moved.Count > 0) SpeechService.Say(Loc.Get("transfer_all_done", toName, string.Join(", ", moved.ToArray())), true);
+                    else SpeechService.Say(Loc.Get("transfer_nothing"), true);
+                    AccessibilityRoot.Instance.Contexts.AnnounceFocusIfChanged();
+                });
+            }, "all:" + button.GetInstanceID())
+            {
+                Group = group,
+                TargetObject = button.gameObject,
+            });
+        }
+
+        /// <summary>The lock of one slot, as the game's lock button: Enter locks or unlocks it.</summary>
+        private static NavItem LockItem(Inventory inv, ItemSlotData slot, string group, string key)
+        {
+            return new ActionItem(() => Loc.Get("label_slot_lock", GameText.Name(slot.ID)), () =>
+            {
+                if (!inv.ItemList.Contains(slot)) return;
+                inv.SetSlotLocked(slot, !slot.isLocked);
+                SpeechService.Say(slot.isLocked ? Loc.Get("state_checked") : Loc.Get("state_unchecked"), true);
+                // An empty slot that is unlocked goes away: the focus moves on.
+                AccessibilityRoot.Instance.Contexts.AnnounceFocusIfChanged();
+            }, key)
+            {
+                Group = group,
+                PartOfPrevious = true,
+                ValueFunc = () => slot.isLocked ? Loc.Get("state_checked") : Loc.Get("state_unchecked"),
+                RoleFunc = () => Loc.Get("role_checkbox"),
+                DetailFunc = () => Loc.Get("hint_slot_lock"),
+            };
         }
 
         public static IEnumerable<string> Categories(Inventory inv)
@@ -158,14 +224,16 @@ namespace HometownStoreAccess.Contexts
             string tName = NameOf(t);
             string sName = s != null ? NameOf(s) : string.Empty;
             string tGroup = TextCleaner.Join(", ", tName, GameText.Slots(t._refInventory));
-            Transfer.AddStacks(items, t._refInventory, t._refInventoryToTransfer, tGroup, sName, "t", include);
+            // As the game: slot locks on a shelf while goods can be moved to it.
+            bool lockable = t._refShelfObject != null && t._refInventoryToTransfer != null;
+            Transfer.AddStacks(items, t._refInventory, t._refInventoryToTransfer, tGroup, sName, "t", include, lockable);
             if (withSource)
             {
                 string sGroup = TextCleaner.Join(", ", sName, GameText.Slots(s._refInventory));
                 Transfer.AddStacks(items, s._refInventory, s._refInventoryToTransfer, sGroup, tName, "s", include);
                 string actions = Loc.Get("group_actions");
-                UiScan.AddControl(items, s.giveAllButton, actions, () => Loc.Get("label_give_all", sName, tName));
-                UiScan.AddControl(items, s.takeAllButton, actions, () => Loc.Get("label_take_all", tName, sName));
+                Transfer.AddAll(items, s.giveAllButton, t._refInventory, tName, actions, () => Loc.Get("label_give_all", sName, tName));
+                Transfer.AddAll(items, s.takeAllButton, s._refInventory, sName, actions, () => Loc.Get("label_take_all", tName, sName));
             }
             UiScan.AddControl(items, t.closeButton, Loc.Get("group_actions"), () => Loc.Get("label_close"));
             if (t._refShelfObject != null)
@@ -191,6 +259,8 @@ namespace HometownStoreAccess.Contexts
     {
         public override string Id => "manufacture";
         public override int Priority => 55;
+        // Whether the recipe chooser was open at the last rebuild, and whether it has just closed.
+        private bool _chooserOpen, _chooserClosed;
         public override bool ResetFocusOnNewVisit => true;
 
         private static ManufacturePanel Panel => UIPanelManager.Instance != null ? UIPanelManager.Instance._refManufacturePanel : null;
@@ -217,7 +287,10 @@ namespace HometownStoreAccess.Contexts
             string storageName = storage != null ? UiUtil.Text(storage.shelfNameText) : string.Empty;
             string machine = GameText.Name(m.ID);
 
-            if (p.allCraftRecipePanel != null && p.allCraftRecipePanel.activeInHierarchy)
+            bool chooser = p.allCraftRecipePanel != null && p.allCraftRecipePanel.activeInHierarchy;
+            _chooserClosed = _chooserOpen && !chooser;
+            _chooserOpen = chooser;
+            if (chooser)
             {
                 string g = Loc.Get("group_choose_recipe");
                 var recipes = new List<CraftingRecipe> { null };
@@ -275,8 +348,8 @@ namespace HometownStoreAccess.Contexts
                 string sGroup = TextCleaner.Join(", ", storageName, GameText.Slots(storage._refInventory));
                 Transfer.AddStacks(items, storage._refInventory, storage._refInventoryToTransfer, sGroup, machine, "st");
                 string actions = Loc.Get("group_actions");
-                UiScan.AddControl(items, storage.giveAllButton, actions, () => Loc.Get("label_give_all", storageName, machine));
-                UiScan.AddControl(items, storage.takeAllButton, actions, () => Loc.Get("label_take_all", machine, storageName));
+                Transfer.AddAll(items, storage.giveAllButton, m.InputInventory, machine, actions, () => Loc.Get("label_give_all", storageName, machine));
+                Transfer.AddAll(items, storage.takeAllButton, storage._refInventory, storageName, actions, () => Loc.Get("label_take_all", machine, storageName));
             }
             UiScan.AddControl(items, p.closeButton, Loc.Get("group_actions"), () => Loc.Get("label_close"));
         }
@@ -285,7 +358,9 @@ namespace HometownStoreAccess.Contexts
         public override string PreferredFocusKey()
         {
             ManufacturePanel p = Panel;
-            if (p == null || p._refManufactureObject == null || p.allCraftRecipePanel == null || !p.allCraftRecipePanel.activeInHierarchy) return null;
+            if (p == null || p._refManufactureObject == null || p.allCraftRecipePanel == null) return null;
+            // The chooser just closed (a recipe was chosen): back on Change recipe.
+            if (!p.allCraftRecipePanel.activeInHierarchy) return _chooserClosed && p.openAllCraftRecipeButton != null ? "btn:" + p.openAllCraftRecipeButton.GetInstanceID() : null;
             CraftingRecipe current = p._refManufactureObject.currentRecipe;
             return "recipe:" + (current != null ? current.name : "none");
         }

@@ -43,6 +43,21 @@ namespace HometownStoreAccess.Core
         }
 
         /// <summary>
+        /// Whether a list gets heading items: it has at least one named section and at least two
+        /// sections in all (a run of items without a name counts as one), so that Page Up and Page Down
+        /// have somewhere to go. A list that is one section only keeps its name in front of its items.
+        /// </summary>
+        public static bool WantsHeadings(IList<string> groups)
+        {
+            if (groups == null || GroupCount(groups) < 2) return false;
+            foreach (string g in groups)
+            {
+                if (!string.IsNullOrEmpty(g)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Where each named section of a list starts and how many items it has (for heading items).
         /// Items without a section get no heading.
         /// </summary>

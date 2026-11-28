@@ -27,4 +27,8 @@
   <ItemGroup Condition="'$(ReleaseZip)' != '' And Exists('$(ReleaseZip)')">
     <EmbeddedResource Include="$(ReleaseZip)" LogicalName="release.zip" />
   </ItemGroup>
+  <!-- The release notes of this version, shown in the installer's What's new box. -->
+  <ItemGroup Condition="'$(WhatsNew)' != '' And Exists('$(WhatsNew)')">
+    <EmbeddedResource Include="$(WhatsNew)" LogicalName="whats-new.md" />
+  </ItemGroup>
 </Project>

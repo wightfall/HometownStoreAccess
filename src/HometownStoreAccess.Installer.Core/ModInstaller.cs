@@ -76,11 +76,41 @@ namespace HometownStoreAccess.Installer
             bool mod = File.Exists(Path.Combine(pluginDir, "HometownStoreAccess.dll"));
             status.State = mod && bepinex ? InstallState.Installed : bepinex ? InstallState.BepInExOnly : InstallState.NotInstalled;
             Dictionary<string, string> record = ReadRecord(pluginDir);
-            if (record.TryGetValue("version", out string v)) status.InstalledVersion = v;
-            else if (File.Exists(Path.Combine(pluginDir, VersionFile))) status.InstalledVersion = File.ReadAllText(Path.Combine(pluginDir, VersionFile)).Trim();
+            // The version of the DLL the game loads: the record and version.txt only say what an installer
+            // wrote last, and a mod copied in by hand (or a newer build) leaves them behind.
+            status.InstalledVersion = mod ? DllVersion(Path.Combine(pluginDir, "HometownStoreAccess.dll")) : null;
+            if (status.InstalledVersion == null && record.TryGetValue("version", out string v) && v != "unknown") status.InstalledVersion = v;
+            else if (status.InstalledVersion == null && File.Exists(Path.Combine(pluginDir, VersionFile))) status.InstalledVersion = File.ReadAllText(Path.Combine(pluginDir, VersionFile)).Trim();
             status.BepInExInstalledByMod = record.TryGetValue("bepinex_by_installer", out string b) && b == "true";
             status.OtherPluginsPresent = OtherPlugins(gameDir).Any();
             return status;
+        }
+
+        /// <summary>The version a DLL carries (its product version, as "1.5.0"), or null when it has none.</summary>
+        public static string DllVersion(string dllPath)
+        {
+            try
+            {
+                if (!File.Exists(dllPath)) return null;
+                FileVersionInfo info = FileVersionInfo.GetVersionInfo(dllPath);
+                return CleanVersion(info.ProductVersion) ?? CleanVersion(info.FileVersion);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>"1.5.0+abc123" and "1.5.0.0" become "1.5.0"; an empty or unusable text is null.</summary>
+        public static string CleanVersion(string version)
+        {
+            string v = (version ?? string.Empty).Trim();
+            int plus = v.IndexOfAny(new[] { '+', ' ' });
+            if (plus >= 0) v = v.Substring(0, plus);
+            string[] parts = v.Split('.');
+            if (parts.Length == 0 || parts.Any(p => p.Length == 0 || !p.All(char.IsDigit))) return null;
+            if (parts.Length == 4 && parts[3] == "0") v = string.Join(".", parts, 0, 3);
+            return v.Length > 0 && v != "0.0.0" && v != "0.0.0.0" ? v : null;
         }
 
         /// <summary>Plugin files or folders under BepInEx/plugins that do not belong to this mod.</summary>

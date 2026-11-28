@@ -23,7 +23,7 @@ namespace HometownStoreAccess.Contexts
                     () => MainMenu()?.ConfirmPanel()?.gameObject,
                     () => MainMenu()?.ConfirmPanel()?.messageText,
                     () => Buttons(MainMenu()?.ConfirmPanel())));
-                manager.Register(new PanelContext("credits", 80, () => SceneCache.Find("CreditPanel"), () => Core.Loc.Get("ctx_credits"), includeTexts: true));
+                manager.Register(new CreditsContext());
                 manager.Register(new MainMenuContext());
             }
             else if (sceneName == GameScene)

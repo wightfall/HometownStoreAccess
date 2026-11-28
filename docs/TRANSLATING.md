@@ -12,8 +12,8 @@ All translation files live in the mod's `lang` folder:
 The mod writes two templates there the first time the game runs, and updates them when a new
 version adds text:
 
-- `template.mod.txt` has every message of the mod (about 700).
-- `template.game.txt` has every text of the game (about 3200), such as menus, items, characters
+- `template.mod.txt` has every message of the mod (about 750).
+- `template.game.txt` has every text of the game (about 3300), such as menus, items, characters
   and dialog.
 
 ## Start a translation
@@ -77,7 +77,7 @@ way you can fix a single message without touching the rest.
 The game's demo leaves most of its Japanese, Indonesian and Chinese text untranslated, so the mod
 also ships game text translations for them in the mod's `translations` folder (next to `lang`):
 `ja.game.txt`, `id.game.txt`, `zh.game.txt` and `th.game.txt`. They hold only what the game itself
-lacks. Do not edit those files, as updates replace them. Your own `lang\ja.game.txt` (or `zh-HK`,
+lacks; `th.game.txt` also corrects spelling mistakes in the game's own Thai text. Do not edit those files, as updates replace them. Your own `lang\ja.game.txt` (or `zh-HK`,
 `id`, `th`) loads on top of them, and its entries win. In the source code they are in the
 `translations` folder; corrections there are welcome as pull requests.
 

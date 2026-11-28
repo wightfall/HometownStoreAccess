@@ -19,6 +19,10 @@ namespace HometownStoreAccess.UI
         private readonly List<ScreenContext> _contexts = new List<ScreenContext>();
         private readonly List<NavItem> _items = new List<NavItem>();
         private readonly List<string> _keys = new List<string>();
+        // Each item's section, and the list before the last rebuild (where a vanished item was).
+        private readonly List<string> _groups = new List<string>();
+        private readonly List<string> _prevKeys = new List<string>();
+        private readonly List<string> _prevGroups = new List<string>();
         private readonly NavCursor _cursor = new NavCursor();
         private readonly Dictionary<string, string> _rememberedFocus = new Dictionary<string, string>();
         // Contexts whose screen closed (not just covered by another one) since they were left.
@@ -30,6 +34,8 @@ namespace HometownStoreAccess.UI
         private float _announceAskedAt;
         private string _lastAnnouncedGroup;
         private float _enterGuardUntil;
+        // Whether the current list has heading items (see ScreenContext.HeadingItems).
+        private bool _hasHeadings;
 
         public ScreenContext Current { get; private set; }
         public IReadOnlyList<NavItem> Items => _items;
@@ -40,6 +46,9 @@ namespace HometownStoreAccess.UI
         /// (set once by the welcome message, so the main menu does not interrupt it).
         /// </summary>
         public bool GentleNextEntry { get; set; }
+
+        /// <summary>Whether the current list has heading items (a list of one section has none).</summary>
+        public bool HasHeadings => _hasHeadings;
 
         /// <summary>How many groups (Page Up / Page Down stops) the current list has.</summary>
         public int GroupCount
@@ -75,9 +84,12 @@ namespace HometownStoreAccess.UI
             Diagnostics.Perf.Stop("contexts.select", t0);
             if (active != Current)
             {
+                // (A deferred action belongs to the screen that asked for it.)
+                _later = null;
                 SwitchTo(active);
             }
             if (Current == null) return;
+            RunLater();
 
             // (The names for the perf command are only built while it measures: no garbage every frame.)
             if (Time.unscaledTime >= _nextRebuild)
@@ -106,6 +118,28 @@ namespace HometownStoreAccess.UI
             bool consumed = false;
             try { consumed = Current.HandleInput(); } catch (Exception e) { Log.Error("Context " + Current.Id + " input failed: " + e); }
             if (!consumed && Current.UsesListNavigation) HandleListInput();
+        }
+
+        // Something to do once the game has finished a change (it removes old rows only at the end of a frame).
+        private Action _later;
+        private int _laterFrame;
+
+        /// <summary>
+        /// Runs <paramref name="action"/> two frames from now, on the same screen only: for reading a page
+        /// the game has just rebuilt (its old rows are still there until the end of this frame).
+        /// </summary>
+        public void AfterGameUpdate(Action action)
+        {
+            _later = action;
+            _laterFrame = Time.frameCount + 2;
+        }
+
+        private void RunLater()
+        {
+            if (_later == null || Time.frameCount < _laterFrame) return;
+            Action a = _later;
+            _later = null;
+            try { a(); } catch (Exception e) { Log.Error("Deferred action failed: " + e); }
         }
 
         /// <summary>Forces an immediate rebuild and announces the focused item if it changed.</summary>
@@ -195,6 +229,9 @@ namespace HometownStoreAccess.UI
             }
             _cursor.Reset(_keys, preferFirst: true);
             if (index > 0) _cursor.MoveTo(index, _keys);
+            // A screen opens on its first entry, not on the heading in front of it (whose name is said
+            // with the entry), so Enter does what it did before headings: scratch, load, next day...
+            if (_cursor.Index == 0 && _items.Count > 1 && _items[0] is HeadingItem && !Current.StartsOnHeading) _cursor.MoveTo(1, _keys);
 
             // After the welcome message, the first screen is queued behind it instead of cutting it off.
             bool interrupt = !GentleNextEntry;
@@ -211,6 +248,11 @@ namespace HometownStoreAccess.UI
         private void Rebuild(bool preferFirst)
         {
             _nextRebuild = Time.unscaledTime + RebuildInterval;
+            _prevKeys.Clear();
+            _prevKeys.AddRange(_keys);
+            _prevGroups.Clear();
+            _prevGroups.AddRange(_groups);
+            int oldIndex = _cursor.Index;
             BuildItems();
             string before = _cursor.FocusedKey;
             bool changed = _cursor.Reset(_keys, preferFirst);
@@ -219,7 +261,19 @@ namespace HometownStoreAccess.UI
                 string preferred = null;
                 try { preferred = Current.PreferredFocusKey(); } catch (Exception e) { Log.Debug("PreferredFocusKey " + Current.Id + " threw " + e.Message); }
                 int at = preferred != null ? _keys.IndexOf(preferred) : -1;
+                // An entry that took the vanished one's place in the same section (the lottery's hint after
+                // the scratch card) keeps the focus. Otherwise the nearest entry that is still there, in
+                // the same section first, rather than whatever sits at that position in another section.
+                string oldGroup = oldIndex >= 0 && oldIndex < _prevGroups.Count ? _prevGroups[oldIndex] : string.Empty;
+                NavItem here = Focused;
+                bool sameSection = here != null && !(here is HeadingItem) && string.Equals(here.Group ?? string.Empty, oldGroup, StringComparison.Ordinal);
+                if (at < 0 && !sameSection) at = NavCursor.NearestSurvivor(_prevKeys, _prevGroups, oldIndex, _keys, IsHeadingKey);
                 if (at >= 0) _cursor.MoveTo(at, _keys);
+            }
+            // A list that was empty when the screen opened, and fills now: its first entry, not its heading.
+            else if (before == null && _cursor.Index == 0 && _items.Count > 1 && _items[0] is HeadingItem && !Current.StartsOnHeading)
+            {
+                _cursor.MoveTo(1, _keys);
             }
             // Keep list focus on the text field being typed in (the game may activate one itself).
             TMPro.TMP_InputField editing = TextEntry.Field;
@@ -246,10 +300,13 @@ namespace HometownStoreAccess.UI
             ApplyVisualFocus();
         }
 
+        private static bool IsHeadingKey(string key) => key != null && key.StartsWith(HeadingItem.KeyPrefix, StringComparison.Ordinal);
+
         private void BuildItems()
         {
             _items.Clear();
             _keys.Clear();
+            _groups.Clear();
             try
             {
                 Current.Build(_items);
@@ -259,6 +316,11 @@ namespace HometownStoreAccess.UI
                 Log.Error("Context " + Current.Id + " build failed: " + e);
             }
             if (Current.HeadingItems) InsertHeadings(_items);
+            _hasHeadings = false;
+            foreach (NavItem item in _items)
+            {
+                if (item is HeadingItem) { _hasHeadings = true; break; }
+            }
             // Keys must be unique for focus tracking: suffix duplicates.
             var seen = new Dictionary<string, int>();
             foreach (NavItem item in _items)
@@ -275,6 +337,7 @@ namespace HometownStoreAccess.UI
                     seen[k] = 0;
                 }
                 _keys.Add(k);
+                _groups.Add(item.Group ?? string.Empty);
             }
         }
 
@@ -283,8 +346,18 @@ namespace HometownStoreAccess.UI
         {
             var groups = new List<string>(items.Count);
             foreach (NavItem i in items) groups.Add(i.Group);
+            if (!ChoiceStep.WantsHeadings(groups)) return;
             var starts = new Dictionary<int, int>();
-            foreach (KeyValuePair<int, int> s in ChoiceStep.SectionStarts(groups)) starts[s.Key] = s.Value;
+            foreach (KeyValuePair<int, int> s in ChoiceStep.SectionStarts(groups))
+            {
+                // (A shelf slot's lock check box is part of its slot, not an entry of its own.)
+                int counted = 0;
+                for (int k = s.Key; k < s.Key + s.Value; k++)
+                {
+                    if (items[k].CountsInSection) counted++;
+                }
+                starts[s.Key] = counted;
+            }
             var result = new List<NavItem>(items.Count + starts.Count);
             for (int i = 0; i < items.Count; i++)
             {
@@ -339,12 +412,16 @@ namespace HometownStoreAccess.UI
             foreach (NavItem i in _items)
             {
                 string l;
+                // A letter jumps to entries, never to a section's heading.
+                if (i is HeadingItem) { labels.Add(string.Empty); continue; }
                 try { l = TextCleaner.Clean(i.Label()); } catch { l = string.Empty; }
                 int start = 0;
                 while (start < l.Length && !char.IsLetterOrDigit(l[start])) start++;
                 labels.Add(l.Substring(start));
             }
-            if (_cursor.FindNextByPrefix(ch.ToString(), labels, _keys)) Feedback(MoveResult.Moved);
+            int from = _cursor.Index;
+            // Letters always search the whole list; going round past the end plays the wrap sound.
+            if (_cursor.FindNextByPrefix(ch.ToString(), labels, _keys)) Feedback(_cursor.Index <= from ? MoveResult.Wrapped : MoveResult.Moved);
             else AudioCues.Play(Cue.Edge);
         }
 
@@ -362,6 +439,9 @@ namespace HometownStoreAccess.UI
             MoveResult r = _cursor.MoveTo(index, _keys);
             Feedback(r == MoveResult.AtEdge ? MoveResult.Moved : r);
         }
+
+        /// <summary>The next announcement says the focused item's section again (a page or view that changed).</summary>
+        public void ForgetSection() => _lastAnnouncedGroup = null;
 
         /// <summary>Moves focus without speaking (the caller announces something more useful).</summary>
         public void MoveToSilently(int index)
@@ -407,6 +487,12 @@ namespace HometownStoreAccess.UI
                 SpeechService.Say(Loc.Get("nothing_here"), true);
                 return;
             }
+            if (f is HeadingItem)
+            {
+                // A heading does nothing: it is read again, without the click of a button.
+                SpeechService.Say(f.Speak(), true);
+                return;
+            }
             bool handled;
             try
             {
@@ -426,7 +512,8 @@ namespace HometownStoreAccess.UI
                 return;
             }
             if (!handled) SpeechService.Say(f.Speak(), true);
-            AudioCues.Play(Cue.Activate);
+            // A sound cue item plays only its own cue, as Left and Right do on a volume.
+            if (!(handled && f.PlaysOwnSound)) AudioCues.Play(Cue.Activate);
             AnnounceFocusIfChanged();
         }
 
@@ -461,9 +548,9 @@ namespace HometownStoreAccess.UI
             }
             string text = SafeString(f.Speak);
             string group = f.Group ?? string.Empty;
-            // With heading items the heading says the section: items are read on their own.
-            bool headings = Current != null && Current.HeadingItems;
-            if (includeGroup && !headings && group.Length > 0 && group != _lastAnnouncedGroup)
+            // A section's name is said when the focus comes into it: by its heading (Page Down), or in
+            // front of the entry when the heading was not heard (a letter, End, a screen opening).
+            if (includeGroup && !(f is HeadingItem) && group.Length > 0 && group != _lastAnnouncedGroup)
             {
                 text = TextCleaner.Join(", ", group, text);
             }
@@ -476,11 +563,11 @@ namespace HometownStoreAccess.UI
             int pos = 0, total = 0;
             for (int i = 0; i < _items.Count; i++)
             {
-                if ((_items[i].Group ?? string.Empty) != group || _items[i] is HeadingItem) continue;
+                if ((_items[i].Group ?? string.Empty) != group || _items[i] is HeadingItem || !_items[i].CountsInSection) continue;
                 total++;
                 if (i <= _cursor.Index) pos++;
             }
-            if (total > 1 && Plugin.Settings.AnnouncePosition.Value) text = TextCleaner.Join(", ", text, Loc.Get("position_of", pos, total));
+            if (total > 1 && f.CountsInSection && Plugin.Settings.AnnouncePosition.Value) text = TextCleaner.Join(", ", text, Loc.Get("position_of", pos, total));
             SpeechService.Say(text, interrupt);
         }
 
