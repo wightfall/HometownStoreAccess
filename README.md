@@ -8,7 +8,7 @@ between are spoken. Sound cues help you find your way on the shop floor and the 
 Speech goes through [Prism](https://github.com/ethindp/prism), so it works with NVDA, JAWS, ZDSR and
 other screen readers, and falls back to Windows speech (OneCore or SAPI) when no screen reader runs.
 
-- Game version tested: Hometown Store Demo 0.7.11A (Steam app 4643920)
+- Game version tested: Hometown Store Demo 0.7.12 (the developers' devlog calls it 1.7.12; Steam app 4643920)
 - Mod loader: [BepInEx](https://github.com/BepInEx/BepInEx) 5.4.23.6 (installed for you)
 - Languages: English, Thai, Japanese, Indonesian and Traditional Chinese for both the mod and the
   game, and any other language through translation files ([how to translate](docs/TRANSLATING.md))
@@ -42,13 +42,21 @@ other screen readers, and falls back to Windows speech (OneCore or SAPI) when no
    - **Start the game after installing or updating**
    - **Start the game and the mod in the installer language**: sets the game's language and the
      mod's language to the language you chose for the installer.
-4. Press **Install** (it says **Update** or **Reinstall** when the mod is already there).
+4. Press **Install**. When the mod is already there it says **Update** (an older version is
+   installed), **Reinstall** (the same version) or **Install older version** (the installed mod is
+   newer than this installer; it asks first).
+
+The installer opens on its read-only status box: the game folder, the installed version (read from
+the mod's DLL) and what the main button does ("This installer updates it to version 1.5.0."). Beside
+it, the read-only **What's new in version 1.5.0** box lists this version's release notes; when the
+installer updates an older version, it opens on that box instead.
 
 The installer works offline, as the mod is built in. It installs BepInEx only when it is missing and
 never touches other BepInEx mods. It needs no administrator rights, as Steam lets every user write to
 its library. If a folder is protected anyway, it offers to try again as administrator.
 
-**Updates:** when the installer starts, it asks GitHub whether a newer version exists. If one does, it
+**Updates:** when the installer starts, it asks GitHub whether there is a version newer than both the
+installed mod and this installer. If there is, it
 shows a window with what's new, one line per row in a read-only text box, and asks **Yes** or
 **No**. Yes downloads the new installer and starts it. You can also press **Check for updates**.
 
@@ -83,7 +91,7 @@ off with **Skip the logo intro** in the settings).
 - **F1** tells you the keys for the screen you are on.
 - **Shift+F1** opens the key list: every key the mod uses, by section, one line at a time. It also
   has a section where you can listen to each sound cue. Each section starts with a heading of its
-  own (for example "Actions, heading, 2 items"): Page Up and Page Down jump to the headings, and
+  own (for example "Actions, 2 items, heading"): Page Up and Page Down jump to the headings, and
   Down reads the first line of the section.
 - **F5** opens the mod settings.
 - **With a controller**, Back tells you the buttons for the screen you are on, holding Back opens
@@ -122,14 +130,15 @@ to repeat. On the shop floor and in walk mode, letters work without Ctrl.
 | F5 | Mod settings |
 | Escape | Back, close, or open the pause menu, as in the game. In a text box, Escape only stops editing. |
 
-A list with more than one section starts each section with a heading line of its own, such as
+A list with more than one section starts each named section with a heading line of its own, such as
 "Basket, 3 items, heading": the main menu, the options, the map, the shops, shelves, the credits, the
 key list and the mod settings all have them. Page Up and Page Down (or Tab) land on the heading, so
 you hear the section's name alone, and Down goes on to its entries, which are read without the
 section name in front of them. When you come into a section another way (a letter, End, Up from the
 next section, or a screen that opens), its name is said in front of the entry. A screen opens on its
 first entry, not on a heading (the key list and the mod settings open on their first heading). A list
-with only one section has no heading. Enter on a heading does nothing, and letters skip headings.
+with only one section has no heading, and a conversation has none, so Enter still picks the first
+reply. Enter on a heading only reads it again, and letters skip headings.
 When an entry goes away (goods moved, a basket line removed), the focus goes to the nearest entry in
 the same section and you hear it.
 
@@ -166,7 +175,7 @@ save; Cancel keeps it. Changing the name, or opening the name box again, starts 
 always warns before it overwrites a save. (In the game itself the warning stays armed after Cancel,
 and the next Confirm overwrites without one; the mod fixes that.)
 
-### Message history
+### Message history keys
 
 | Key | Action |
 | --- | --- |
@@ -197,8 +206,9 @@ Hold Ctrl while a list is open.
 Each morning the game picks the day's weather: clear, rain or fog, light, moderate or heavy. It is
 only a picture on the screen, so the mod says when it starts, changes or stops ("Weather: heavy
 rain"), and T says it at any time. A save that loads with rain or fog says it too; clear weather
-is said only when it follows rain or fog. To keep quiet about it, turn off **Weather** in the mod
-settings (T still says it). The game calls its weather "still in testing" in version 1.7.12.
+is said only when it follows rain or fog. To keep quiet about it, turn off **Weather (rain and fog)**
+in the mod settings (T still says it). The developers' devlog for version 1.7.12 calls the weather
+"still in testing".
 
 When an event upgrades your shop, the game does it as the day's summary opens (since version
 1.7.12; agreeing to it only books it). You hear "Your shop grew to level 2" then, before the summary:
@@ -256,12 +266,12 @@ once).
 Each has two lists: the building's items and your storage (or the delivery truck). Tab jumps
 between them. Enter moves the whole stack to the other side, Shift+Enter moves half and Ctrl+Enter
 moves one. Ctrl+I describes an item: price, how it stacks, and which shelves it fits on. The
-actions section has the move-everything buttons, which say what they moved ("Moved to the shelf:
-Candy: 22"), and Close. When the goods belong to more than one category, Ctrl+Up and Ctrl+Down (or
+actions section has the move-everything buttons, which say what they moved ("Moved to Wooden
+half-shelf: Candy: 22"), and Close. When the goods belong to more than one category, Ctrl+Up and Ctrl+Down (or
 the Category item at the top) show one category at a time.
 
 On a shelf opened with the storage or the truck, each slot is followed by its lock, a check box
-("Lock slot to Candy, not checked"), as the game shows a lock button on each slot. Enter locks the
+("Lock slot to Candy, not checked, check box"), as the game shows a lock button on each slot. Enter locks the
 slot to its kind of goods: it stays on the shelf when it sells out or you take the goods away
 ("Candy: 0"), and moving everything from the storage fills it with the same goods again. Unlocking
 an empty slot removes it.
@@ -348,8 +358,8 @@ there: arriving is what completes that task.
 
 A shop, the lottery and the vehicle shop always open at the top of their list, and so do shelves,
 machines and the cashier's looks; only coming back from a popup inside them keeps your place.
-When a place's details are open, the map's last item says **Close the place's details**; after that
-it closes the map. Your own shop is only a marker on the map; you go back to it with End of the
+When a place's details are open, Close map in the map section says **Close the place's details**;
+after that it closes the map. Your own shop is only a marker on the map; you go back to it with End of the
 day.
 
 ### Shops on the map
@@ -381,7 +391,7 @@ Xbox-compatible (XInput) controllers work directly. Other controllers work throu
 The mod says when you plug a controller in or out. While you play with the controller, what the mod
 tells you names its buttons instead of keys: the tutorial hints, the help for each screen (Back),
 the hints on items, and the prompts for placing a building and for starting the day. The key list
-(hold Back) then starts with the controller section. When you press a key on the keyboard, the mod
+(hold Back) then has the controller section right after This screen. When you press a key on the keyboard, the mod
 names the keyboard keys again, until you use the controller again. Ctrl, Shift, Alt, Insert, Caps
 Lock and the number pad do not count, so your screen reader's keys (such as Ctrl to stop speech)
 leave it as it is.
@@ -393,7 +403,7 @@ leave it as it is.
 | X | Alternative action (Shift+Enter); hold for the third action (Ctrl+Enter): move one item, delete a save |
 | Y | Details; hold to read the whole screen (Ctrl+Shift+R) |
 | B | Back |
-| LB, RB | Previous, next section; hold for the first, last item (Home, End) |
+| LB, RB | Heading of the previous, next section; hold for the first, last item (Home, End) |
 | Start | Pause menu; hold for the mod settings (F5) |
 | Back | Help for this screen (F1); hold for the key list (Shift+F1) |
 | Left trigger | Repeat; in a conversation, hold to hear the line again (Backslash) |
@@ -579,7 +589,8 @@ powershell -ExecutionPolicy Bypass -File tools\build-release.ps1
 ```
 
 `DeployToGame` copies the plugin into the game. `build-release.ps1` runs the tests and writes the
-release zip and the installer to `dist\`.
+release zip and the installer to `dist\`. It needs `docs\release-notes\<version>.md`, the release
+notes the installer shows in its What's new box.
 
 ### Test commands
 
@@ -646,7 +657,7 @@ done, set `TestHooks = false` again and delete `BepInEx\hsa_dumps` and any `BepI
 | `blueprint <name> [n]` | Adds buildings to your blueprints, to place in build mode. |
 | `buildings` | Lists every building with its kind and category. |
 | `upgrade`, `upgrade now` | Queues a shop upgrade, as an event's reply does (the game does it when the day's summary opens), or does it at once. Use a test save: the shop really grows. |
-| `weather [Clear, Rain or Fog] [0-100]` | Says the weather, or sets it as the game's developer panel does (the strength is 50 when not given). |
+| `weather [Clear, Rain or Fog] [0-100]` | Writes the weather to the log (kind, strength and whether the daily roll is on), or sets it as the game's developer panel does (the strength is 50 when not given); the mod then announces the change. |
 
 **Shops and the map**
 

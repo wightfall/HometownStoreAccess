@@ -151,6 +151,14 @@ namespace HometownStoreAccess.Core
                 if (newKeys[i] != null && !where.ContainsKey(newKeys[i])) where[newKeys[i]] = i;
             }
             string group = oldGroups != null && oldIndex < oldGroups.Count ? oldGroups[oldIndex] ?? string.Empty : string.Empty;
+            // The vanished item's own section: the run of neighbours with the same section name around it
+            // (items far away with the same name, such as unnamed ones at the end, are another section).
+            int runStart = oldIndex, runEnd = oldIndex;
+            if (oldGroups != null && oldGroups.Count == oldKeys.Count)
+            {
+                while (runStart > 0 && string.Equals(oldGroups[runStart - 1] ?? string.Empty, group, StringComparison.Ordinal)) runStart--;
+                while (runEnd < oldKeys.Count - 1 && string.Equals(oldGroups[runEnd + 1] ?? string.Empty, group, StringComparison.Ordinal)) runEnd++;
+            }
             for (int pass = 0; pass < 2; pass++)
             {
                 for (int d = 1; d < oldKeys.Count; d++)
@@ -159,7 +167,7 @@ namespace HometownStoreAccess.Core
                     {
                         int j = side == 0 ? oldIndex + d : oldIndex - d;
                         if (j < 0 || j >= oldKeys.Count) continue;
-                        if (pass == 0 && (oldGroups == null || j >= oldGroups.Count || !string.Equals(oldGroups[j] ?? string.Empty, group, StringComparison.Ordinal))) continue;
+                        if (pass == 0 && (j < runStart || j > runEnd)) continue;
                         string k = oldKeys[j];
                         if (k == null || (isHeading != null && isHeading(k))) continue;
                         if (where.TryGetValue(k, out int at)) return at;

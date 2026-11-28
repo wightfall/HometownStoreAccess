@@ -18,6 +18,12 @@ namespace HometownStoreAccess.Contexts
         public static void Move(ItemSlotData slot, Inventory from, Inventory to, string toName, Amount amount)
         {
             if (slot == null || slot.ID == null || from == null || to == null) return;
+            if (slot.currentAmount <= 0)
+            {
+                // A slot locked to its kind of goods stays when empty: the game ignores a click on it.
+                SpeechService.Say(Loc.Get("state_empty"), true);
+                return;
+            }
             int n;
             switch (amount)
             {
@@ -110,16 +116,18 @@ namespace HometownStoreAccess.Contexts
                     return;
                 }
                 Dictionary<Item, int> before = to.SummaryItemDictionary();
-                UiUtil.Click(button.gameObject);
-                var moved = new List<string>();
-                foreach (KeyValuePair<Item, int> kv in to.SummaryItemDictionary())
+                UiUtil.ClickThen(button.gameObject, () =>
                 {
-                    before.TryGetValue(kv.Key, out int was);
-                    if (kv.Key != null && kv.Value > was) moved.Add(Loc.Get("item_stack", GameText.Name(kv.Key), kv.Value - was));
-                }
-                if (moved.Count > 0) SpeechService.Say(Loc.Get("transfer_all_done", toName, string.Join(", ", moved.ToArray())), true);
-                else SpeechService.Say(Loc.Get("transfer_nothing"), true);
-                AccessibilityRoot.Instance.Contexts.AnnounceFocusIfChanged();
+                    var moved = new List<string>();
+                    foreach (KeyValuePair<Item, int> kv in to.SummaryItemDictionary())
+                    {
+                        before.TryGetValue(kv.Key, out int was);
+                        if (kv.Key != null && kv.Value > was) moved.Add(Loc.Get("item_stack", GameText.Name(kv.Key), kv.Value - was));
+                    }
+                    if (moved.Count > 0) SpeechService.Say(Loc.Get("transfer_all_done", toName, string.Join(", ", moved.ToArray())), true);
+                    else SpeechService.Say(Loc.Get("transfer_nothing"), true);
+                    AccessibilityRoot.Instance.Contexts.AnnounceFocusIfChanged();
+                });
             }, "all:" + button.GetInstanceID())
             {
                 Group = group,

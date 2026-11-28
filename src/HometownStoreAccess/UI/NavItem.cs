@@ -85,15 +85,18 @@ namespace HometownStoreAccess.UI
         private readonly string _name;
         private readonly int _count;
 
+        private readonly string _key;
+
         public HeadingItem(string name, int count)
         {
             _name = name;
             _count = count;
             Group = name;
+            // Numbers in a section's name change (slots used): the key leaves them out, so the focus stays.
+            _key = KeyPrefix + System.Text.RegularExpressions.Regex.Replace(name ?? string.Empty, @"\d+", "#");
         }
 
-        // Numbers in a section's name change (slots used): the key leaves them out, so the focus stays.
-        public override string Key => KeyPrefix + System.Text.RegularExpressions.Regex.Replace(_name ?? string.Empty, @"\d+", "#");
+        public override string Key => _key;
         public override string Label() => _name;
         public override string Value() => _count == 1 ? Loc.Get("heading_item_one") : Loc.Get("heading_items", _count);
         public override string Role() => Loc.Get("role_heading");

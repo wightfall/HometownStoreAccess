@@ -261,10 +261,19 @@ namespace HometownStoreAccess.UI
                 string preferred = null;
                 try { preferred = Current.PreferredFocusKey(); } catch (Exception e) { Log.Debug("PreferredFocusKey " + Current.Id + " threw " + e.Message); }
                 int at = preferred != null ? _keys.IndexOf(preferred) : -1;
-                // Otherwise the nearest entry that is still there, in the same section first (not
-                // whatever now sits at the same position, which can be in another section).
-                if (at < 0) at = NavCursor.NearestSurvivor(_prevKeys, _prevGroups, oldIndex, _keys, IsHeadingKey);
+                // An entry that took the vanished one's place in the same section (the lottery's hint after
+                // the scratch card) keeps the focus. Otherwise the nearest entry that is still there, in
+                // the same section first, rather than whatever sits at that position in another section.
+                string oldGroup = oldIndex >= 0 && oldIndex < _prevGroups.Count ? _prevGroups[oldIndex] : string.Empty;
+                NavItem here = Focused;
+                bool sameSection = here != null && !(here is HeadingItem) && string.Equals(here.Group ?? string.Empty, oldGroup, StringComparison.Ordinal);
+                if (at < 0 && !sameSection) at = NavCursor.NearestSurvivor(_prevKeys, _prevGroups, oldIndex, _keys, IsHeadingKey);
                 if (at >= 0) _cursor.MoveTo(at, _keys);
+            }
+            // A list that was empty when the screen opened, and fills now: its first entry, not its heading.
+            else if (before == null && _cursor.Index == 0 && _items.Count > 1 && _items[0] is HeadingItem && !Current.StartsOnHeading)
+            {
+                _cursor.MoveTo(1, _keys);
             }
             // Keep list focus on the text field being typed in (the game may activate one itself).
             TMPro.TMP_InputField editing = TextEntry.Field;

@@ -581,7 +581,7 @@ namespace HometownStoreAccess.Contexts
             if (StoreManager.Instance != null) parts.Add(Loc.Get("status_shop_level", StoreManager.Instance.StoreLevel + 1));
             // Rain and fog are only seen on the screen (game 1.7.12).
             WeatherManager wm = GameText.Weather();
-            if (wm != null) parts.Add(GameText.WeatherText(wm));
+            if (wm != null) parts.Add(Loc.Get("weather_now", GameText.WeatherText(wm)));
             return TextCleaner.Join(", ", parts.ToArray());
         }
 

@@ -756,7 +756,8 @@ namespace HometownStoreAccess.Diagnostics
         private static readonly string[] HelpText =
         {
             "help: this list",
-            "state: the active screen and focus | say <text>: speak | key <KeyCode> [shift] [ctrl] [alt]: a mod key press | pad <buttons> [frames]: controller input | pad connect, pad disconnect: what plugging a controller in or out does",
+            "state: the active screen and focus (also BepInEx/hsa_state.txt, with the cues and speech since the last state) | items: the screen's list with its sections | say <text>: speak | key <KeyCode> [shift] [ctrl] [alt]: a mod key press | pad <buttons> [frames]: controller input | pad connect, pad disconnect: what plugging a controller in or out does",
+            "setting <name> <value>: change a mod setting (saved) | weather [Clear|Rain|Fog] [0-100]: log or set the weather | upgrade [now]: queue a shop upgrade for the day's summary, or do it now",
             "click <path>: press a button | dump [tag]: the UI tree | world: the shop grid | perf [seconds]: the mod's cost per frame",
             "cash <n>: add money | item <name> [n]: goods into storage | stock <item> [n]: goods onto a shelf | blueprint <name> [n]: buildings | buildings: building names",
             "trades: every shop's stock today | trade <shop>: open a shop | places: every map place | points <n>: travel points | goto <place>: arrive at a place | unlock <place>|all",

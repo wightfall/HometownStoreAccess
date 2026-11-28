@@ -113,6 +113,7 @@ namespace HometownStoreAccess
             {
                 if (!string.Equals(def.Key, key, System.StringComparison.OrdinalIgnoreCase)) continue;
                 ConfigEntryBase entry = _config[def];
+                string before = entry.GetSerializedValue();
                 try
                 {
                     entry.SetSerializedValue(value);
@@ -121,7 +122,10 @@ namespace HometownStoreAccess
                 {
                     return null;
                 }
-                return def.Section + "." + def.Key + " = " + entry.GetSerializedValue();
+                string after = entry.GetSerializedValue();
+                // (BepInEx keeps the old value, without an error, when the text does not fit the option.)
+                if (after == before && !string.Equals(before, value, System.StringComparison.OrdinalIgnoreCase)) return null;
+                return def.Section + "." + def.Key + " = " + after;
             }
             return null;
         }

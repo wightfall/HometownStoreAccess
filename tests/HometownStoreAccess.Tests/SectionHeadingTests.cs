@@ -64,6 +64,18 @@ namespace HometownStoreAccess.Tests
         }
 
         [Fact]
+        public void ASectionIsItsOwnRunNotEveryItemWithTheSameName()
+        {
+            // Unnamed entries at the top and at the bottom are two sections: when the top one empties,
+            // the focus does not jump to the bottom's Close because both have no name.
+            var oldKeys = new List<string> { "emp:a", "heading:Pages", "tab:1", "tab:2", "close" };
+            var oldGroups = new List<string> { "", "Pages", "Pages", "Pages", "" };
+            var newKeys = new List<string> { "emp:b", "heading:Pages", "tab:1", "tab:2", "close" };
+            // Nothing of its own run is left: the nearest entry anywhere, the first tab (not Close).
+            Assert.Equal(newKeys.IndexOf("tab:1"), NavCursor.NearestSurvivor(oldKeys, oldGroups, 0, newKeys, IsHeading));
+        }
+
+        [Fact]
         public void HeadingsOnlyWhenPageDownHasSomewhereToGo()
         {
             // 1.5.0: every list with sections gets headings, not only the key list and settings.

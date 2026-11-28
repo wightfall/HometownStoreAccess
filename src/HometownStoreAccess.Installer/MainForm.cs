@@ -176,6 +176,9 @@ namespace HometownStoreAccess.Installer
         private void RefreshStatus()
         {
             string folder = GameFolder;
+            // (Nothing from a folder typed before this one.)
+            _installedVersion = null;
+            _action = InstallAction.Install;
             if (!SteamLocator.IsGameFolder(folder))
             {
                 _status.Text = string.IsNullOrEmpty(folder) ? Loc.Get("inst_not_found") : Loc.Get("inst_invalid_folder");

@@ -110,15 +110,18 @@ namespace HometownStoreAccess.Contexts
             Button b = tab;
             items.Add(new ActionItem(() => UiUtil.LabelFor(b.gameObject), () =>
             {
-                UiUtil.Click(b.gameObject);
-                // The choice, then the page's first entry once the game has replaced the old page's rows.
-                SpeechService.Say(Loc.Get("state_selected"), true);
-                ContextManager cm = AccessibilityRoot.Instance.Contexts;
-                cm.AfterGameUpdate(() =>
+                // The choice, then the page's first entry once the game has replaced the old page's rows
+                // (and once the click is made: an opening panel locks its buttons for a moment).
+                UiUtil.ClickThen(b.gameObject, () =>
                 {
-                    cm.Refresh(false);
-                    NavItem first = cm.Items.Count > 0 && cm.Items[0].Group != group ? cm.Items[0] : null;
-                    if (first != null) SpeechService.Say(first.Speak(), false);
+                    SpeechService.Say(Loc.Get("state_selected"), true);
+                    ContextManager cm = AccessibilityRoot.Instance.Contexts;
+                    cm.AfterGameUpdate(() =>
+                    {
+                        cm.Refresh(false);
+                        NavItem first = cm.Items.Count > 0 && cm.Items[0].Group != group ? cm.Items[0] : null;
+                        if (first != null) SpeechService.Say(first.Speak(), false);
+                    });
                 });
             }, "tab:" + b.GetInstanceID())
             {
@@ -138,8 +141,25 @@ namespace HometownStoreAccess.Contexts
                     var g = t.GetComponent<ContentEmployeeGroup>();
                     if (g == null || !t.gameObject.activeInHierarchy) continue;
                     ContentEmployeeGroup e = g;
-                    items.Add(new TextItem(() => TextCleaner.Join(", ", UiUtil.Text(e.nameText), UiUtil.Text(e.statsText)), "emp:" + e.GetInstanceID(), () => UiUtil.Text(e.descriptionText)));
-                    if (e.workingToggle != null && e.workingToggle.gameObject.activeInHierarchy) items.Add(new ToggleItem(e.workingToggle));
+                    // Keyed by the employee: the game builds the rows again shortly after the panel opens.
+                    string id = e.employeeProfile != null && e.employeeProfile.employeeID != null ? e.employeeProfile.employeeID.name : e.GetInstanceID().ToString();
+                    items.Add(new TextItem(() => TextCleaner.Join(", ", UiUtil.Text(e.nameText), UiUtil.Text(e.statsText), Holding(e.employeeProfile)), "emp:" + id, () => UiUtil.Text(e.descriptionText)));
+                    Toggle working = e.workingToggle;
+                    if (working != null && working.gameObject.activeInHierarchy)
+                    {
+                        // Its switch belongs to the row above (not counted on its own).
+                        items.Add(new ActionItem(() => Loc.Get("fixed_working"), () =>
+                        {
+                            if (!working.IsInteractable()) { SpeechService.Say(Loc.Get("state_unavailable"), true); return; }
+                            UiUtil.ClickThen(working.gameObject, () => SpeechService.Say(working.isOn ? Loc.Get("state_checked") : Loc.Get("state_unchecked"), true));
+                        }, "emp:" + id + ":working")
+                        {
+                            PartOfPrevious = true,
+                            ValueFunc = () => working.isOn ? Loc.Get("state_checked") : Loc.Get("state_unchecked"),
+                            RoleFunc = () => Loc.Get("role_checkbox"),
+                            TargetObject = working.gameObject,
+                        });
+                    }
                 }
             }
             if (p.noEmployeeText != null && p.noEmployeeText.activeInHierarchy)
@@ -147,6 +167,18 @@ namespace HometownStoreAccess.Contexts
                 var text = p.noEmployeeText.GetComponentInChildren<TMPro.TMP_Text>(true);
                 UiScan.AddText(items, text);
             }
+        }
+
+        /// <summary>"Holding: Candy: 2, ..." for the goods an employee carries (the game shows their icons).</summary>
+        private static string Holding(EmployeeProfile prof)
+        {
+            if (prof == null || prof.handItems == null || prof.handItems.Count == 0) return null;
+            var parts = new List<string>();
+            foreach (ItemSlotData slot in prof.handItems)
+            {
+                if (slot != null && slot.ID != null) parts.Add(GameText.Stack(slot));
+            }
+            return parts.Count == 0 ? null : Loc.Get("fixed_holding") + ": " + string.Join(", ", parts.ToArray());
         }
 
         private static void BuildCustomers(List<NavItem> items, CustomerPanel p)
@@ -159,8 +191,8 @@ namespace HometownStoreAccess.Contexts
                 CustomerProfile prof = g.customerProfile;
                 items.Add(new ActionItem(() => Describe(prof), () =>
                 {
-                    UiUtil.Click(group.favoriteButton.gameObject);
-                    SpeechService.Say(prof.IsFavorite ? Loc.Get("favorite_on") : Loc.Get("favorite_off"), true);
+                    UiUtil.ClickThen(group.favoriteButton.gameObject, () =>
+                        SpeechService.Say(prof.IsFavorite ? Loc.Get("favorite_on") : Loc.Get("favorite_off"), true));
                 }, "cust:" + prof.customerID.name)
                 {
                     DetailFunc = () => TextCleaner.Join(". ", GameText.Description(prof.customerID), Loc.Get("hint_favorite")),
@@ -238,7 +270,8 @@ namespace HometownStoreAccess.Contexts
                     tasks.Add(done && !p.checkDoneJournals ? Loc.Get("task_done", text) : text);
                 }
                 string group = title;
-                items.Add(new TextItem(() => Loc.Get("task_count", tasks.Count), "j" + i) { Group = group });
+                // The event's heading says how many tasks it has; an event without tasks still gets a line.
+                if (tasks.Count == 0) items.Add(new TextItem(() => Loc.Get("task_count", tasks.Count), "j" + i) { Group = group });
                 int k = 0;
                 foreach (string task in tasks) items.Add(new TextItem(task, "j" + i + "t" + k++) { Group = group });
                 i++;
@@ -288,18 +321,20 @@ namespace HometownStoreAccess.Contexts
                 SpeechService.Say(Title(), true);
                 return true;
             }
-            UiUtil.Click(b.gameObject);
             Audio.AudioCues.Play(wraps ? Audio.Cue.Wrap : Audio.Cue.Move);
-            SpeechService.Say(Title(), true);
-            // The game puts the other view's events in now and removes the old ones at the end of the
-            // frame: the first event is read once they are gone (its heading's name is said with it).
-            ContextManager cm = AccessibilityRoot.Instance.Contexts;
-            cm.AfterGameUpdate(() =>
+            UiUtil.ClickThen(b.gameObject, () =>
             {
-                cm.Refresh(false);
-                cm.MoveToSilently(cm.Items.Count > 1 && cm.Items[0] is HeadingItem ? 1 : 0);
-                cm.ForgetSection();
-                cm.AnnounceFocus(includeGroup: true, interrupt: false);
+                SpeechService.Say(Title(), true);
+                // The game puts the other view's events in now and removes the old ones at the end of the
+                // frame: the first event is read once they are gone (its heading's name is said with it).
+                ContextManager cm = AccessibilityRoot.Instance.Contexts;
+                cm.AfterGameUpdate(() =>
+                {
+                    cm.Refresh(false);
+                    cm.MoveToSilently(cm.Items.Count > 1 && cm.Items[0] is HeadingItem ? 1 : 0);
+                    cm.ForgetSection();
+                    cm.AnnounceFocus(includeGroup: true, interrupt: false);
+                });
             });
             return true;
         }

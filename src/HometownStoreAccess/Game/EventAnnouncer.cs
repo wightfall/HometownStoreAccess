@@ -69,6 +69,7 @@ namespace HometownStoreAccess.Game
             _rush = _ended = _storageFull = false;
             _lastGuideKey = null;
             _weather = null;
+            _weatherStrength = -1;
         }
 
         public static void Update()
@@ -83,8 +84,11 @@ namespace HometownStoreAccess.Game
             PollWeather();
         }
 
-        // The weather last said (or seen when the save loaded), as its text key.
+        // The weather last said (or seen when the save loaded), as its text key, and the kind and
+        // strength it came from (compared first, so nothing is built while the weather stays).
         private static string _weather;
+        private static WeatherType _weatherKind;
+        private static int _weatherStrength = -1;
 
         /// <summary>
         /// Rain and fog (game 1.7.12) are only pictures on the screen: say when they start, change or
@@ -95,6 +99,9 @@ namespace HometownStoreAccess.Game
         {
             WeatherManager wm = GameText.Weather();
             if (wm == null) return;
+            if (_weather != null && wm.CurrentWeather == _weatherKind && wm.Intensity == _weatherStrength) return;
+            _weatherKind = wm.CurrentWeather;
+            _weatherStrength = wm.Intensity;
             string now = WeatherWords.Key(wm.CurrentWeather.ToString(), wm.Intensity) ?? wm.CurrentWeather.ToString();
             if (now == _weather) return;
             bool first = _weather == null;

@@ -96,9 +96,10 @@ namespace HometownStoreAccess.Installer
         /// <summary>True when <paramref name="candidate"/> is a higher version than <paramref name="current"/>.</summary>
         public static bool IsNewer(string candidate, string current)
         {
-            if (!TryParse(candidate, out Version a)) return false;
-            if (!TryParse(current, out Version b)) return true;
-            return a > b;
+            if (!TryParse(candidate, out Version _)) return false;
+            // A current version that cannot be read counts as older.
+            int? c = Compare(candidate, current);
+            return c == null || c > 0;
         }
 
         /// <summary>-1, 0 or 1 as <paramref name="a"/> is lower, the same or higher; null when either is not a version.</summary>

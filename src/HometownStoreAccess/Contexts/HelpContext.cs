@@ -61,7 +61,7 @@ namespace HometownStoreAccess.Contexts
                 // Only where it does something (the list has more than one group) and the screen's own
                 // help does not already say it (key names are the same in every language).
                 ContextManager cm = AccessibilityRoot.Instance != null ? AccessibilityRoot.Instance.Contexts : null;
-                bool told = parts.Exists(p => p.IndexOf("Page Down", StringComparison.OrdinalIgnoreCase) >= 0);
+                bool told = parts.Exists(p => p.IndexOf("Page Down", StringComparison.OrdinalIgnoreCase) >= 0 || p.IndexOf("RB", StringComparison.Ordinal) >= 0);
                 if (!told && cm != null && cm.Current == current && cm.GroupCount > 1) parts.Add(Loc.Get(cm.HasHeadings ? "help_groups" : "help_sections"));
             }
             if (inGame) parts.Add(Loc.Get("help_game_short"));

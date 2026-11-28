@@ -72,6 +72,10 @@ namespace HometownStoreAccess.Tests
             Assert.Equal(-1, UpdateInfo.Compare("v1.3.1", "1.4.5"));
             Assert.Equal(1, UpdateInfo.Compare("1.10.0", "1.9.9"));
             Assert.Null(UpdateInfo.Compare("abc", "1.0"));
+            // IsNewer agrees: "1.5" and "1.5.0" are the same, so no update to the version installed.
+            Assert.False(UpdateInfo.IsNewer("1.5.0", "1.5"));
+            Assert.False(UpdateInfo.ShouldOffer("1.5.0", "1.5", "1.5"));
+            Assert.Equal(InstallAction.Reinstall, UpdateInfo.ActionFor(true, "1.5", "1.5.0"));
         }
 
         [Fact]
